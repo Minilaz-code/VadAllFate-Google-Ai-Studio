@@ -70,6 +70,9 @@ interface HeaderProps {
   onAdvanceTime: (mins: number) => void;
   onTogglePauseClock: () => void;
   onOpenAudit: () => void;
+  runtimeStatusText?: string;
+  isUsingDemoClient?: boolean;
+  onToggleClientMode?: (useDemo: boolean) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -84,6 +87,9 @@ export const Header: React.FC<HeaderProps> = ({
   onAdvanceTime,
   onTogglePauseClock,
   onOpenAudit,
+  runtimeStatusText,
+  isUsingDemoClient = true,
+  onToggleClientMode,
 }) => {
   const [showModeDropdown, setShowModeDropdown] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
@@ -370,15 +376,37 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Architecture Status Register Pill */}
-          <button
-            onClick={onOpenAudit}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-mono transition-colors"
-            title="Inspect R1-W00 Architectural Feature Status"
-          >
-            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Spine V2</span>
-          </button>
+          {/* Honest Architecture & Runtime Status Badge */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onOpenAudit}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-mono transition-colors ${
+                isUsingDemoClient
+                  ? 'bg-amber-950/40 border-amber-700/60 text-amber-300 hover:bg-amber-900/40'
+                  : 'bg-red-950/60 border-red-700 text-red-300 hover:bg-red-900/60'
+              }`}
+              title="Inspect Architectural Feature Register (AIUI-CP001)"
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">
+                {isUsingDemoClient
+                  ? 'DEMO MODE — IN-MEMORY STATE — PYTHON RUNTIME NOT CONNECTED'
+                  : 'PYTHON RUNTIME GATEWAY: NOT CONNECTED'}
+              </span>
+              <span className="xl:hidden font-bold">
+                {isUsingDemoClient ? 'DEMO (EPHEMERAL)' : 'PYTHON (DISCONNECTED)'}
+              </span>
+            </button>
+            {onToggleClientMode && (
+              <button
+                onClick={() => onToggleClientMode(!isUsingDemoClient)}
+                className="px-2 py-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] font-mono text-neutral-400 hover:text-neutral-200 transition-colors"
+                title="Toggle between in-memory Demo Client and disconnected Python Runtime Gateway"
+              >
+                {isUsingDemoClient ? 'Test Gateway' : 'Return to Demo'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>

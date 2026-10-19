@@ -13,7 +13,7 @@ import {
 import type { ActionEnvelope, SnapshotRef, CommitReceipt, UserRole } from '../../types/runtime.ts';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
-import { runtimeService } from '../../runtime/adapter.ts';
+import { clientManager } from '../../runtime/adapter.ts';
 
 interface Props {
   isOpen: boolean;
@@ -92,10 +92,11 @@ export const ActionSubmissionModal: React.FC<Props> = ({
     }
 
     try {
-      const { receipt } = await runtimeService.submitActionEnvelope(actionEnvelope);
+      const client = clientManager.getClient();
+      const { receipt } = await client.submitAction(actionEnvelope);
       setLastReceipt(receipt);
     } catch (err: any) {
-      alert(`Commit Authority Error: ${err.message}`);
+      alert(`Runtime Gateway Error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -112,10 +113,10 @@ export const ActionSubmissionModal: React.FC<Props> = ({
             </div>
             <div>
               <h3 className="font-bold font-cinzel text-amber-100 text-sm tracking-wide">
-                Submit Canonical ActionEnvelope
+                Submit ActionEnvelope (Demonstration Client)
               </h3>
               <p className="text-[11px] text-neutral-400">
-                Routed to the Single Commit Authority with SnapshotRef validation.
+                Processed via in-memory demonstration client. Python R1 Commit Authority is not connected.
               </p>
             </div>
           </div>
@@ -137,7 +138,7 @@ export const ActionSubmissionModal: React.FC<Props> = ({
               <span className="text-amber-300 font-semibold">Commit Seq #{currentSnapshot.commitSequence}</span>
             </div>
             <div>
-              <span className="text-neutral-500">State Hash: </span>
+              <span className="text-neutral-500">Demo State Hash: </span>
               <span className="text-neutral-300 font-mono">{currentSnapshot.stateHash.substring(0, 10)}...</span>
             </div>
           </div>
@@ -234,39 +235,45 @@ export const ActionSubmissionModal: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Commit Pipeline Diagram */}
+          {/* Pipeline Trace Diagram */}
           <div className="p-3 bg-neutral-950/60 rounded border border-neutral-800/80 font-mono text-[10px] text-neutral-400 flex items-center justify-between">
-            <span className="text-amber-400">ActionEnvelope</span>
+            <span className="text-amber-400">DemoActionEnvelope</span>
             <ArrowRight className="w-3 h-3 text-neutral-600" />
-            <span>StatePatch</span>
+            <span>DemoStatePatch</span>
             <ArrowRight className="w-3 h-3 text-neutral-600" />
-            <span>Commit Authority</span>
+            <span>Demo Adapter</span>
             <ArrowRight className="w-3 h-3 text-neutral-600" />
-            <span className="text-emerald-400">CommitReceipt</span>
+            <span className="text-amber-300">DemoCommitReceipt</span>
           </div>
 
-          {/* Last Returned Receipt */}
+          {/* Last Returned Receipt with Honest Labeling */}
           {lastReceipt && (
             <div
               className={`p-3.5 rounded border text-xs font-mono space-y-1.5 ${
                 lastReceipt.status === 'COMMITTED'
-                  ? 'bg-emerald-950/30 border-emerald-700/60 text-emerald-200'
+                  ? 'bg-amber-950/30 border-amber-700/60 text-amber-200'
                   : 'bg-red-950/30 border-red-700/60 text-red-200'
               }`}
             >
               <div className="flex items-center gap-2 font-bold">
                 {lastReceipt.status === 'COMMITTED' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-amber-400" />
                 ) : (
                   <AlertTriangle className="w-4 h-4 text-red-400" />
                 )}
-                <span>Commit Authority Receipt: {lastReceipt.status}</span>
+                <span>DEMONSTRATION RECEIPT: {lastReceipt.status}</span>
+                <span className="text-[10px] bg-neutral-900 px-1 rounded text-neutral-400 font-normal">
+                  [Simulated / Non-Authoritative]
+                </span>
               </div>
               <div className="text-[11px] text-neutral-300">
-                Commit Sequence: <span className="font-bold text-amber-300">#{lastReceipt.commitSequence}</span> | Hash: {lastReceipt.commitHash.substring(0, 12)}...
+                Demo Sequence: <span className="font-bold text-amber-300">#{lastReceipt.commitSequence}</span> | Synthetic Hash: {lastReceipt.commitHash.substring(0, 10)}...
               </div>
               <div className="text-[10px] text-neutral-400">
                 Applied Patches: {lastReceipt.appliedPatchesCount} • Resulting World Minute: {lastReceipt.resultingWorldMinute}m
+              </div>
+              <div className="text-[9px] text-neutral-500 italic">
+                * Note: Synthetic client hash for visual preview only; does not represent cryptographic commit from Python SQLite runtime.
               </div>
               {lastReceipt.error && (
                 <div className="text-red-400 font-semibold">{lastReceipt.error}</div>
@@ -278,7 +285,7 @@ export const ActionSubmissionModal: React.FC<Props> = ({
         {/* Footer */}
         <div className="px-5 py-3 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between">
           <span className="text-[10px] text-neutral-500 font-mono">
-            VadAllFate Deterministic Commit Spine
+            VadAllFate In-Memory Demo Adapter (Ephemeral Client)
           </span>
           <div className="flex gap-2">
             <button
@@ -293,7 +300,7 @@ export const ActionSubmissionModal: React.FC<Props> = ({
               className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold rounded transition-colors shadow-md disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>{isSubmitting ? 'Committing...' : 'Dispatch Action'}</span>
+              <span>{isSubmitting ? 'Simulating...' : 'Dispatch Action'}</span>
             </button>
           </div>
         </div>

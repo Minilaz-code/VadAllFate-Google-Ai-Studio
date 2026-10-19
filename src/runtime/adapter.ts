@@ -1,18 +1,27 @@
 /**
- * VadAllFate Runtime Adapter
- * Coordinates between the UI and either:
- * 1) The Embedded Deterministic Spine (in-memory, deterministic, schema-compliant demo adapter)
- * 2) The Live Python VadAllFate Runtime (via HTTP/WebSocket gateway when spawned)
+ * VadAllFate - Campaign Client & Runtime Boundary Architecture (AIUI-CP001)
+ *
+ * Provides a clean interface boundary separating:
+ * 1. DemoCampaignClient (Non-authoritative in-memory demonstration)
+ * 2. PythonRuntimeGateway (Future integration boundary for established Python R1 runtime)
+ *
+ * ARCHITECTURAL CONSTRAINTS:
+ * - No automatic fallback from failed production writes to demo commits.
+ * - Demo client clearly identifies as ephemeral and non-authoritative.
+ * - Server-side role projection boundaries are explicitly distinguished.
  */
 
 import type {
-  ActionEnvelope,
-  CommitReceipt,
-  SnapshotRef,
-  CausalEvent,
-  StatePatch,
+  DemoActionEnvelope,
+  DemoCommitReceipt,
+  DemoSnapshotRef,
+  DemoCausalEvent,
+  DemoStatePatch,
   OperatingMode,
   UserRole,
+  CampaignProjection,
+  PlayerSafeCampaignProjection,
+  DmFullCampaignProjection,
 } from '../types/runtime.ts';
 import type { CharacterSheet, RuleCitation } from '../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../types/npc.ts';
@@ -37,10 +46,51 @@ import {
 import { checkActionAdmission, validateStatePatch } from './rules.ts';
 import { advanceWorldClock } from './clock.ts';
 
-export interface AuthoritativeCampaignState {
+export interface RuntimeConnectionStatus {
+  isConnectedToLivePython: boolean;
+  adapterMode: 'DEMO_CLIENT_EPHEMERAL' | 'PYTHON_RUNTIME_GATEWAY';
+  endpoint: string;
+  version: string;
+  commitSequence: number;
+  statusLabel: string;
+  isAuthoritative: boolean;
+}
+
+/**
+ * Universal Frontend Campaign Client Interface
+ */
+export interface CampaignClient {
+  getProjection(role: UserRole, characterId?: string): CampaignProjection;
+  subscribe(callback: () => void): () => void;
+  submitAction(envelope: DemoActionEnvelope): Promise<{
+    receipt: DemoCommitReceipt;
+    event?: DemoCausalEvent;
+  }>;
+  submitActionEnvelope(envelope: DemoActionEnvelope): Promise<{
+    receipt: DemoCommitReceipt;
+    event?: DemoCausalEvent;
+  }>;
+  queryRules(searchTerm: string, category?: string): RuleCitation[];
+  getConnectionStatus(): RuntimeConnectionStatus;
+  advanceTime(minutes: number): void;
+  toggleClockPause(): void;
+  setOperatingMode(mode: OperatingMode): void;
+  setActiveDirectorProfile(profileId: string): void;
+  reviewRecommendation(recId: string, action: 'ACCEPTED' | 'DISMISSED'): void;
+  addHomebrewCreature(npc: NonPlayerCharacter): void;
+  addHomebrewSpell(spell: any): void;
+  addHomebrewItem(item: any): void;
+  addHomebrewSourcePack(pack: SourcePack): void;
+  getCurrentSnapshot(): DemoSnapshotRef;
+}
+
+/**
+ * Internal state shape for the local demonstration client.
+ */
+interface DemoClientInternalState {
   campaignId: string;
   name: string;
-  currentSnapshot: SnapshotRef;
+  currentSnapshot: DemoSnapshotRef;
   operatingMode: OperatingMode;
   worldClock: MasterWorldClock;
   characters: CharacterSheet[];
@@ -48,26 +98,23 @@ export interface AuthoritativeCampaignState {
   factions: Faction[];
   locations: WorldLocation[];
   quests: Quest[];
-  events: CausalEvent[];
+  events: DemoCausalEvent[];
   directorProfiles: DirectorProfile[];
   activeDirectorProfileId: string;
   recommendations: DirectorRecommendation[];
   spotlightMetrics: PlayerSpotlightMetric[];
   sourcePacks: SourcePack[];
+  processedNonces: Set<string>;
 }
 
-export interface RuntimeConnectionStatus {
-  isConnectedToLivePython: boolean;
-  adapterMode: 'EMBEDDED_DETERMINISTIC_SPINE' | 'PYTHON_RUNTIME_GATEWAY';
-  endpoint: string;
-  version: string;
-  commitSequence: number;
-}
-
-class VadAllFateRuntimeService {
-  private state: AuthoritativeCampaignState;
-  private connectionStatus: RuntimeConnectionStatus;
-  private listeners: Set<(state: AuthoritativeCampaignState) => void> = new Set();
+/**
+ * DemoCampaignClient:
+ * Operates the in-memory demonstration adapter.
+ * Explicitly non-authoritative, ephemeral, and unsuitable for live multiplayer.
+ */
+export class DemoCampaignClient implements CampaignClient {
+  private state: DemoClientInternalState;
+  private listeners: Set<() => void> = new Set();
 
   constructor() {
     this.state = {
@@ -87,37 +134,104 @@ class VadAllFateRuntimeService {
       recommendations: JSON.parse(JSON.stringify(DEMO_RECOMMENDATIONS)),
       spotlightMetrics: JSON.parse(JSON.stringify(DEMO_SPOTLIGHT_METRICS)),
       sourcePacks: JSON.parse(JSON.stringify(DEMO_SOURCE_PACKS)),
-    };
-
-    this.connectionStatus = {
-      isConnectedToLivePython: false,
-      adapterMode: 'EMBEDDED_DETERMINISTIC_SPINE',
-      endpoint: 'local://deterministic-spine/v2',
-      version: 'R1-W00-COMPAT-SPINE-V2',
-      commitSequence: this.state.currentSnapshot.commitSequence,
+      processedNonces: new Set<string>(),
     };
   }
 
-  public getState(): AuthoritativeCampaignState {
-    return this.state;
+  public getCurrentSnapshot(): DemoSnapshotRef {
+    return { ...this.state.currentSnapshot };
   }
 
   public getConnectionStatus(): RuntimeConnectionStatus {
     return {
-      ...this.connectionStatus,
+      isConnectedToLivePython: false,
+      adapterMode: 'DEMO_CLIENT_EPHEMERAL',
+      endpoint: 'in-memory://browser/demo-adapter',
+      version: 'CP001-DEMO-EPHEMERAL',
       commitSequence: this.state.currentSnapshot.commitSequence,
+      statusLabel: 'DEMO MODE — IN-MEMORY STATE — PYTHON RUNTIME NOT CONNECTED',
+      isAuthoritative: false,
     };
   }
 
-  public subscribe(callback: (state: AuthoritativeCampaignState) => void): () => void {
+  public subscribe(callback: () => void): () => void {
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);
   }
 
   private notify(): void {
     for (const listener of this.listeners) {
-      listener(this.state);
+      listener();
     }
+  }
+
+  /**
+   * Generates typed projections:
+   * Separates PlayerSafeCampaignProjection from DmFullCampaignProjection.
+   */
+  public getProjection(role: UserRole, characterId?: string): CampaignProjection {
+    const base: any = {
+      campaignId: this.state.campaignId,
+      name: this.state.name,
+      operatingMode: this.state.operatingMode,
+      worldClock: { ...this.state.worldClock },
+      characters: JSON.parse(JSON.stringify(this.state.characters)),
+      quests: JSON.parse(JSON.stringify(this.state.quests)),
+      sourcePacks: JSON.parse(JSON.stringify(this.state.sourcePacks)),
+      isServerVerifiedProjection: false, // In demo mode, this is simulated in-browser
+      projectionGeneratedAtUtc: new Date().toISOString(),
+    };
+
+    if (role === 'player' || role === 'observer') {
+      // Physical sanitation of the projection payload (Repair D)
+      const sanitizedNpcs: NonPlayerCharacter[] = this.state.npcs
+        .filter((n) => n.token.isVisibleToPlayers)
+        .map((n) => ({
+          ...JSON.parse(JSON.stringify(n)),
+          knowledgeBoundary: {
+            verifiedFacts: [...n.knowledgeBoundary.verifiedFacts],
+            falseBeliefs: [...n.knowledgeBoundary.falseBeliefs],
+            suspicions: [...n.knowledgeBoundary.suspicions],
+            guardedSecrets: [], // STRIPPED from player projection
+          },
+        }));
+
+      const sanitizedLocations: WorldLocation[] = this.state.locations.map((loc) => ({
+        ...JSON.parse(JSON.stringify(loc)),
+        dmNotes: '[CONFIDENTIAL DM DATA EXCLUDED FROM PLAYER PROJECTION]',
+      }));
+
+      const sanitizedEvents: DemoCausalEvent[] = this.state.events
+        .filter((e) => !e.isDmOnly)
+        .map((e) => JSON.parse(JSON.stringify(e)));
+
+      const playerProj: PlayerSafeCampaignProjection = {
+        ...base,
+        projectionRole: role,
+        activeCharacterId: characterId,
+        npcs: sanitizedNpcs,
+        locations: sanitizedLocations,
+        events: sanitizedEvents,
+        securityLimitationNotice:
+          'DEMO NOTICE: Client-side projection generated by in-browser adapter. True cryptographic RBAC requires connected Python runtime backend.',
+      };
+      return playerProj;
+    }
+
+    // Full DM projection
+    const dmProj: DmFullCampaignProjection = {
+      ...base,
+      projectionRole: 'dm_host',
+      npcs: JSON.parse(JSON.stringify(this.state.npcs)),
+      factions: JSON.parse(JSON.stringify(this.state.factions)),
+      locations: JSON.parse(JSON.stringify(this.state.locations)),
+      events: JSON.parse(JSON.stringify(this.state.events)),
+      directorProfiles: JSON.parse(JSON.stringify(this.state.directorProfiles)),
+      activeDirectorProfileId: this.state.activeDirectorProfileId,
+      recommendations: JSON.parse(JSON.stringify(this.state.recommendations)),
+      spotlightMetrics: JSON.parse(JSON.stringify(this.state.spotlightMetrics)),
+    };
+    return dmProj;
   }
 
   public setOperatingMode(mode: OperatingMode): void {
@@ -157,19 +271,38 @@ class VadAllFateRuntimeService {
     });
   }
 
+  public async submitActionEnvelope(envelope: DemoActionEnvelope) {
+    return this.submitAction(envelope);
+  }
+
   /**
-   * Authoritative Commit Pipeline:
-   * ActionEnvelope -> Concurrency Check -> StatePatch Generation -> Validation ->
-   * Single Commit Authority -> Canonical Update -> CommitReceipt -> CausalEvent
+   * Action Submission with Negative-Case Validation (Repair E)
    */
-  public async submitActionEnvelope(envelope: ActionEnvelope): Promise<{
-    receipt: CommitReceipt;
-    event?: CausalEvent;
+  public async submitAction(envelope: DemoActionEnvelope): Promise<{
+    receipt: DemoCommitReceipt;
+    event?: DemoCausalEvent;
   }> {
-    // 1. Concurrency Check
+    // 1. Idempotency Check (Duplicate nonce rejection)
+    if (this.state.processedNonces.has(envelope.clientNonce)) {
+      const rejectReceipt: DemoCommitReceipt = {
+        commitSequence: this.state.currentSnapshot.commitSequence,
+        commitHash: this.state.currentSnapshot.stateHash,
+        requestId: envelope.actionId,
+        actionId: envelope.actionId,
+        status: 'REJECTED_DUPLICATE_NONCE',
+        committedAtUtc: new Date().toISOString(),
+        appliedPatchesCount: 0,
+        resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+        error: `Duplicate action detected: nonce ${envelope.clientNonce} has already been processed`,
+        isSimulatedDemoReceipt: true,
+      };
+      return { receipt: rejectReceipt };
+    }
+
+    // 2. Concurrency Check (Stale snapshot rejection)
     const admission = checkActionAdmission(envelope, this.state.currentSnapshot);
     if (!admission.admitted) {
-      const rejectReceipt: CommitReceipt = {
+      const rejectReceipt: DemoCommitReceipt = {
         commitSequence: this.state.currentSnapshot.commitSequence,
         commitHash: this.state.currentSnapshot.stateHash,
         requestId: envelope.actionId,
@@ -179,15 +312,120 @@ class VadAllFateRuntimeService {
         appliedPatchesCount: 0,
         resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
         error: admission.error,
+        isSimulatedDemoReceipt: true,
       };
       return { receipt: rejectReceipt };
     }
 
-    // 2. Derive Patches based on Action Type
-    const proposedPatches: StatePatch[] = [];
+    // 3. Negative-Case Entity & Boundary Validation (Repair E)
+    if (envelope.actionType === 'MOVE_TOKEN') {
+      const { entityId, targetX, targetY, entityType } = envelope.payload;
+      const targetChar = this.state.characters.find((c) => c.id === entityId);
+      const targetNpc = this.state.npcs.find((n) => n.id === entityId);
+
+      if (!targetChar && !targetNpc) {
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_NONEXISTENT_ENTITY',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: `Movement target entity "${entityId}" does not exist in campaign`,
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
+
+      if (
+        typeof targetX !== 'number' ||
+        typeof targetY !== 'number' ||
+        targetX < 0 ||
+        targetX > 100 ||
+        targetY < 0 ||
+        targetY > 100
+      ) {
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_OUT_OF_BOUNDS',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: `Coordinate (${targetX}, ${targetY}) is outside valid grid bounds [0, 100]`,
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
+    } else if (envelope.actionType === 'ATTACK_ACTION') {
+      const { attackerId, targetId, isFumble, damage } = envelope.payload;
+      const attacker = this.state.characters.find((c) => c.id === attackerId) || this.state.npcs.find((n) => n.id === attackerId);
+      const target = this.state.characters.find((c) => c.id === targetId) || this.state.npcs.find((n) => n.id === targetId);
+
+      if (!attacker) {
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_NONEXISTENT_ENTITY',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: `Attacking actor "${attackerId}" does not exist`,
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
+
+      if (!target) {
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_INVALID_TARGET',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: `Attack target "${targetId}" is unavailable or nonexistent`,
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
+
+      // Natural-1 Fumble Check: Never deals damage
+      if (isFumble && damage > 0) {
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_VALIDATION_FAILURE',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: 'Rule invariant violation: Natural-1 attack fumbles cannot deal damage',
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
+    }
+
+    // 4. Derive Patches
+    const proposedPatches: DemoStatePatch[] = [];
     let eventSummary = '';
-    let eventCategory: CausalEvent['category'] = 'WORLD';
-    let diceRollData: CausalEvent['diceRoll'] | undefined;
+    let eventCategory: DemoCausalEvent['category'] = 'WORLD';
+    let diceRollData: DemoCausalEvent['diceRoll'] | undefined;
     let actorDisplayName = envelope.actorId;
 
     if (envelope.actionType === 'MOVE_TOKEN') {
@@ -230,7 +468,7 @@ class VadAllFateRuntimeService {
         reason: `${attackName} vs ${targetName}`,
       };
 
-      if (damage && targetNpc) {
+      if (damage && !isFumble && targetNpc) {
         const newHp = Math.max(0, targetNpc.statBlock ? targetNpc.statBlock.hitPoints - damage : 0);
         proposedPatches.push({
           entityType: 'npc',
@@ -241,7 +479,9 @@ class VadAllFateRuntimeService {
         });
       }
 
-      eventSummary = `${actorDisplayName} launched ${attackName} against ${targetName}: To-Hit Total ${totalToHit} (${damage ? `Dealt ${damage} damage` : 'Calculated'})`;
+      eventSummary = `${actorDisplayName} launched ${attackName} against ${targetName}: To-Hit Total ${totalToHit} (${
+        isFumble ? 'Fumbled (0 Damage)' : damage ? `Dealt ${damage} damage` : 'Calculated'
+      })`;
       eventCategory = 'COMBAT';
     } else if (envelope.actionType === 'SKILL_CHECK') {
       const { skillName, roll, modifier, total, reason } = envelope.payload;
@@ -258,6 +498,23 @@ class VadAllFateRuntimeService {
       eventCategory = 'RULES_QUERY';
     } else if (envelope.actionType === 'ADVANCE_TIME') {
       const { minutes } = envelope.payload;
+      if (this.state.worldClock.isPaused) {
+        // Paused world cannot advance time unless explicitly unpaused
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_VALIDATION_FAILURE',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: 'Cannot advance time while Master World Clock is paused',
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
       const newClock = advanceWorldClock(this.state.worldClock, minutes);
       proposedPatches.push({
         entityType: 'world_clock',
@@ -280,7 +537,6 @@ class VadAllFateRuntimeService {
         value: newClock.totalWorldMinutes,
       });
 
-      // Restore HP & spell slots on long rest
       if (isLong) {
         for (const c of this.state.characters) {
           proposedPatches.push({
@@ -303,7 +559,7 @@ class VadAllFateRuntimeService {
       eventCategory = 'DIALOGUE';
     }
 
-    // 3. Validate Proposed Patches
+    // 5. Validate StatePatches
     for (const patch of proposedPatches) {
       let targetEntity: any;
       if (patch.entityType === 'character') {
@@ -313,7 +569,7 @@ class VadAllFateRuntimeService {
       }
       const validation = validateStatePatch(patch, targetEntity);
       if (!validation.isValid) {
-        const rejectReceipt: CommitReceipt = {
+        const rejectReceipt: DemoCommitReceipt = {
           commitSequence: this.state.currentSnapshot.commitSequence,
           commitHash: this.state.currentSnapshot.stateHash,
           requestId: envelope.actionId,
@@ -323,12 +579,13 @@ class VadAllFateRuntimeService {
           appliedPatchesCount: 0,
           resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
           error: validation.reason,
+          isSimulatedDemoReceipt: true,
         };
         return { receipt: rejectReceipt };
       }
     }
 
-    // 4. Apply Patches to State (Commit Authority)
+    // 6. Apply Patches to Local State
     let updatedCharacters = [...this.state.characters];
     let updatedNpcs = [...this.state.npcs];
     let updatedClock = { ...this.state.worldClock };
@@ -365,23 +622,26 @@ class VadAllFateRuntimeService {
       }
     }
 
-    // 5. Update Monotonic Commit Sequence and Snapshot
+    // 7. Update Sequence, Hash, Nonces
     const nextCommitSeq = this.state.currentSnapshot.commitSequence + 1;
-    const nextHash = Math.random().toString(16).substring(2, 12) + Math.random().toString(16).substring(2, 12);
-    const newSnapshot: SnapshotRef = {
+    const nextHash = Math.random().toString(16).substring(2, 14);
+    const newSnapshot: DemoSnapshotRef = {
       campaignId: this.state.campaignId,
       commitSequence: nextCommitSeq,
       stateHash: nextHash,
       worldMinute: updatedClock.totalWorldMinutes,
     };
 
-    // 6. Create CausalEvent
-    const newEvent: CausalEvent = {
+    const newNonces = new Set(this.state.processedNonces);
+    newNonces.add(envelope.clientNonce);
+
+    // 8. Create DemoCausalEvent
+    const newEvent: DemoCausalEvent = {
       eventId: `evt-${nextCommitSeq}`,
       commitSequence: nextCommitSeq,
       worldMinute: updatedClock.totalWorldMinutes,
       category: eventCategory,
-      summary: eventSummary || 'Action committed to canonical state.',
+      summary: eventSummary || 'Action committed to demo state.',
       actorName: actorDisplayName,
       actorId: envelope.actorId,
       isDmOnly: envelope.actorRole === 'dm_host' && envelope.actionType === 'DM_OVERRIDE_STATE',
@@ -389,8 +649,8 @@ class VadAllFateRuntimeService {
       timestampUtc: new Date().toISOString(),
     };
 
-    // 7. Commit Receipt
-    const receipt: CommitReceipt = {
+    // 9. Emit Simulated Demo Receipt
+    const receipt: DemoCommitReceipt = {
       commitSequence: nextCommitSeq,
       commitHash: nextHash,
       requestId: envelope.actionId,
@@ -399,6 +659,7 @@ class VadAllFateRuntimeService {
       committedAtUtc: newEvent.timestampUtc,
       appliedPatchesCount: proposedPatches.length,
       resultingWorldMinute: updatedClock.totalWorldMinutes,
+      isSimulatedDemoReceipt: true,
     };
 
     this.state = {
@@ -408,6 +669,7 @@ class VadAllFateRuntimeService {
       npcs: updatedNpcs,
       worldClock: updatedClock,
       events: [newEvent, ...this.state.events],
+      processedNonces: newNonces,
     };
 
     this.notify();
@@ -454,7 +716,7 @@ class VadAllFateRuntimeService {
     this.notify();
   }
 
-  public addHomebrewCreature(npc: any): void {
+  public addHomebrewCreature(npc: NonPlayerCharacter): void {
     this.state = {
       ...this.state,
       npcs: [npc, ...this.state.npcs],
@@ -479,13 +741,13 @@ class VadAllFateRuntimeService {
 
   private appendSystemLog(message: string): void {
     const nextSeq = this.state.currentSnapshot.commitSequence + 1;
-    const logEvent: CausalEvent = {
+    const logEvent: DemoCausalEvent = {
       eventId: `sys-${Date.now()}`,
       commitSequence: nextSeq,
       worldMinute: this.state.worldClock.totalWorldMinutes,
       category: 'WORLD',
       summary: message,
-      actorName: 'System Authority',
+      actorName: 'System Authority (Demo)',
       actorId: 'system',
       isDmOnly: false,
       timestampUtc: new Date().toISOString(),
@@ -494,4 +756,142 @@ class VadAllFateRuntimeService {
   }
 }
 
-export const runtimeService = new VadAllFateRuntimeService();
+/**
+ * PythonRuntimeGateway:
+ * Defines the future integration boundary for the canonical Python runtime.
+ * When not connected, reports NOT CONNECTED and rejects all live mutations.
+ * NO automatic fallback from production failure to demo writes is permitted.
+ */
+export class PythonRuntimeGateway implements CampaignClient {
+  private endpoint: string;
+
+  constructor(endpoint: string = 'http://localhost:8000/api/v1/runtime') {
+    this.endpoint = endpoint;
+  }
+
+  public getCurrentSnapshot(): DemoSnapshotRef {
+    return {
+      campaignId: 'DISCONNECTED',
+      commitSequence: 0,
+      stateHash: 'NONE',
+      worldMinute: 0,
+    };
+  }
+
+  public getConnectionStatus(): RuntimeConnectionStatus {
+    return {
+      isConnectedToLivePython: false,
+      adapterMode: 'PYTHON_RUNTIME_GATEWAY',
+      endpoint: this.endpoint,
+      version: 'UNKNOWN (DAEMON NOT REACHABLE)',
+      commitSequence: 0,
+      statusLabel: 'PYTHON RUNTIME NOT CONNECTED — Daemon unreachable at ' + this.endpoint,
+      isAuthoritative: true, // Target is authoritative, but currently disconnected
+    };
+  }
+
+  public getProjection(role: UserRole, characterId?: string): CampaignProjection {
+    throw new Error(
+      'Cannot retrieve campaign projection: Python R1 runtime gateway is disconnected. Demo fallback is disabled by architecture policy.'
+    );
+  }
+
+  public subscribe(callback: () => void): () => void {
+    return () => {};
+  }
+
+  public async submitAction(envelope: DemoActionEnvelope): Promise<{
+    receipt: DemoCommitReceipt;
+    event?: DemoCausalEvent;
+  }> {
+    throw new Error(
+      'Action submission rejected: Python R1 runtime gateway is disconnected. Automatic fallback to local demonstration is disabled.'
+    );
+  }
+
+  public async submitActionEnvelope(envelope: DemoActionEnvelope) {
+    return this.submitAction(envelope);
+  }
+
+  public queryRules(searchTerm: string, category?: string): RuleCitation[] {
+    return [];
+  }
+
+  public advanceTime(minutes: number): void {
+    throw new Error('Cannot advance time: Python runtime disconnected.');
+  }
+
+  public toggleClockPause(): void {
+    throw new Error('Cannot toggle clock: Python runtime disconnected.');
+  }
+
+  public setOperatingMode(mode: OperatingMode): void {
+    throw new Error('Cannot set operating mode: Python runtime disconnected.');
+  }
+
+  public setActiveDirectorProfile(profileId: string): void {
+    throw new Error('Cannot set director profile: Python runtime disconnected.');
+  }
+
+  public reviewRecommendation(recId: string, action: 'ACCEPTED' | 'DISMISSED'): void {
+    throw new Error('Cannot review recommendation: Python runtime disconnected.');
+  }
+
+  public addHomebrewCreature(npc: NonPlayerCharacter): void {
+    throw new Error('Cannot save creature: Python runtime disconnected.');
+  }
+
+  public addHomebrewSpell(spell: any): void {
+    throw new Error('Cannot save spell: Python runtime disconnected.');
+  }
+
+  public addHomebrewItem(item: any): void {
+    throw new Error('Cannot save item: Python runtime disconnected.');
+  }
+
+  public addHomebrewSourcePack(pack: SourcePack): void {
+    throw new Error('Cannot add source pack: Python runtime disconnected.');
+  }
+}
+
+/**
+ * Global Client Manager
+ * Manages active CampaignClient selection (Default: DemoCampaignClient).
+ */
+class CampaignClientManager {
+  private activeClient: CampaignClient;
+  private isDemoMode: boolean = true;
+  private demoClient: DemoCampaignClient;
+  private pythonGateway: PythonRuntimeGateway;
+  private listeners: Set<() => void> = new Set();
+
+  constructor() {
+    this.demoClient = new DemoCampaignClient();
+    this.pythonGateway = new PythonRuntimeGateway();
+    this.activeClient = this.demoClient;
+  }
+
+  public getClient(): CampaignClient {
+    return this.activeClient;
+  }
+
+  public isUsingDemo(): boolean {
+    return this.isDemoMode;
+  }
+
+  public switchClient(useDemo: boolean): void {
+    this.isDemoMode = useDemo;
+    this.activeClient = useDemo ? this.demoClient : this.pythonGateway;
+    for (const listener of this.listeners) {
+      listener();
+    }
+  }
+
+  public subscribe(callback: () => void): () => void {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  }
+}
+
+export const clientManager = new CampaignClientManager();
+export const runtimeService = clientManager.getClient();
