@@ -16,6 +16,7 @@ import {
   FastForward,
   Cpu,
   BookOpen,
+  Map as MapIcon,
 } from 'lucide-react';
 import type { OperatingMode, UserRole } from '../../types/runtime.ts';
 import type { MasterWorldClock } from '../../types/world.ts';
@@ -59,8 +60,8 @@ export const OPERATING_MODES_CONFIG: {
 ];
 
 interface HeaderProps {
-  currentTab: 'play' | 'planning' | 'workshop';
-  onSelectTab: (tab: 'play' | 'planning' | 'workshop') => void;
+  currentTab: 'play' | 'battlemap' | 'planning' | 'workshop';
+  onSelectTab: (tab: 'play' | 'battlemap' | 'planning' | 'workshop') => void;
   operatingMode: OperatingMode;
   onSelectOperatingMode: (mode: OperatingMode) => void;
   currentRole: UserRole;
@@ -123,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="h-6 w-px bg-neutral-800 hidden md:block" />
 
-          {/* 3 Main Application Areas */}
+          {/* 4 Main Application Workspaces */}
           <nav className="flex items-center gap-1 bg-neutral-900/80 p-1 rounded-lg border border-neutral-800" aria-label="Main Navigation">
             <button
               onClick={() => onSelectTab('play')}
@@ -135,6 +136,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Compass className="w-3.5 h-3.5" />
               <span>Play / Host</span>
+            </button>
+            <button
+              onClick={() => onSelectTab('battlemap')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                currentTab === 'battlemap'
+                  ? 'bg-amber-600/20 text-amber-200 border border-amber-600/50 shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
+              }`}
+            >
+              <MapIcon className="w-3.5 h-3.5" />
+              <span>Battlemap</span>
             </button>
             <button
               onClick={() => onSelectTab('planning')}

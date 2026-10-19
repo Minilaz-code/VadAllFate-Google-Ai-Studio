@@ -521,21 +521,26 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
                       {/* Knowledge boundary card */}
                       <div className="p-2.5 bg-neutral-950 rounded border border-amber-800/40 space-y-1.5">
                         <span className="text-[10px] font-bold text-amber-300 font-mono uppercase block">
-                          NPC Knowledge Boundary
+                          {userRole === 'dm_host' ? 'NPC Knowledge Boundary' : 'Public Knowledge & Rumors'}
                         </span>
                         <div>
-                          <span className="text-[9px] text-emerald-400 font-mono">Verified Facts:</span>
+                          <span className="text-[9px] text-emerald-400 font-mono">
+                            {userRole === 'dm_host' ? 'Verified Facts:' : 'Known Facts & Topics:'}
+                          </span>
                           <ul className="list-disc list-inside text-[11px] text-neutral-300">
-                            {selectedNpc.knowledgeBoundary.verifiedFacts.map((f, i) => (
+                            {('publicKnowledge' in selectedNpc
+                              ? selectedNpc.publicKnowledge.publicFacts
+                              : (selectedNpc as NonPlayerCharacter).knowledgeBoundary?.verifiedFacts || []
+                            ).map((f, i) => (
                               <li key={i}>{f}</li>
                             ))}
                           </ul>
                         </div>
-                        {userRole === 'dm_host' && (selectedNpc as any)?.knowledgeBoundary?.guardedSecrets && (
+                        {userRole === 'dm_host' && 'knowledgeBoundary' in selectedNpc && (selectedNpc as NonPlayerCharacter).knowledgeBoundary.guardedSecrets && (
                           <div className="pt-1.5 border-t border-neutral-800">
                             <span className="text-[9px] text-amber-400 font-mono uppercase">[DM Secrets]:</span>
                             <ul className="list-disc list-inside text-[11px] text-amber-200/90">
-                              {((selectedNpc as any).knowledgeBoundary.guardedSecrets || []).map((s: string, i: number) => (
+                              {((selectedNpc as NonPlayerCharacter).knowledgeBoundary.guardedSecrets || []).map((s: string, i: number) => (
                                 <li key={i}>{s}</li>
                               ))}
                             </ul>

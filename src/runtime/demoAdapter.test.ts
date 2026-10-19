@@ -265,7 +265,16 @@ test('Projection Isolation: PlayerSafe and ObserverSafe projections exclude ques
     // 5. NPC allowlist verification:
     const vaelin = proj.npcs.find((n: any) => n.id === 'npc-brother-vaelin');
     assert.ok(vaelin, 'Visible NPC Brother Vaelin should be included');
-    assert.equal('guardedSecrets' in vaelin.knowledgeBoundary, false);
+    // Verify private internal cognition is strictly excluded
+    assert.equal('knowledgeBoundary' in vaelin, false, 'Internal knowledgeBoundary must not be exposed to players');
+    assert.equal('falseBeliefs' in vaelin, false, 'falseBeliefs must not be exposed to players');
+    assert.equal('suspicions' in vaelin, false, 'suspicions must not be exposed to players');
+    assert.equal('guardedSecrets' in vaelin, false, 'guardedSecrets must not be exposed to players');
+    assert.equal('motivationsAndGoals' in vaelin, false, 'Internal goals must not be exposed to players');
+    assert.equal('routinesAndCommitments' in vaelin, false, 'Internal routines must not be exposed to players');
+    assert.equal('statBlock' in vaelin, false, 'Combat stat block must not be exposed to players');
+    assert.ok(vaelin.publicKnowledge, 'Public knowledge must be present');
+    assert.ok(Array.isArray(vaelin.publicKnowledge.publicFacts), 'Public facts array must be present');
   }
 
   // Verify DM Full projection retains complete data

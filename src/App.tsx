@@ -7,14 +7,15 @@ import React, { useState, useEffect } from 'react';
 import type { OperatingMode, UserRole, CampaignProjection, DmFullCampaignProjection, PlayerSafeCampaignProjection } from './types/runtime.ts';
 import { clientManager } from './runtime/adapter.ts';
 import { Header } from './components/layout/Header.tsx';
-import { TabletopView } from './components/play/TabletopView.tsx';
+import { NarrativePlayView } from './components/play/NarrativePlayView.tsx';
+import { BattlemapView } from './components/battlemap/BattlemapView.tsx';
 import { DmPlanningView } from './components/planning/DmPlanningView.tsx';
 import { HomebrewWorkshopView } from './components/workshop/HomebrewWorkshopView.tsx';
 import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
 import { AlertTriangle, RefreshCw, Cpu, ShieldAlert } from 'lucide-react';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'play' | 'planning' | 'workshop'>('play');
+  const [currentTab, setCurrentTab] = useState<'play' | 'battlemap' | 'planning' | 'workshop'>('play');
   const [userRole, setUserRole] = useState<UserRole>('dm_host');
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('char-kaelen');
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
@@ -149,7 +150,7 @@ export default function App() {
       {projection && (
         <div className="flex-1 flex flex-col min-h-0">
           {currentTab === 'play' && (
-            <TabletopView
+            <NarrativePlayView
               characters={projection.characters}
               npcs={projection.npcs}
               quests={projection.quests}
@@ -180,6 +181,30 @@ export default function App() {
               selectedCharacterId={selectedCharacterId}
               onSelectOperatingMode={(mode) => activeClient.setOperatingMode(mode)}
               onSelectDirectorProfile={(pId) => activeClient.setActiveDirectorProfile(pId)}
+              onNavigateToBattlemap={() => setCurrentTab('battlemap')}
+            />
+          )}
+
+          {currentTab === 'battlemap' && (
+            <BattlemapView
+              characters={projection.characters}
+              npcs={projection.npcs}
+              userRole={userRole}
+              currentSnapshot={activeClient.getCurrentSnapshot()}
+              selectedCharacterId={selectedCharacterId}
+              onNavigateToPlay={() => setCurrentTab('play')}
+              onMoveToken={(entityId, targetX, targetY, entityType) => {
+                activeClient.submitActionEnvelope({
+                  actionId: `move-${Date.now()}`,
+                  actorId: entityId,
+                  actorRole: userRole,
+                  actionType: 'MOVE_TOKEN',
+                  payload: { entityId, targetX, targetY, entityType },
+                  snapshotRef: activeClient.getCurrentSnapshot(),
+                  timestampUtc: new Date().toISOString(),
+                  clientNonce: `nonce-${Date.now()}`,
+                });
+              }}
             />
           )}
 

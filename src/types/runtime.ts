@@ -104,13 +104,12 @@ export interface PlayerSafeNpc {
     tokenLabel: string;
     isVisibleToPlayers: true;
   };
-  knowledgeBoundary: {
-    verifiedFacts: string[];
-    falseBeliefs: string[];
-    suspicions: string[];
-    // NOTE: guardedSecrets is strictly excluded
+  // Public knowledge or verified dialogue topics known to the party
+  publicKnowledge: {
+    publicFacts: string[];
   };
   isAlive: boolean;
+  // NOTE: Private internal NPC cognition (falseBeliefs, suspicions, motivationsAndGoals, routinesAndCommitments, guardedSecrets, statBlock) is strictly excluded
 }
 
 /**

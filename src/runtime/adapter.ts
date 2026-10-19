@@ -200,10 +200,8 @@ export class DemoCampaignClient implements CampaignClient {
             tokenLabel: n.token.tokenLabel,
             isVisibleToPlayers: true as const,
           },
-          knowledgeBoundary: {
-            verifiedFacts: [...n.knowledgeBoundary.verifiedFacts],
-            falseBeliefs: [...n.knowledgeBoundary.falseBeliefs],
-            suspicions: [...n.knowledgeBoundary.suspicions],
+          publicKnowledge: {
+            publicFacts: [...n.knowledgeBoundary.verifiedFacts],
           },
           isAlive: n.isAlive,
         }));
