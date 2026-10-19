@@ -15,6 +15,8 @@ export interface MapGridConfig {
   feetPerCell: number;     // Standard D&D 5ft per cell
   showGrid: boolean;       // Grid line overlay visibility
   gridColor: string;       // Hex or rgba grid color
+  originX?: number;        // Grid horizontal alignment offset in pixels
+  originY?: number;        // Grid vertical alignment offset in pixels
 }
 
 export interface MapBackgroundArtwork {
@@ -24,7 +26,10 @@ export interface MapBackgroundArtwork {
   offsetX: number;         // X offset in pixels
   offsetY: number;         // Y offset in pixels
   opacity: number;         // 0.0 - 1.0
-  aspectRatio: string;
+  aspectRatio?: string;
+  isLocalBlob?: boolean;   // True if created from local file input (session-only)
+  naturalWidth?: number;   // Image original pixel width
+  naturalHeight?: number;  // Image original pixel height
 }
 
 export interface RectangularRoom {
@@ -45,6 +50,7 @@ export interface CorridorSegment {
   endX: number;
   endY: number;
   widthCells: number;
+  floorType?: 'stone' | 'wood' | 'dirt' | 'water' | 'tiles';
 }
 
 export interface WallSegment {
@@ -55,6 +61,7 @@ export interface WallSegment {
   y2: number;
   blocksMovement: boolean;
   blocksVision: boolean;
+  thickness?: number;
 }
 
 export interface DoorSegment {
@@ -71,6 +78,31 @@ export interface MapGeometry {
   corridors: CorridorSegment[];
   walls: WallSegment[];
   doors: DoorSegment[];
+}
+
+export type BattlemapEditorTool =
+  | 'select'     // Select geometry or inspect elements
+  | 'token'      // Token movement mode (default play mode)
+  | 'pan'        // Pan canvas viewport
+  | 'room'       // Draw rectangular room
+  | 'corridor'   // Draw connecting corridor
+  | 'wall'       // Draw line-segment wall
+  | 'door'       // Place / toggle doors
+  | 'measure';   // Distance ruler tool
+
+export interface SelectedGeometryRef {
+  type: 'room' | 'corridor' | 'wall' | 'door';
+  id: string;
+}
+
+export interface BattlemapLayerVisibility {
+  artwork: boolean;
+  geometry: boolean;
+  grid: boolean;
+  walls: boolean;
+  fog: boolean;
+  tokens: boolean;
+  overlays: boolean;
 }
 
 export interface FogOfWarState {
