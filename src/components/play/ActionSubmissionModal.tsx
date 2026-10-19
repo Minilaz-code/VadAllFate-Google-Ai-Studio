@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   Lock,
 } from 'lucide-react';
-import type { ActionEnvelope, SnapshotRef, CommitReceipt, UserRole } from '../../types/runtime.ts';
+import type { ActionEnvelope, SnapshotRef, CommitReceipt, UserRole, PlayerSafeNpc } from '../../types/runtime.ts';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import { clientManager } from '../../runtime/adapter.ts';
@@ -20,7 +20,7 @@ interface Props {
   onClose: () => void;
   currentSnapshot: SnapshotRef;
   characters: CharacterSheet[];
-  npcs: NonPlayerCharacter[];
+  npcs: (NonPlayerCharacter | PlayerSafeNpc)[];
   userRole: UserRole;
   selectedCharacterId?: string;
 }

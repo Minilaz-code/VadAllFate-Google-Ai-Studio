@@ -185,30 +185,14 @@ export default function App() {
 
           {currentTab === 'planning' && (
             <DmPlanningView
-              npcs={projection.npcs}
-              factions={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).factions || []
-                  : []
-              }
-              locations={projection.locations}
-              quests={projection.quests}
+              npcs={(projection as DmFullCampaignProjection).npcs || []}
+              factions={(projection as DmFullCampaignProjection).factions || []}
+              locations={(projection as DmFullCampaignProjection).locations || []}
+              quests={(projection as DmFullCampaignProjection).quests || []}
               worldClock={projection.worldClock}
-              directorProfiles={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).directorProfiles || []
-                  : []
-              }
-              activeDirectorProfileId={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).activeDirectorProfileId || ''
-                  : ''
-              }
-              recommendations={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).recommendations || []
-                  : []
-              }
+              directorProfiles={(projection as DmFullCampaignProjection).directorProfiles || []}
+              activeDirectorProfileId={(projection as DmFullCampaignProjection).activeDirectorProfileId || ''}
+              recommendations={(projection as DmFullCampaignProjection).recommendations || []}
               onSelectDirectorProfile={(pId) => activeClient.setActiveDirectorProfile(pId)}
               onAdvanceTime={(mins) => activeClient.advanceTime(mins)}
               onTogglePauseClock={() => activeClient.toggleClockPause()}

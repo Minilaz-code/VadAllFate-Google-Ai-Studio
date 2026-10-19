@@ -19,11 +19,11 @@ import {
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
-import type { UserRole } from '../../types/runtime.ts';
+import type { UserRole, PlayerSafeNpc } from '../../types/runtime.ts';
 
 interface VirtualTabletopProps {
   characters: CharacterSheet[];
-  npcs: NonPlayerCharacter[];
+  npcs: (NonPlayerCharacter | PlayerSafeNpc)[];
   userRole: UserRole;
   selectedEntityId?: string;
   onSelectEntity: (id: string, type: 'character' | 'npc') => void;
@@ -381,7 +381,7 @@ export const VirtualTabletop: React.FC<VirtualTabletopProps> = ({
                 <span className="text-[10px] text-neutral-400 font-mono">
                   {selectedChar
                     ? `Lvl ${selectedChar.level} ${selectedChar.characterClass}`
-                    : `${(selectedNpc as NonPlayerCharacter).occupation}`}
+                    : `${selectedNpc?.occupation || 'NPC'}`}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-[11px] text-neutral-400 mt-0.5">
@@ -389,16 +389,16 @@ export const VirtualTabletop: React.FC<VirtualTabletopProps> = ({
                   <Heart className="w-3 h-3" />
                   {selectedChar
                     ? `${selectedChar.currentHp} / ${selectedChar.maxHp} HP`
-                    : selectedNpc?.statBlock
-                    ? `${selectedNpc.statBlock.hitPoints} / ${selectedNpc.statBlock.maxHitPoints} HP`
+                    : (selectedNpc && 'statBlock' in selectedNpc && (selectedNpc as any).statBlock)
+                    ? `${(selectedNpc as any).statBlock.hitPoints} / ${(selectedNpc as any).statBlock.maxHitPoints} HP`
                     : 'N/A'}
                 </span>
                 <span className="flex items-center gap-1 text-amber-300 font-mono">
                   <Shield className="w-3 h-3" />
                   {selectedChar
                     ? `AC ${selectedChar.armorClass}`
-                    : selectedNpc?.statBlock
-                    ? `AC ${selectedNpc.statBlock.armorClass}`
+                    : (selectedNpc && 'statBlock' in selectedNpc && (selectedNpc as any).statBlock)
+                    ? `AC ${(selectedNpc as any).statBlock.armorClass}`
                     : 'AC 10'}
                 </span>
                 <span className="text-neutral-500 font-mono">

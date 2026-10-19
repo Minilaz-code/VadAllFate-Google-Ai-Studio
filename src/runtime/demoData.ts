@@ -927,8 +927,8 @@ export const ARCHITECTURAL_STATUS_REGISTER: FeatureStatusItem[] = [
     module: 'Deterministic Runtime & Commit Authority',
     featureName: 'Canonical Python R1 Runtime & SQLite WAL',
     status: 'NOT IMPLEMENTED',
-    contract: 'R1ActionEnvelope -> Python Deterministic Worker -> SQLite Commit Authority -> R1CommitReceipt',
-    notes: 'The canonical Python runtime owns authoritative state and persistence. It is currently NOT connected to this frontend client.',
+    contract: 'Unverified Python R1 Schema -> Python Daemon -> SQLite Commit Authority -> Unverified Receipt',
+    notes: 'The canonical Python runtime owns authoritative state and persistence. It is currently NOT connected to this frontend client. Schemas remain unverified.',
   },
   {
     id: 'reg-02',
@@ -944,7 +944,7 @@ export const ARCHITECTURAL_STATUS_REGISTER: FeatureStatusItem[] = [
     featureName: 'D&D 5e SRD 5.1 Math & Roll Engine',
     status: 'IMPLEMENTED AND TESTED',
     contract: 'parseDiceFormula, rollDice (adv/disadv), resolveAttack, calculateAbilityModifier, calculateProficiencyBonus',
-    notes: '23/23 unit and negative-case regression tests passing. Validates dice formulas, natural-1 zero damage, and proficiency bonuses.',
+    notes: 'Pure logic unit and negative-case regression tests passing. Validates dice formulas, natural-1 zero damage, and proficiency bonuses.',
   },
   {
     id: 'reg-04',
@@ -965,10 +965,10 @@ export const ARCHITECTURAL_STATUS_REGISTER: FeatureStatusItem[] = [
   {
     id: 'reg-06',
     module: 'Multiplayer & Role Permissions',
-    featureName: 'Typed Client Projections (Player-Safe vs DM-Full)',
+    featureName: 'Allowlisted Client Projections (PlayerSafe & ObserverSafe)',
     status: 'DEMONSTRATION / MOCK',
-    contract: 'PlayerSafeCampaignProjection strips guardedSecrets, hidden tokens, and dmNotes',
-    notes: 'Projection sanitization implemented and unit-tested in frontend client. True cryptographic RBAC requires backend serialization.',
+    contract: 'PlayerSafeCampaignProjection excludes dmSecretTwist, undiscovered locations, dmNotes, guardedSecrets, and hidden tokens',
+    notes: 'Strict allowlist filtering implemented and verified via JSON serialization assertions in tests. True multi-user RBAC requires backend serialization.',
   },
   {
     id: 'reg-07',

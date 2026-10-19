@@ -22,6 +22,10 @@ import type {
   CampaignProjection,
   PlayerSafeCampaignProjection,
   DmFullCampaignProjection,
+  PlayerSafeQuest,
+  PlayerSafeLocation,
+  PlayerSafeNpc,
+  RuntimeConnectionStatus,
 } from '../types/runtime.ts';
 import type { CharacterSheet, RuleCitation } from '../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../types/npc.ts';
@@ -45,16 +49,6 @@ import {
 } from './demoData.ts';
 import { checkActionAdmission, validateStatePatch } from './rules.ts';
 import { advanceWorldClock } from './clock.ts';
-
-export interface RuntimeConnectionStatus {
-  isConnectedToLivePython: boolean;
-  adapterMode: 'DEMO_CLIENT_EPHEMERAL' | 'PYTHON_RUNTIME_GATEWAY';
-  endpoint: string;
-  version: string;
-  commitSequence: number;
-  statusLabel: string;
-  isAuthoritative: boolean;
-}
 
 /**
  * Universal Frontend Campaign Client Interface
@@ -147,10 +141,12 @@ export class DemoCampaignClient implements CampaignClient {
       isConnectedToLivePython: false,
       adapterMode: 'DEMO_CLIENT_EPHEMERAL',
       endpoint: 'in-memory://browser/demo-adapter',
-      version: 'CP001-DEMO-EPHEMERAL',
+      version: 'CP001B-DEMO-EPHEMERAL',
       commitSequence: this.state.currentSnapshot.commitSequence,
       statusLabel: 'DEMO MODE — IN-MEMORY STATE — PYTHON RUNTIME NOT CONNECTED',
-      isAuthoritative: false,
+      intendedAuthority: 'NON_AUTHORITATIVE_DEMO',
+      isCurrentlyAuthoritative: false,
+      canAcceptAuthoritativeActions: false,
     };
   }
 
@@ -168,39 +164,84 @@ export class DemoCampaignClient implements CampaignClient {
   /**
    * Generates typed projections:
    * Separates PlayerSafeCampaignProjection from DmFullCampaignProjection.
+   * Excludes confidential fields and undiscovered content via explicit allowlists.
    */
   public getProjection(role: UserRole, characterId?: string): CampaignProjection {
-    const base: any = {
+    const base = {
       campaignId: this.state.campaignId,
       name: this.state.name,
       operatingMode: this.state.operatingMode,
       worldClock: { ...this.state.worldClock },
       characters: JSON.parse(JSON.stringify(this.state.characters)),
-      quests: JSON.parse(JSON.stringify(this.state.quests)),
       sourcePacks: JSON.parse(JSON.stringify(this.state.sourcePacks)),
-      isServerVerifiedProjection: false, // In demo mode, this is simulated in-browser
+      isServerVerifiedProjection: false,
       projectionGeneratedAtUtc: new Date().toISOString(),
     };
 
     if (role === 'player' || role === 'observer') {
-      // Physical sanitation of the projection payload (Repair D)
-      const sanitizedNpcs: NonPlayerCharacter[] = this.state.npcs
-        .filter((n) => n.token.isVisibleToPlayers)
+      // Physical allowlisting of the projection payload (Repair D & CP001B)
+      // 1. Explicit allowlisted PlayerSafeNpc (visible tokens only, guardedSecrets excluded)
+      const sanitizedNpcs: PlayerSafeNpc[] = this.state.npcs
+        .filter((n) => n.token.isVisibleToPlayers === true)
         .map((n) => ({
-          ...JSON.parse(JSON.stringify(n)),
+          id: n.id,
+          name: n.name,
+          title: n.title,
+          race: n.race,
+          occupation: n.occupation,
+          currentLocationId: n.currentLocationId,
+          factionId: n.factionId,
+          appearanceDescription: n.appearanceDescription,
+          token: {
+            x: n.token.x,
+            y: n.token.y,
+            size: n.token.size,
+            color: n.token.color,
+            tokenLabel: n.token.tokenLabel,
+            isVisibleToPlayers: true as const,
+          },
           knowledgeBoundary: {
             verifiedFacts: [...n.knowledgeBoundary.verifiedFacts],
             falseBeliefs: [...n.knowledgeBoundary.falseBeliefs],
             suspicions: [...n.knowledgeBoundary.suspicions],
-            guardedSecrets: [], // STRIPPED from player projection
           },
+          isAlive: n.isAlive,
         }));
 
-      const sanitizedLocations: WorldLocation[] = this.state.locations.map((loc) => ({
-        ...JSON.parse(JSON.stringify(loc)),
-        dmNotes: '[CONFIDENTIAL DM DATA EXCLUDED FROM PLAYER PROJECTION]',
+      // 2. Explicit allowlisted PlayerSafeLocation (discovered only, dmNotes excluded)
+      const sanitizedLocations: PlayerSafeLocation[] = this.state.locations
+        .filter((loc) => loc.isDiscoveredByParty === true)
+        .map((loc) => ({
+          id: loc.id,
+          name: loc.name,
+          region: loc.region,
+          type: loc.type,
+          coordinates: { x: loc.coordinates.x, y: loc.coordinates.y },
+          connectedRouteIds: [...loc.connectedRouteIds],
+          travelHazardLevel: loc.travelHazardLevel,
+          travelTimeHoursFromParty: loc.travelTimeHoursFromParty,
+          publicDescription: loc.publicDescription,
+          isDiscoveredByParty: true,
+        }));
+
+      // 3. Explicit allowlisted PlayerSafeQuest (dmSecretTwist excluded)
+      const sanitizedQuests: PlayerSafeQuest[] = this.state.quests.map((q) => ({
+        id: q.id,
+        title: q.title,
+        giverNpcId: q.giverNpcId,
+        giverName: q.giverName,
+        status: q.status,
+        urgency: q.urgency,
+        objectives: q.objectives.map((obj) => ({
+          id: obj.id,
+          description: obj.description,
+          isCompleted: obj.isCompleted,
+          isOptional: obj.isOptional,
+        })),
+        rewardsDescription: q.rewardsDescription,
       }));
 
+      // 4. Sanitized Causal Events (isDmOnly stripped)
       const sanitizedEvents: DemoCausalEvent[] = this.state.events
         .filter((e) => !e.isDmOnly)
         .map((e) => JSON.parse(JSON.stringify(e)));
@@ -211,6 +252,7 @@ export class DemoCampaignClient implements CampaignClient {
         activeCharacterId: characterId,
         npcs: sanitizedNpcs,
         locations: sanitizedLocations,
+        quests: sanitizedQuests,
         events: sanitizedEvents,
         securityLimitationNotice:
           'DEMO NOTICE: Client-side projection generated by in-browser adapter. True cryptographic RBAC requires connected Python runtime backend.',
@@ -225,6 +267,7 @@ export class DemoCampaignClient implements CampaignClient {
       npcs: JSON.parse(JSON.stringify(this.state.npcs)),
       factions: JSON.parse(JSON.stringify(this.state.factions)),
       locations: JSON.parse(JSON.stringify(this.state.locations)),
+      quests: JSON.parse(JSON.stringify(this.state.quests)),
       events: JSON.parse(JSON.stringify(this.state.events)),
       directorProfiles: JSON.parse(JSON.stringify(this.state.directorProfiles)),
       activeDirectorProfileId: this.state.activeDirectorProfileId,
@@ -317,7 +360,9 @@ export class DemoCampaignClient implements CampaignClient {
       return { receipt: rejectReceipt };
     }
 
-    // 3. Negative-Case Entity & Boundary Validation (Repair E)
+    // 3. Negative-Case Entity, Boundary & Role Permission Validation (Repair E & CP001B)
+    const isPlayerOrObserver = envelope.actorRole === 'player' || envelope.actorRole === 'observer';
+
     if (envelope.actionType === 'MOVE_TOKEN') {
       const { entityId, targetX, targetY, entityType } = envelope.payload;
       const targetChar = this.state.characters.find((c) => c.id === entityId);
@@ -335,6 +380,26 @@ export class DemoCampaignClient implements CampaignClient {
             appliedPatchesCount: 0,
             resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
             error: `Movement target entity "${entityId}" does not exist in campaign`,
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
+
+      // Check player moving an NPC or hidden entity
+      if (isPlayerOrObserver && targetNpc) {
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_UNAUTHORIZED_TARGET',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: !targetNpc.token.isVisibleToPlayers
+              ? `Action rejected: Target entity "${entityId}" is hidden from player view`
+              : `Action rejected: Players cannot move NPC tokens`,
             isSimulatedDemoReceipt: true,
           },
         };
@@ -366,7 +431,9 @@ export class DemoCampaignClient implements CampaignClient {
     } else if (envelope.actionType === 'ATTACK_ACTION') {
       const { attackerId, targetId, isFumble, damage } = envelope.payload;
       const attacker = this.state.characters.find((c) => c.id === attackerId) || this.state.npcs.find((n) => n.id === attackerId);
-      const target = this.state.characters.find((c) => c.id === targetId) || this.state.npcs.find((n) => n.id === targetId);
+      const targetChar = this.state.characters.find((c) => c.id === targetId);
+      const targetNpc = this.state.npcs.find((n) => n.id === targetId);
+      const target = targetChar || targetNpc;
 
       if (!attacker) {
         return {
@@ -402,6 +469,24 @@ export class DemoCampaignClient implements CampaignClient {
         };
       }
 
+      // Hidden NPC Target Check for Player / Observer:
+      if (isPlayerOrObserver && targetNpc && !targetNpc.token.isVisibleToPlayers) {
+        return {
+          receipt: {
+            commitSequence: this.state.currentSnapshot.commitSequence,
+            commitHash: this.state.currentSnapshot.stateHash,
+            requestId: envelope.actionId,
+            actionId: envelope.actionId,
+            status: 'REJECTED_UNAUTHORIZED_TARGET',
+            committedAtUtc: new Date().toISOString(),
+            appliedPatchesCount: 0,
+            resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+            error: `Action rejected: Attack target "${targetId}" is hidden from player view and cannot be targeted`,
+            isSimulatedDemoReceipt: true,
+          },
+        };
+      }
+
       // Natural-1 Fumble Check: Never deals damage
       if (isFumble && damage > 0) {
         return {
@@ -418,6 +503,30 @@ export class DemoCampaignClient implements CampaignClient {
             isSimulatedDemoReceipt: true,
           },
         };
+      }
+    } else {
+      // General check for dialogue or skill check targeting hidden NPC
+      if (isPlayerOrObserver) {
+        const targetNpcId = envelope.payload?.targetNpcId || envelope.payload?.targetId;
+        if (targetNpcId) {
+          const targetNpc = this.state.npcs.find((n) => n.id === targetNpcId);
+          if (targetNpc && !targetNpc.token.isVisibleToPlayers) {
+            return {
+              receipt: {
+                commitSequence: this.state.currentSnapshot.commitSequence,
+                commitHash: this.state.currentSnapshot.stateHash,
+                requestId: envelope.actionId,
+                actionId: envelope.actionId,
+                status: 'REJECTED_UNAUTHORIZED_TARGET',
+                committedAtUtc: new Date().toISOString(),
+                appliedPatchesCount: 0,
+                resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+                error: `Action rejected: Target NPC "${targetNpcId}" is hidden from player view`,
+                isSimulatedDemoReceipt: true,
+              },
+            };
+          }
+        }
       }
     }
 
@@ -785,8 +894,10 @@ export class PythonRuntimeGateway implements CampaignClient {
       endpoint: this.endpoint,
       version: 'UNKNOWN (DAEMON NOT REACHABLE)',
       commitSequence: 0,
-      statusLabel: 'PYTHON RUNTIME NOT CONNECTED — Daemon unreachable at ' + this.endpoint,
-      isAuthoritative: true, // Target is authoritative, but currently disconnected
+      statusLabel: 'PYTHON RUNTIME GATEWAY: NOT CONNECTED (Fail-Closed, Non-Authoritative)',
+      intendedAuthority: 'CANONICAL_PYTHON_BACKEND',
+      isCurrentlyAuthoritative: false,
+      canAcceptAuthoritativeActions: false,
     };
   }
 
@@ -894,4 +1005,23 @@ class CampaignClientManager {
 }
 
 export const clientManager = new CampaignClientManager();
-export const runtimeService = clientManager.getClient();
+
+/**
+ * Dynamic Proxy for runtimeService:
+ * Automatically delegates all invocations to clientManager.getClient()
+ * so operations always target the currently selected CampaignClient
+ * rather than capturing an initial static reference.
+ * When the Python Gateway is active and disconnected, any submitted
+ * action or mutation fails closed as required by architectural policy.
+ */
+export const runtimeService: CampaignClient = new Proxy({} as CampaignClient, {
+  get(_target, prop: string | symbol) {
+    const active = clientManager.getClient();
+    const val = (active as any)[prop];
+    if (typeof val === 'function') {
+      return val.bind(active);
+    }
+    return val;
+  },
+});
+

@@ -28,7 +28,7 @@ import {
 import type { CharacterSheet, RuleCitation } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type { Quest } from '../../types/world.ts';
-import type { CausalEvent, SnapshotRef, UserRole, OperatingMode } from '../../types/runtime.ts';
+import type { CausalEvent, SnapshotRef, UserRole, OperatingMode, PlayerSafeNpc, PlayerSafeQuest } from '../../types/runtime.ts';
 import type { DirectorProfile, DirectorRecommendation, PlayerSpotlightMetric } from '../../types/director.ts';
 import { VirtualTabletop } from './VirtualTabletop.tsx';
 import { CharacterSheetModal } from './CharacterSheetModal.tsx';
@@ -39,8 +39,8 @@ import { runtimeService } from '../../runtime/adapter.ts';
 
 interface TabletopViewProps {
   characters: CharacterSheet[];
-  npcs: NonPlayerCharacter[];
-  quests: Quest[];
+  npcs: (NonPlayerCharacter | PlayerSafeNpc)[];
+  quests: (Quest | PlayerSafeQuest)[];
   events: CausalEvent[];
   currentSnapshot: SnapshotRef;
   userRole: UserRole;
@@ -303,10 +303,10 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
                         ))}
                       </div>
                       {/* DM Secret Twist (Visible only to DM role) */}
-                      {userRole === 'dm_host' && q.dmSecretTwist && (
+                      {userRole === 'dm_host' && (q as any).dmSecretTwist && (
                         <div className="mt-2.5 p-2 rounded bg-amber-950/30 border border-amber-800/40 text-[10px] text-amber-300">
                           <span className="font-bold font-mono uppercase">[DM Secret]: </span>
-                          {q.dmSecretTwist}
+                          {(q as any).dmSecretTwist}
                         </div>
                       )}
                     </div>
@@ -531,11 +531,11 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
                             ))}
                           </ul>
                         </div>
-                        {userRole === 'dm_host' && (
+                        {userRole === 'dm_host' && (selectedNpc as any)?.knowledgeBoundary?.guardedSecrets && (
                           <div className="pt-1.5 border-t border-neutral-800">
                             <span className="text-[9px] text-amber-400 font-mono uppercase">[DM Secrets]:</span>
                             <ul className="list-disc list-inside text-[11px] text-amber-200/90">
-                              {selectedNpc.knowledgeBoundary.guardedSecrets.map((s, i) => (
+                              {((selectedNpc as any).knowledgeBoundary.guardedSecrets || []).map((s: string, i: number) => (
                                 <li key={i}>{s}</li>
                               ))}
                             </ul>
@@ -543,23 +543,25 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
                         )}
                       </div>
 
-                      {/* Memory cue list */}
-                      <div>
-                        <span className="text-[10px] uppercase font-mono text-neutral-400 block mb-1">
-                          Structured Memories
-                        </span>
-                        <div className="space-y-1.5">
-                          {selectedNpc.memoryEntries.map((m) => (
-                            <div key={m.id} className="p-2 rounded bg-neutral-950 border border-neutral-800">
-                              <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
-                                <span>{m.subject}</span>
-                                <span>{m.worldMinute}m</span>
+                      {/* Memory cue list (DM Host Only) */}
+                      {userRole === 'dm_host' && (selectedNpc as any)?.memoryEntries && (
+                        <div>
+                          <span className="text-[10px] uppercase font-mono text-neutral-400 block mb-1">
+                            Structured Memories
+                          </span>
+                          <div className="space-y-1.5">
+                            {((selectedNpc as any).memoryEntries || []).map((m: any) => (
+                              <div key={m.id} className="p-2 rounded bg-neutral-950 border border-neutral-800">
+                                <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
+                                  <span>{m.subject}</span>
+                                  <span>{m.worldMinute}m</span>
+                                </div>
+                                <p className="text-[11px] text-neutral-300 mt-0.5">{m.summary}</p>
                               </div>
-                              <p className="text-[11px] text-neutral-300 mt-0.5">{m.summary}</p>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
