@@ -1,0 +1,6 @@
+{
+  "name": "VadAllFate — Persistent AI Tabletop RPG Platform",
+  "description": "Modular, persistent, AI-assisted tabletop roleplaying game platform with structured rules, living world simulation, DM planning, and homebrew workshop.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
