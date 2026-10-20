@@ -1,0 +1,223 @@
+/**
+ * VadAllFate — Battlemap Session State Manager (AIUI-CP002B1)
+ *
+ * Provides a frontend session owner for battlemap definitions, geometry edits,
+ * calibration settings, and undo/redo histories.
+ *
+ * Architectural Boundaries:
+ * - Lives at the application session tier above workspace view mounting/unmounting.
+ * - Guarantees maps, geometry edits, and imported artwork survive tab navigation
+ *   between Play/Host, Battlemap, DM Planning, and Homebrew Workshop.
+ * - Manages object URLs so they are revoked only when a map is deleted or replaced.
+ * - STRICTLY NON-AUTHORITATIVE: This is in-memory frontend session state only.
+ *   It does NOT claim database persistence or alter canonical Python R1 state.
+ */
+
+import {
+  SAMPLE_BATTLEMAPS,
+  type BattlemapDefinition,
+  type MapGeometry,
+  type MapBackgroundArtwork,
+  type MapGridConfig,
+} from '../types/battlemap.ts';
+
+export class BattlemapSessionManager {
+  private maps: BattlemapDefinition[];
+  private activeMapId: string;
+  private undoStacks: Record<string, MapGeometry[]> = {};
+  private redoStacks: Record<string, MapGeometry[]> = {};
+  private blobUrls: Set<string> = new Set();
+  private listeners: Set<() => void> = new Set();
+
+  constructor() {
+    this.maps = JSON.parse(JSON.stringify(SAMPLE_BATTLEMAPS));
+    this.activeMapId = this.maps[0]?.id || 'map-yawning-portal';
+  }
+
+  public subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(): void {
+    this.listeners.forEach((fn) => fn());
+  }
+
+  public getMaps(): BattlemapDefinition[] {
+    return this.maps;
+  }
+
+  public getActiveMapId(): string {
+    return this.activeMapId;
+  }
+
+  public getActiveMap(): BattlemapDefinition {
+    const found = this.maps.find((m) => m.id === this.activeMapId);
+    return found || this.maps[0];
+  }
+
+  public setActiveMapId(id: string): void {
+    if (this.maps.some((m) => m.id === id)) {
+      this.activeMapId = id;
+      this.notify();
+    }
+  }
+
+  public updateGeometry(mapId: string, newGeometry: MapGeometry): void {
+    const map = this.maps.find((m) => m.id === mapId);
+    if (!map) return;
+
+    // Record undo state
+    const currentUndo = this.undoStacks[mapId] || [];
+    this.undoStacks[mapId] = [...currentUndo, JSON.parse(JSON.stringify(map.geometry))];
+    // Clear redo state on fresh modification
+    this.redoStacks[mapId] = [];
+
+    // Apply update
+    this.maps = this.maps.map((m) =>
+      m.id === mapId ? { ...m, geometry: newGeometry } : m
+    );
+
+    this.notify();
+  }
+
+  public canUndo(mapId: string): boolean {
+    return (this.undoStacks[mapId] || []).length > 0;
+  }
+
+  public canRedo(mapId: string): boolean {
+    return (this.redoStacks[mapId] || []).length > 0;
+  }
+
+  public undo(mapId: string): boolean {
+    const stack = this.undoStacks[mapId] || [];
+    if (stack.length === 0) return false;
+
+    const map = this.maps.find((m) => m.id === mapId);
+    if (!map) return false;
+
+    const previousGeometry = stack[stack.length - 1];
+    this.undoStacks[mapId] = stack.slice(0, stack.length - 1);
+
+    // Push current to redo
+    const currentRedo = this.redoStacks[mapId] || [];
+    this.redoStacks[mapId] = [...currentRedo, JSON.parse(JSON.stringify(map.geometry))];
+
+    // Restore previous
+    this.maps = this.maps.map((m) =>
+      m.id === mapId ? { ...m, geometry: previousGeometry } : m
+    );
+
+    this.notify();
+    return true;
+  }
+
+  public redo(mapId: string): boolean {
+    const stack = this.redoStacks[mapId] || [];
+    if (stack.length === 0) return false;
+
+    const map = this.maps.find((m) => m.id === mapId);
+    if (!map) return false;
+
+    const nextGeometry = stack[stack.length - 1];
+    this.redoStacks[mapId] = stack.slice(0, stack.length - 1);
+
+    // Push current to undo
+    const currentUndo = this.undoStacks[mapId] || [];
+    this.undoStacks[mapId] = [...currentUndo, JSON.parse(JSON.stringify(map.geometry))];
+
+    // Apply next
+    this.maps = this.maps.map((m) =>
+      m.id === mapId ? { ...m, geometry: nextGeometry } : m
+    );
+
+    this.notify();
+    return true;
+  }
+
+  public addCustomMap(newMap: BattlemapDefinition): void {
+    if (newMap.backgroundArtwork?.isLocalBlob && newMap.backgroundArtwork.url) {
+      this.blobUrls.add(newMap.backgroundArtwork.url);
+    }
+    this.maps = [...this.maps, newMap];
+    this.activeMapId = newMap.id;
+    this.notify();
+  }
+
+  public deleteMap(mapId: string): void {
+    const targetMap = this.maps.find((m) => m.id === mapId);
+    if (targetMap?.backgroundArtwork?.isLocalBlob && targetMap.backgroundArtwork.url) {
+      try {
+        if (typeof window !== 'undefined' && window.URL) {
+          window.URL.revokeObjectURL(targetMap.backgroundArtwork.url);
+        }
+      } catch {
+        // ignore
+      }
+      this.blobUrls.delete(targetMap.backgroundArtwork.url);
+    }
+
+    this.maps = this.maps.filter((m) => m.id !== mapId);
+    delete this.undoStacks[mapId];
+    delete this.redoStacks[mapId];
+
+    if (this.activeMapId === mapId) {
+      this.activeMapId = this.maps[0]?.id || '';
+    }
+
+    this.notify();
+  }
+
+  public updateArtwork(mapId: string, patch: Partial<MapBackgroundArtwork>): void {
+    this.maps = this.maps.map((m) => {
+      if (m.id !== mapId || !m.backgroundArtwork) return m;
+      return {
+        ...m,
+        backgroundArtwork: {
+          ...m.backgroundArtwork,
+          ...patch,
+        },
+      };
+    });
+    this.notify();
+  }
+
+  public updateGrid(mapId: string, patch: Partial<MapGridConfig>): void {
+    this.maps = this.maps.map((m) => {
+      if (m.id !== mapId) return m;
+      return {
+        ...m,
+        grid: {
+          ...m.grid,
+          ...patch,
+        },
+      };
+    });
+    this.notify();
+  }
+
+  public resetToDefaults(): void {
+    // Revoke all tracked blobs
+    this.blobUrls.forEach((url) => {
+      try {
+        if (typeof window !== 'undefined' && window.URL) {
+          window.URL.revokeObjectURL(url);
+        }
+      } catch {
+        // ignore
+      }
+    });
+    this.blobUrls.clear();
+
+    this.maps = JSON.parse(JSON.stringify(SAMPLE_BATTLEMAPS));
+    this.activeMapId = this.maps[0]?.id || 'map-yawning-portal';
+    this.undoStacks = {};
+    this.redoStacks = {};
+    this.notify();
+  }
+}
+
+// Global session singleton instance for application workspace continuity
+export const battlemapSessionManager = new BattlemapSessionManager();

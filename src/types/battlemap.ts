@@ -201,15 +201,13 @@ export const SAMPLE_BATTLEMAPS: BattlemapDefinition[] = [
     },
     tokens: [
       { id: 'tok-kaelen', entityId: 'char-kaelen', entityType: 'character', name: 'Kaelen Shadowstrider', x: 25, y: 35, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
-      { id: 'tok-brother-vaelin', entityId: 'npc-brother-vaelin', entityType: 'npc', name: 'Brother Vaelin', x: 30, y: 40, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
-      { id: 'tok-lyra', entityId: 'npc-lyra', entityType: 'npc', name: 'Lyra Moonshadow', x: 45, y: 30, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
-      { id: 'tok-cultist', entityId: 'npc-cultist-leader', entityType: 'npc', name: 'Shadow Initiate (Hidden)', x: 80, y: 80, sizeCells: 1, isVisibleToPlayers: false, elevationFt: 0 },
+      { id: 'tok-sorsha', entityId: 'npc-sorsha', entityType: 'npc', name: 'Sorsha Vance', x: 45, y: 30, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
     ],
   },
   {
     id: 'map-sunken-vault',
     name: 'The Sunken Vault — Lower Crypts',
-    locationId: 'loc-sunken-vault',
+    locationId: 'loc-vault-antechamber',
     sceneSummary: 'Ancient flooded Netherese vault carved beneath the city sewers with damp stone masonry.',
     grid: {
       width: 24,
@@ -259,7 +257,8 @@ export const SAMPLE_BATTLEMAPS: BattlemapDefinition[] = [
     },
     tokens: [
       { id: 'tok-kaelen-vault', entityId: 'char-kaelen', entityType: 'character', name: 'Kaelen Shadowstrider', x: 15, y: 20, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
-      { id: 'tok-cultist-ambush', entityId: 'npc-cultist-leader', entityType: 'npc', name: 'Shadow Initiate (Ambusher)', x: 75, y: 65, sizeCells: 1, isVisibleToPlayers: false, elevationFt: 0 },
+      { id: 'tok-brother-vaelin-vault', entityId: 'npc-brother-vaelin', entityType: 'npc', name: 'Brother Vaelin', x: 20, y: 25, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
+      { id: 'tok-ghoul-stalker-vault', entityId: 'npc-ghoul-stalker', entityType: 'npc', name: 'Withered Crypt Ghoul', x: 75, y: 65, sizeCells: 1, isVisibleToPlayers: false, elevationFt: 0 },
     ],
   },
   {

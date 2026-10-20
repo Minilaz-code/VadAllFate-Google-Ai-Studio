@@ -1,26 +1,45 @@
 /**
  * VadAllFate (Ada V2) — Persistent AI Tabletop RPG Platform
- * Master Application Shell (AIUI-CP001 Architecture Boundary Lock)
+ * Master Application Shell (AIUI-HOTFIX-001 Role Separation & Independent Hosting)
  */
 
 import React, { useState, useEffect } from 'react';
-import type { OperatingMode, UserRole, CampaignProjection, DmFullCampaignProjection, PlayerSafeCampaignProjection } from './types/runtime.ts';
+import type {
+  CampaignProjection,
+  UserIdentityContext,
+} from './types/runtime.ts';
+import { isDmFullProjection } from './types/runtime.ts';
 import { clientManager } from './runtime/adapter.ts';
+import {
+  type ApplicationTab,
+  canAccessDmWorkspaces,
+  canAccessWorkshop,
+  getEffectiveProjectionRole,
+  getEffectiveCharacterId,
+  sanitizeTabForIdentity,
+} from './runtime/roleAuthority.ts';
 import { Header } from './components/layout/Header.tsx';
 import { NarrativePlayView } from './components/play/NarrativePlayView.tsx';
 import { BattlemapView } from './components/battlemap/BattlemapView.tsx';
 import { DmPlanningView } from './components/planning/DmPlanningView.tsx';
 import { HomebrewWorkshopView } from './components/workshop/HomebrewWorkshopView.tsx';
+import { PlayerCharacterView } from './components/player/PlayerCharacterView.tsx';
+import { PlayerJournalView } from './components/player/PlayerJournalView.tsx';
 import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
-import { AlertTriangle, RefreshCw, Cpu, ShieldAlert } from 'lucide-react';
+import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
+import { ShieldAlert } from 'lucide-react';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'play' | 'battlemap' | 'planning' | 'workshop'>('play');
-  const [userRole, setUserRole] = useState<UserRole>('dm_host');
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string>('char-kaelen');
+  const [currentTab, setCurrentTab] = useState<ApplicationTab>('play');
+  const [identity, setIdentity] = useState<UserIdentityContext>({
+    gameRole: 'dm',
+    isHost: true,
+    assignedCharacterId: undefined,
+  });
+
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isUsingDemo, setIsUsingDemo] = useState(clientManager.isUsingDemo());
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
 
   // Subscribe to active client and manager updates
   useEffect(() => {
@@ -43,34 +62,71 @@ export default function App() {
   const activeClient = clientManager.getClient();
   const connectionStatus = activeClient.getConnectionStatus();
 
-  // Retrieve current role-aware projection if in demo mode
+  // Resolve effective projection parameters
+  const effectiveRole = getEffectiveProjectionRole(identity);
+  const effectiveCharId = getEffectiveCharacterId(identity);
+
+  // Retrieve current role-aware projection safely
   let projection: CampaignProjection | null = null;
   let gatewayError: string | null = null;
 
   if (isUsingDemo) {
-    projection = activeClient.getProjection(userRole, selectedCharacterId);
+    projection = activeClient.getProjection(effectiveRole, effectiveCharId);
   } else {
     try {
-      projection = activeClient.getProjection(userRole, selectedCharacterId);
+      projection = activeClient.getProjection(effectiveRole, effectiveCharId);
     } catch (e: any) {
       gatewayError = e.message;
     }
   }
+
+  // Handlers for switching identity preset
+  const handleSelectIdentity = (newIdentity: UserIdentityContext) => {
+    setIdentity(newIdentity);
+    // Sanitize active tab to prevent invalid DM workspace access
+    setCurrentTab((prevTab) => sanitizeTabForIdentity(prevTab, newIdentity));
+  };
+
+  // Handlers for entering/exiting Player Preview mode
+  const handleEnterPreview = (characterId: string) => {
+    setIdentity((prev) => {
+      const updated: UserIdentityContext = {
+        ...prev,
+        previewMode: {
+          isActive: true,
+          previewRole: 'player',
+          previewCharacterId: characterId,
+        },
+      };
+      setCurrentTab((prevTab) => sanitizeTabForIdentity(prevTab, updated));
+      return updated;
+    });
+  };
+
+  const handleExitPreview = () => {
+    setIdentity((prev) => {
+      const updated: UserIdentityContext = {
+        ...prev,
+        previewMode: undefined,
+      };
+      setCurrentTab((prevTab) => sanitizeTabForIdentity(prevTab, updated));
+      return updated;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-200 flex flex-col font-sans select-none antialiased">
       {/* Persistent Global Header */}
       <Header
         currentTab={currentTab}
-        onSelectTab={setCurrentTab}
+        onSelectTab={(tab) => {
+          const safeTab = sanitizeTabForIdentity(tab, identity);
+          setCurrentTab(safeTab);
+        }}
+        identity={identity}
+        onSelectIdentity={handleSelectIdentity}
         operatingMode={projection ? projection.operatingMode : 'ai_primary_codm'}
         onSelectOperatingMode={(mode) => activeClient.setOperatingMode(mode)}
-        currentRole={userRole}
-        selectedCharacterId={selectedCharacterId}
-        onSelectRole={(role, charId) => {
-          setUserRole(role);
-          if (charId) setSelectedCharacterId(charId);
-        }}
         worldClock={
           projection
             ? projection.worldClock
@@ -91,12 +147,22 @@ export default function App() {
                 isPaused: true,
               }
         }
-        onAdvanceTime={(mins) => activeClient.advanceTime(mins)}
-        onTogglePauseClock={() => activeClient.toggleClockPause()}
+        onAdvanceTime={(mins) => {
+          if (canAccessDmWorkspaces(identity)) {
+            activeClient.advanceTime(mins);
+          }
+        }}
+        onTogglePauseClock={() => {
+          if (canAccessDmWorkspaces(identity)) {
+            activeClient.toggleClockPause();
+          }
+        }}
         onOpenAudit={() => setIsAuditModalOpen(true)}
         runtimeStatusText={connectionStatus.statusLabel}
         isUsingDemoClient={isUsingDemo}
         onToggleClientMode={(useDemo) => clientManager.switchClient(useDemo)}
+        onExitPreview={handleExitPreview}
+        onEnterPreview={handleEnterPreview}
       />
 
       {/* Disconnected Python Gateway Diagnostic Screen */}
@@ -146,88 +212,152 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Active Application Area (Demo or Connected Mode) */}
+      {/* Main Active Application Area with ErrorBoundary Protection */}
       {projection && (
-        <div className="flex-1 flex flex-col min-h-0">
-          {currentTab === 'play' && (
-            <NarrativePlayView
-              characters={projection.characters}
-              npcs={projection.npcs}
-              quests={projection.quests}
-              events={projection.events}
-              currentSnapshot={activeClient.getCurrentSnapshot()}
-              userRole={userRole}
-              operatingMode={projection.operatingMode}
-              directorProfiles={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).directorProfiles || []
-                  : []
-              }
-              activeDirectorProfileId={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).activeDirectorProfileId || ''
-                  : ''
-              }
-              recommendations={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).recommendations || []
-                  : []
-              }
-              spotlightMetrics={
-                userRole === 'dm_host'
-                  ? (projection as DmFullCampaignProjection).spotlightMetrics || []
-                  : []
-              }
-              selectedCharacterId={selectedCharacterId}
-              onSelectOperatingMode={(mode) => activeClient.setOperatingMode(mode)}
-              onSelectDirectorProfile={(pId) => activeClient.setActiveDirectorProfile(pId)}
-              onNavigateToBattlemap={() => setCurrentTab('battlemap')}
-            />
-          )}
+        <ErrorBoundary
+          onRecover={() => setCurrentTab('play')}
+          fallbackTitle="Workspace Render Exception Handled"
+          fallbackDescription="A display error occurred in this workspace view. The error boundary caught it cleanly without crashing the application. Click below to return to the Play workspace."
+        >
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* WORKSPACE 1: PLAY (Shared) */}
+            {currentTab === 'play' && (
+              <NarrativePlayView
+                characters={projection.characters}
+                npcs={projection.npcs}
+                quests={projection.quests}
+                events={projection.events}
+                currentSnapshot={activeClient.getCurrentSnapshot()}
+                userRole={effectiveRole}
+                operatingMode={projection.operatingMode}
+                directorProfiles={
+                  isDmFullProjection(projection) ? projection.directorProfiles : []
+                }
+                activeDirectorProfileId={
+                  isDmFullProjection(projection) ? projection.activeDirectorProfileId : ''
+                }
+                recommendations={
+                  isDmFullProjection(projection) ? projection.recommendations : []
+                }
+                spotlightMetrics={
+                  isDmFullProjection(projection) ? projection.spotlightMetrics : []
+                }
+                selectedCharacterId={effectiveCharId}
+                onSelectOperatingMode={(mode) => {
+                  if (canAccessDmWorkspaces(identity)) {
+                    activeClient.setOperatingMode(mode);
+                  }
+                }}
+                onSelectDirectorProfile={(pId) => {
+                  if (canAccessDmWorkspaces(identity)) {
+                    activeClient.setActiveDirectorProfile(pId);
+                  }
+                }}
+                onNavigateToBattlemap={() => setCurrentTab('battlemap')}
+              />
+            )}
 
-          {currentTab === 'battlemap' && (
-            <BattlemapView
-              characters={projection.characters}
-              npcs={projection.npcs}
-              userRole={userRole}
-              currentSnapshot={activeClient.getCurrentSnapshot()}
-              selectedCharacterId={selectedCharacterId}
-              onNavigateToPlay={() => setCurrentTab('play')}
-              onMoveToken={(entityId, targetX, targetY, entityType) => {
-                activeClient.submitActionEnvelope({
-                  actionId: `move-${Date.now()}`,
-                  actorId: entityId,
-                  actorRole: userRole,
-                  actionType: 'MOVE_TOKEN',
-                  payload: { entityId, targetX, targetY, entityType },
-                  snapshotRef: activeClient.getCurrentSnapshot(),
-                  timestampUtc: new Date().toISOString(),
-                  clientNonce: `nonce-${Date.now()}`,
-                });
-              }}
-            />
-          )}
+            {/* WORKSPACE 2: BATTLEMAP (Shared, Role-Filtered) */}
+            {currentTab === 'battlemap' && (
+              <BattlemapView
+                characters={projection.characters}
+                npcs={projection.npcs}
+                userRole={effectiveRole}
+                currentSnapshot={activeClient.getCurrentSnapshot()}
+                selectedCharacterId={effectiveCharId}
+                onNavigateToPlay={() => setCurrentTab('play')}
+                onMoveToken={(entityId, targetX, targetY, entityType) => {
+                  activeClient.submitActionEnvelope({
+                    actionId: `move-${Date.now()}`,
+                    actorId: entityId,
+                    actorRole: effectiveRole,
+                    actionType: 'MOVE_TOKEN',
+                    payload: { entityId, targetX, targetY, entityType },
+                    snapshotRef: activeClient.getCurrentSnapshot(),
+                    timestampUtc: new Date().toISOString(),
+                    clientNonce: `nonce-${Date.now()}`,
+                  });
+                }}
+              />
+            )}
 
-          {currentTab === 'planning' && (
-            <DmPlanningView
-              npcs={(projection as DmFullCampaignProjection).npcs || []}
-              factions={(projection as DmFullCampaignProjection).factions || []}
-              locations={(projection as DmFullCampaignProjection).locations || []}
-              quests={(projection as DmFullCampaignProjection).quests || []}
-              worldClock={projection.worldClock}
-              directorProfiles={(projection as DmFullCampaignProjection).directorProfiles || []}
-              activeDirectorProfileId={(projection as DmFullCampaignProjection).activeDirectorProfileId || ''}
-              recommendations={(projection as DmFullCampaignProjection).recommendations || []}
-              onSelectDirectorProfile={(pId) => activeClient.setActiveDirectorProfile(pId)}
-              onAdvanceTime={(mins) => activeClient.advanceTime(mins)}
-              onTogglePauseClock={() => activeClient.toggleClockPause()}
-            />
-          )}
+            {/* WORKSPACE 3: DM PLANNING (DM Only — Protected by Role & Projection Type Guard) */}
+            {currentTab === 'planning' &&
+              (canAccessDmWorkspaces(identity) && isDmFullProjection(projection) ? (
+                <DmPlanningView
+                  npcs={projection.npcs}
+                  factions={projection.factions}
+                  locations={projection.locations}
+                  quests={projection.quests}
+                  worldClock={projection.worldClock}
+                  directorProfiles={projection.directorProfiles}
+                  activeDirectorProfileId={projection.activeDirectorProfileId}
+                  recommendations={projection.recommendations}
+                  onSelectDirectorProfile={(pId) => activeClient.setActiveDirectorProfile(pId)}
+                  onAdvanceTime={(mins) => activeClient.advanceTime(mins)}
+                  onTogglePauseClock={() => activeClient.toggleClockPause()}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center p-8 bg-neutral-950 text-neutral-400">
+                  <div className="text-center space-y-2">
+                    <p className="font-cinzel font-bold text-amber-200">Restricted Workspace</p>
+                    <p className="text-xs">DM Planning requires authorized Dungeon Master credentials.</p>
+                    <button
+                      onClick={() => setCurrentTab('play')}
+                      className="mt-2 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs"
+                    >
+                      Return to Play
+                    </button>
+                  </div>
+                </div>
+              ))}
 
-          {currentTab === 'workshop' && (
-            <HomebrewWorkshopView sourcePacks={projection.sourcePacks} />
-          )}
-        </div>
+            {/* WORKSPACE 4: HOMEBREW WORKSHOP (DM Only) */}
+            {currentTab === 'workshop' &&
+              (canAccessWorkshop(identity) ? (
+                <HomebrewWorkshopView sourcePacks={projection.sourcePacks} />
+              ) : (
+                <div className="flex-1 flex items-center justify-center p-8 bg-neutral-950 text-neutral-400">
+                  <div className="text-center space-y-2">
+                    <p className="font-cinzel font-bold text-amber-200">Restricted Workspace</p>
+                    <p className="text-xs">Homebrew Workshop requires authorized Dungeon Master credentials.</p>
+                    <button
+                      onClick={() => setCurrentTab('play')}
+                      className="mt-2 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs"
+                    >
+                      Return to Play
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+            {/* WORKSPACE 5: PLAYER CHARACTER (Player View) */}
+            {currentTab === 'character' && (
+              <PlayerCharacterView
+                characters={projection.characters}
+                selectedCharacterId={effectiveCharId}
+                onSelectCharacter={(id) => {
+                  setIdentity((prev) => ({ ...prev, assignedCharacterId: id }));
+                }}
+              />
+            )}
+
+            {/* WORKSPACE 6: PLAYER JOURNAL & QUESTS (Player View) */}
+            {currentTab === 'journal' && (
+              <PlayerJournalView
+                quests={projection.quests}
+                locations={
+                  // Discovered locations only for player journal
+                  projection.locations.filter((l: any) => l.isDiscoveredByParty === true) as any
+                }
+                npcs={
+                  // Player-safe NPCs
+                  projection.npcs as any
+                }
+              />
+            )}
+          </div>
+        </ErrorBoundary>
       )}
 
       {/* Architectural Status Register Audit Modal */}

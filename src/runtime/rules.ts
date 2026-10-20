@@ -59,6 +59,15 @@ export function checkActionAdmission(
   if (!envelope.actorId) {
     return { admitted: false, error: 'ActionEnvelope missing actorId' };
   }
+  if (
+    (envelope.actorRole === 'player' || envelope.actorRole === 'observer') &&
+    envelope.actionType === 'DM_OVERRIDE_STATE'
+  ) {
+    return {
+      admitted: false,
+      error: 'Action rejected: DM_OVERRIDE_STATE requires DM or Co-DM role authority',
+    };
+  }
   return { admitted: true };
 }
 

@@ -361,6 +361,23 @@ export class DemoCampaignClient implements CampaignClient {
     // 3. Negative-Case Entity, Boundary & Role Permission Validation (Repair E & CP001B)
     const isPlayerOrObserver = envelope.actorRole === 'player' || envelope.actorRole === 'observer';
 
+    if (isPlayerOrObserver && (envelope.actionType === 'DM_OVERRIDE_STATE' || envelope.actionType === 'ADVANCE_TIME')) {
+      return {
+        receipt: {
+          commitSequence: this.state.currentSnapshot.commitSequence,
+          commitHash: this.state.currentSnapshot.stateHash,
+          requestId: envelope.actionId,
+          actionId: envelope.actionId,
+          status: 'REJECTED_UNAUTHORIZED_TARGET',
+          committedAtUtc: new Date().toISOString(),
+          appliedPatchesCount: 0,
+          resultingWorldMinute: this.state.worldClock.totalWorldMinutes,
+          error: `Action rejected: Action type ${envelope.actionType} requires DM or Co-DM role authority`,
+          isSimulatedDemoReceipt: true,
+        },
+      };
+    }
+
     if (envelope.actionType === 'MOVE_TOKEN') {
       const { entityId, targetX, targetY, entityType } = envelope.payload;
       const targetChar = this.state.characters.find((c) => c.id === entityId);

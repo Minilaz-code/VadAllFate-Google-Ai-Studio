@@ -9,6 +9,7 @@ import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type { UserRole, PlayerSafeNpc } from '../../types/runtime.ts';
 import { SAMPLE_BATTLEMAPS, type BattlemapDefinition } from '../../types/battlemap.ts';
+import { battlemapSessionManager } from '../../state/battlemapSession.ts';
 import { BattlemapCanvas } from '../battlemap/BattlemapCanvas.tsx';
 
 interface VirtualTabletopProps {
@@ -34,8 +35,8 @@ export const VirtualTabletop: React.FC<VirtualTabletopProps> = ({
   onQuickAttack,
   onOpenDiceRoller,
 }) => {
-  // Use passed mapDefinition or default to Sunken Vault sample scene
-  const activeMap = mapDefinition || SAMPLE_BATTLEMAPS[1];
+  // Use passed mapDefinition or session manager's active map
+  const activeMap = mapDefinition || battlemapSessionManager.getActiveMap();
 
   // Selected entity data
   const selectedChar = characters.find((c) => c.id === selectedEntityId);

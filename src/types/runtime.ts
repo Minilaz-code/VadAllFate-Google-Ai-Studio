@@ -40,12 +40,26 @@ export interface OperatingModeConfig {
 
 export type UserRole = 'dm_host' | 'player' | 'observer';
 
+export type GameRole = 'dm' | 'player' | 'observer';
+export type SessionHostStatus = 'host' | 'non_host';
+
 export interface UserSession {
   userId: string;
   displayName: string;
   role: UserRole;
   assignedCharacterId?: string;
   isHost: boolean;
+}
+
+export interface UserIdentityContext {
+  gameRole: GameRole;
+  isHost: boolean;
+  assignedCharacterId?: string;
+  previewMode?: {
+    isActive: boolean;
+    previewRole: 'player' | 'observer';
+    previewCharacterId: string;
+  };
 }
 
 // ============================================================================
@@ -167,6 +181,28 @@ export interface DmFullCampaignProjection extends BaseCampaignProjection {
 }
 
 export type CampaignProjection = PlayerSafeCampaignProjection | DmFullCampaignProjection;
+
+/**
+ * Type guard to safely identify full Dungeon Master campaign projections.
+ * Never force cast (as DmFullCampaignProjection) without checking this guard.
+ */
+export function isDmFullProjection(
+  projection: CampaignProjection | null | undefined
+): projection is DmFullCampaignProjection {
+  return projection != null && projection.projectionRole === 'dm_host';
+}
+
+/**
+ * Type guard to safely identify player-safe campaign projections.
+ */
+export function isPlayerSafeProjection(
+  projection: CampaignProjection | null | undefined
+): projection is PlayerSafeCampaignProjection {
+  return (
+    projection != null &&
+    (projection.projectionRole === 'player' || projection.projectionRole === 'observer')
+  );
+}
 
 export interface RuntimeConnectionStatus {
   isConnectedToLivePython: boolean;

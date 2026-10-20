@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Map as MapIcon,
   Layers,
@@ -35,25 +35,26 @@ import {
   Redo2,
   FileImage,
   Move,
+  CheckCircle,
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type { UserRole, PlayerSafeNpc, SnapshotRef } from '../../types/runtime.ts';
-import {
-  SAMPLE_BATTLEMAPS,
-  type BattlemapDefinition,
-  type BattlemapEditorTool,
-  type SelectedGeometryRef,
-  type BattlemapLayerVisibility,
-  type RectangularRoom,
-  type CorridorSegment,
-  type WallSegment,
-  type DoorSegment,
-  type MapGeometry,
+import type {
+  BattlemapDefinition,
+  BattlemapEditorTool,
+  SelectedGeometryRef,
+  BattlemapLayerVisibility,
+  RectangularRoom,
+  CorridorSegment,
+  WallSegment,
+  DoorSegment,
 } from '../../types/battlemap.ts';
+import { battlemapSessionManager } from '../../state/battlemapSession.ts';
 import { BattlemapCanvas } from './BattlemapCanvas.tsx';
 import { DiceRollerModal } from '../play/DiceRollerModal.tsx';
 import { ActionSubmissionModal } from '../play/ActionSubmissionModal.tsx';
+import { decodeImageInBrowser, calculateFitScale } from '../../utils/imageDecoder.ts';
 
 interface BattlemapViewProps {
   characters: CharacterSheet[];
@@ -74,24 +75,33 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   onNavigateToPlay,
   onMoveToken,
 }) => {
-  // Map collection state (built-in sample maps initialized with deep copy so edits persist per map)
-  const [mapList, setMapList] = useState<BattlemapDefinition[]>(() =>
-    JSON.parse(JSON.stringify(SAMPLE_BATTLEMAPS))
-  );
-  const [activeMapId, setActiveMapId] = useState<string>('map-yawning-portal');
+  // Subscribe to persistent session manager for map data
+  const [, setSessionTick] = useState(0);
 
-  // Currently active map definition
-  const activeMap = mapList.find((m) => m.id === activeMapId) || mapList[0];
+  useEffect(() => {
+    const unsub = battlemapSessionManager.subscribe(() => {
+      setSessionTick((t) => t + 1);
+    });
+    return unsub;
+  }, []);
 
-  // Active Tool selection
+  const mapList = battlemapSessionManager.getMaps();
+  const activeMap = battlemapSessionManager.getActiveMap();
+  const activeMapId = battlemapSessionManager.getActiveMapId();
+
+  // Active Tool selection (restricted by role)
+  const isDm = userRole === 'dm_host';
   const [activeTool, setActiveTool] = useState<BattlemapEditorTool>('token');
 
-  // Selected Geometry ref (e.g. { type: 'room', id: 'r1' })
+  // Selected Geometry pointer
   const [selectedGeometry, setSelectedGeometry] = useState<SelectedGeometryRef | null>(null);
 
   // Selected Token / Entity
   const [selectedEntityId, setSelectedEntityId] = useState<string>(selectedCharacterId || 'char-kaelen');
   const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'npc'>('character');
+
+  // Corridor width setting (cells)
+  const [corridorWidth, setCorridorWidth] = useState<number>(2);
 
   // Layer Visibility
   const [layers, setLayers] = useState<BattlemapLayerVisibility>({
@@ -104,14 +114,10 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
     overlays: true,
   });
 
-  // Undo / Redo history stacks for geometry edits (keyed by map ID)
-  const [undoHistory, setUndoHistory] = useState<Record<string, MapGeometry[]>>({});
-  const [redoHistory, setRedoHistory] = useState<Record<string, MapGeometry[]>>({});
-
   // Collapsible Sidebars
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [leftTab, setLeftTab] = useState<'geometry' | 'artwork' | 'layers'>('geometry');
+  const [leftTab, setLeftTab] = useState<'geometry' | 'artwork'>('geometry');
 
   // Modals
   const [showImportModal, setShowImportModal] = useState(false);
@@ -126,99 +132,44 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   const [importHeight, setImportHeight] = useState(16);
   const [importUrl, setImportUrl] = useState('');
   const [localFile, setLocalFile] = useState<File | null>(null);
-  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [isDecoding, setIsDecoding] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
-  // Track created blob URLs to revoke when replaced or unmounted
-  const blobUrlsRef = useRef<Set<string>>(new Set());
+  // Undo / Redo capabilities from session manager
+  const canUndo = battlemapSessionManager.canUndo(activeMap.id);
+  const canRedo = battlemapSessionManager.canRedo(activeMap.id);
 
+  // Keyboard shortcut listener for Undo / Redo
   useEffect(() => {
-    return () => {
-      // Cleanup all session blob URLs
-      blobUrlsRef.current.forEach((url) => {
-        try {
-          URL.revokeObjectURL(url);
-        } catch {
-          // ignore
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when user is typing in form controls
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          battlemapSessionManager.redo(activeMap.id);
+        } else {
+          battlemapSessionManager.undo(activeMap.id);
         }
-      });
-      blobUrlsRef.current.clear();
+      } else if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        battlemapSessionManager.redo(activeMap.id);
+      }
     };
-  }, []);
 
-  // Update active map helper with undo snapshot
-  const updateActiveMapGeometry = (newGeometry: MapGeometry) => {
-    // Save current geometry to undo history
-    setUndoHistory((prev) => {
-      const currentStack = prev[activeMap.id] || [];
-      return {
-        ...prev,
-        [activeMap.id]: [...currentStack, JSON.parse(JSON.stringify(activeMap.geometry))],
-      };
-    });
-    // Clear redo history on new action
-    setRedoHistory((prev) => ({
-      ...prev,
-      [activeMap.id]: [],
-    }));
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeMap.id]);
 
-    // Update map list
-    setMapList((prev) =>
-      prev.map((m) => (m.id === activeMap.id ? { ...m, geometry: newGeometry } : m))
-    );
-  };
-
-  // Undo recent edit
-  const handleUndo = () => {
-    const currentStack = undoHistory[activeMap.id] || [];
-    if (currentStack.length === 0) return;
-
-    const previousGeometry = currentStack[currentStack.length - 1];
-    const newUndoStack = currentStack.slice(0, currentStack.length - 1);
-
-    // Save to redo stack
-    setRedoHistory((prev) => ({
-      ...prev,
-      [activeMap.id]: [...(prev[activeMap.id] || []), JSON.parse(JSON.stringify(activeMap.geometry))],
-    }));
-
-    setUndoHistory((prev) => ({
-      ...prev,
-      [activeMap.id]: newUndoStack,
-    }));
-
-    setMapList((prev) =>
-      prev.map((m) => (m.id === activeMap.id ? { ...m, geometry: previousGeometry } : m))
-    );
-  };
-
-  // Redo recent edit
-  const handleRedo = () => {
-    const currentRedoStack = redoHistory[activeMap.id] || [];
-    if (currentRedoStack.length === 0) return;
-
-    const nextGeometry = currentRedoStack[currentRedoStack.length - 1];
-    const newRedoStack = currentRedoStack.slice(0, currentRedoStack.length - 1);
-
-    // Save to undo stack
-    setUndoHistory((prev) => ({
-      ...prev,
-      [activeMap.id]: [...(prev[activeMap.id] || []), JSON.parse(JSON.stringify(activeMap.geometry))],
-    }));
-
-    setRedoHistory((prev) => ({
-      ...prev,
-      [activeMap.id]: newRedoStack,
-    }));
-
-    setMapList((prev) =>
-      prev.map((m) => (m.id === activeMap.id ? { ...m, geometry: nextGeometry } : m))
-    );
-  };
-
-  // Geometry manipulation callbacks
+  // Geometry manipulation handlers
   const handleAddRoom = (newRoom: RectangularRoom) => {
-    updateActiveMapGeometry({
+    if (!isDm) return;
+    battlemapSessionManager.updateGeometry(activeMap.id, {
       ...activeMap.geometry,
       rooms: [...activeMap.geometry.rooms, newRoom],
     });
@@ -226,7 +177,8 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   };
 
   const handleAddCorridor = (newCorridor: CorridorSegment) => {
-    updateActiveMapGeometry({
+    if (!isDm) return;
+    battlemapSessionManager.updateGeometry(activeMap.id, {
       ...activeMap.geometry,
       corridors: [...activeMap.geometry.corridors, newCorridor],
     });
@@ -234,7 +186,8 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   };
 
   const handleAddWall = (newWall: WallSegment) => {
-    updateActiveMapGeometry({
+    if (!isDm) return;
+    battlemapSessionManager.updateGeometry(activeMap.id, {
       ...activeMap.geometry,
       walls: [...activeMap.geometry.walls, newWall],
     });
@@ -242,7 +195,8 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   };
 
   const handleAddDoor = (newDoor: DoorSegment) => {
-    updateActiveMapGeometry({
+    if (!isDm) return;
+    battlemapSessionManager.updateGeometry(activeMap.id, {
       ...activeMap.geometry,
       doors: [...activeMap.geometry.doors, newDoor],
     });
@@ -253,30 +207,31 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
     const updatedDoors = activeMap.geometry.doors.map((d) =>
       d.id === doorId ? { ...d, state: newState } : d
     );
-    updateActiveMapGeometry({
+    battlemapSessionManager.updateGeometry(activeMap.id, {
       ...activeMap.geometry,
       doors: updatedDoors,
     });
   };
 
   const handleDeleteGeometry = (geom: SelectedGeometryRef) => {
+    if (!isDm) return;
     if (geom.type === 'room') {
-      updateActiveMapGeometry({
+      battlemapSessionManager.updateGeometry(activeMap.id, {
         ...activeMap.geometry,
         rooms: activeMap.geometry.rooms.filter((r) => r.id !== geom.id),
       });
     } else if (geom.type === 'corridor') {
-      updateActiveMapGeometry({
+      battlemapSessionManager.updateGeometry(activeMap.id, {
         ...activeMap.geometry,
         corridors: activeMap.geometry.corridors.filter((c) => c.id !== geom.id),
       });
     } else if (geom.type === 'wall') {
-      updateActiveMapGeometry({
+      battlemapSessionManager.updateGeometry(activeMap.id, {
         ...activeMap.geometry,
         walls: activeMap.geometry.walls.filter((w) => w.id !== geom.id),
       });
     } else if (geom.type === 'door') {
-      updateActiveMapGeometry({
+      battlemapSessionManager.updateGeometry(activeMap.id, {
         ...activeMap.geometry,
         doors: activeMap.geometry.doors.filter((d) => d.id !== geom.id),
       });
@@ -284,168 +239,134 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
     setSelectedGeometry(null);
   };
 
-  // Artwork calibration updater
-  const updateActiveMapArtwork = (
-    patch: Partial<NonNullable<BattlemapDefinition['backgroundArtwork']>>
-  ) => {
+  // Calibration handlers
+  const handleFitArtworkToGrid = () => {
     if (!activeMap.backgroundArtwork) return;
-    setMapList((prev) =>
-      prev.map((m) =>
-        m.id === activeMap.id
-          ? {
-              ...m,
-              backgroundArtwork: {
-                ...m.backgroundArtwork!,
-                ...patch,
-              },
-            }
-          : m
-      )
-    );
+    const targetW = activeMap.grid.width * activeMap.grid.cellSizePx;
+    const targetH = activeMap.grid.height * activeMap.grid.cellSizePx;
+    const natW = activeMap.backgroundArtwork.naturalWidth || 1200;
+    const natH = activeMap.backgroundArtwork.naturalHeight || 800;
+
+    const fit = calculateFitScale(natW, natH, targetW, targetH, 'contain');
+    battlemapSessionManager.updateArtwork(activeMap.id, {
+      scale: fit.scale,
+      offsetX: fit.offsetX,
+      offsetY: fit.offsetY,
+    });
   };
 
-  // Grid calibration updater
-  const updateActiveMapGrid = (patch: Partial<BattlemapDefinition['grid']>) => {
-    setMapList((prev) =>
-      prev.map((m) =>
-        m.id === activeMap.id
-          ? {
-              ...m,
-              grid: {
-                ...m.grid,
-                ...patch,
-              },
-            }
-          : m
-      )
-    );
-  };
-
-  // Local file selection handler with validation
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Local file change handler
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setImportError(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate type: PNG, JPEG/JPG, WebP
-    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setImportError('Invalid image format. Supported formats: PNG, JPG/JPEG, WebP.');
-      return;
-    }
-
-    // Validate size: 15MB limit
-    const maxSize = 15 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setImportError('File size exceeds 15MB limit.');
-      return;
-    }
-
-    // Create session object URL
-    const objectUrl = URL.createObjectURL(file);
-    blobUrlsRef.current.add(objectUrl);
-    setLocalFile(file);
-    setLocalPreviewUrl(objectUrl);
-    if (!importName) {
-      // Set default name from file name without extension
-      setImportName(file.name.replace(/\.[^/.]+$/, ''));
+    setIsDecoding(true);
+    try {
+      const decoded = await decodeImageInBrowser(file);
+      setLocalFile(file);
+      if (!importName) {
+        setImportName(file.name.replace(/\.[^/.]+$/, ''));
+      }
+    } catch (err: any) {
+      setImportError(err.message || 'Failed to decode image file.');
+      setLocalFile(null);
+    } finally {
+      setIsDecoding(false);
     }
   };
 
-  // Form submission for importing a new map
-  const handleImportSubmit = (e: React.FormEvent) => {
+  // Handle Map Import submission
+  const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!importName.trim()) {
-      setImportError('Please enter a name for the battlemap.');
+      setImportError('Please enter a name for the battlemap scene.');
       return;
     }
 
-    let finalArtworkUrl = '';
-    let isLocal = false;
-
-    if (importTab === 'local') {
-      if (!localPreviewUrl) {
-        setImportError('Please select a local PNG, JPG, or WebP image file.');
-        return;
-      }
-      finalArtworkUrl = localPreviewUrl;
-      isLocal = true;
-    } else {
-      if (!importUrl.trim()) {
-        setImportError('Please provide a valid image URL.');
-        return;
-      }
-      finalArtworkUrl = importUrl.trim();
-    }
-
-    const newMap: BattlemapDefinition = {
-      id: `custom-map-${Date.now()}`,
-      name: importName.trim(),
-      locationId: 'loc-custom',
-      sceneSummary: `User-imported tactical battlemap artwork (${importWidth}x${importHeight} grid).`,
-      grid: {
-        width: importWidth,
-        height: importHeight,
-        cellSizePx: 42,
-        feetPerCell: 5,
-        showGrid: true,
-        gridColor: 'rgba(217, 119, 6, 0.35)',
-        originX: 0,
-        originY: 0,
-      },
-      backgroundArtwork: {
-        url: finalArtworkUrl,
-        name: importName.trim(),
-        scale: 1.0,
-        offsetX: 0,
-        offsetY: 0,
-        opacity: 0.85,
-        isLocalBlob: isLocal,
-      },
-      geometry: {
-        rooms: [],
-        corridors: [],
-        walls: [],
-        doors: [],
-      },
-      fog: {
-        enabled: false,
-        defaultState: 'revealed',
-        revealedCells: [],
-        previousExploredCells: [],
-      },
-      lineOfSight: {
-        enabled: false,
-        blocksOnWalls: true,
-        blocksOnClosedDoors: true,
-        maxSightRadiusFeet: 60,
-      },
-      tokens: [
-        {
-          id: `tok-${Date.now()}`,
-          entityId: 'char-kaelen',
-          entityType: 'character',
-          name: 'Kaelen Shadowstrider',
-          x: 20,
-          y: 20,
-          sizeCells: 1,
-          isVisibleToPlayers: true,
-          elevationFt: 0,
-        },
-      ],
-    };
-
-    setMapList((prev) => [...prev, newMap]);
-    setActiveMapId(newMap.id);
-    setShowImportModal(false);
-    setImportName('');
-    setImportUrl('');
-    setLocalFile(null);
-    setLocalPreviewUrl(null);
+    setIsDecoding(true);
     setImportError(null);
+
+    try {
+      let decoded;
+      if (importTab === 'local') {
+        if (!localFile) {
+          setImportError('Please select a local PNG, JPG, or WebP image file.');
+          setIsDecoding(false);
+          return;
+        }
+        decoded = await decodeImageInBrowser(localFile);
+      } else {
+        if (!importUrl.trim()) {
+          setImportError('Please provide a valid image URL.');
+          setIsDecoding(false);
+          return;
+        }
+        decoded = await decodeImageInBrowser(importUrl.trim());
+      }
+
+      const newMap: BattlemapDefinition = {
+        id: `custom-map-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: importName.trim(),
+        locationId: 'loc-custom',
+        sceneSummary: `User-imported tactical battlemap (${importWidth}x${importHeight} grid).`,
+        grid: {
+          width: importWidth,
+          height: importHeight,
+          cellSizePx: 42,
+          feetPerCell: 5,
+          showGrid: true,
+          gridColor: 'rgba(217, 119, 6, 0.35)',
+          originX: 0,
+          originY: 0,
+        },
+        backgroundArtwork: {
+          url: decoded.url,
+          name: importName.trim(),
+          scale: 1.0,
+          offsetX: 0,
+          offsetY: 0,
+          opacity: 0.85,
+          aspectRatio: decoded.aspectRatio,
+          isLocalBlob: decoded.isLocalBlob,
+          naturalWidth: decoded.naturalWidth,
+          naturalHeight: decoded.naturalHeight,
+        },
+        geometry: {
+          rooms: [],
+          corridors: [],
+          walls: [],
+          doors: [],
+        },
+        fog: {
+          enabled: false,
+          defaultState: 'revealed',
+          revealedCells: [],
+          previousExploredCells: [],
+        },
+        lineOfSight: {
+          enabled: false,
+          blocksOnWalls: true,
+          blocksOnClosedDoors: true,
+          maxSightRadiusFeet: 60,
+        },
+        tokens: [],
+      };
+
+      battlemapSessionManager.addCustomMap(newMap);
+      setShowImportModal(false);
+      setImportName('');
+      setImportUrl('');
+      setLocalFile(null);
+      setImportError(null);
+    } catch (err: any) {
+      setImportError(err.message || 'Image import failed.');
+    } finally {
+      setIsDecoding(false);
+    }
   };
 
-  // Find selected room, corridor, wall, door for property editing
+  // Inspect selected room, corridor, wall, door
   const selectedRoom =
     selectedGeometry?.type === 'room'
       ? activeMap.geometry.rooms.find((r) => r.id === selectedGeometry.id)
@@ -466,12 +387,9 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   const selectedChar = characters.find((c) => c.id === selectedEntityId);
   const selectedNpc = npcs.find((n) => n.id === selectedEntityId);
 
-  const canUndo = (undoHistory[activeMap.id] || []).length > 0;
-  const canRedo = (redoHistory[activeMap.id] || []).length > 0;
-
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-53px)] bg-neutral-950 overflow-hidden select-none">
-      {/* Top Battlemap Workspace Bar */}
+      {/* Top Workspace Bar */}
       <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center justify-between gap-4 z-20 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -491,7 +409,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             <select
               value={activeMapId}
               onChange={(e) => {
-                setActiveMapId(e.target.value);
+                battlemapSessionManager.setActiveMapId(e.target.value);
                 setSelectedGeometry(null);
               }}
               className="bg-neutral-950 border border-neutral-700 rounded px-2.5 py-1 text-xs text-neutral-200 focus:outline-none focus:border-amber-500 font-medium cursor-pointer"
@@ -501,7 +419,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                   .filter((m) => !m.id.startsWith('custom-map-'))
                   .map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name} ({m.grid.width}x{m.grid.height})
+                      {m.name} ({m.grid.width}×{m.grid.height})
                     </option>
                   ))}
               </optgroup>
@@ -511,7 +429,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                     .filter((m) => m.id.startsWith('custom-map-'))
                     .map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.name} ({m.grid.width}x{m.grid.height})
+                        {m.name} ({m.grid.width}×{m.grid.height})
                       </option>
                     ))}
                 </optgroup>
@@ -519,18 +437,20 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             </select>
           </div>
 
-          {/* Quick Action: Import Map Artwork */}
-          <button
-            onClick={() => {
-              setImportError(null);
-              setShowImportModal(true);
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs transition-colors border border-neutral-700/60"
-            title="Import custom PNG, JPG, or WebP local file or URL"
-          >
-            <Upload className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden lg:inline">Import Map Image</span>
-          </button>
+          {/* Quick Action: Import Map Artwork (DM Host only) */}
+          {isDm && (
+            <button
+              onClick={() => {
+                setImportError(null);
+                setShowImportModal(true);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs transition-colors border border-neutral-700/60"
+              title="Import custom PNG, JPG, or WebP local file or URL"
+            >
+              <Upload className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden lg:inline">Import Map Image</span>
+            </button>
+          )}
 
           {/* Optional Owlbear Rodeo Integration */}
           <button
@@ -578,72 +498,91 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             <span>Token Mode</span>
           </button>
 
-          <button
-            onClick={() => setActiveTool('select')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-              activeTool === 'select'
-                ? 'bg-amber-600 text-neutral-950 font-bold shadow'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-            title="Select and inspect rooms, corridors, walls, and doors"
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>Select Geom</span>
-          </button>
+          {isDm && (
+            <>
+              <button
+                onClick={() => setActiveTool('select')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'select'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Select and inspect rooms, corridors, walls, and doors"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Select Geom</span>
+              </button>
 
-          <div className="h-4 w-px bg-neutral-700 mx-0.5" />
+              <div className="h-4 w-px bg-neutral-700 mx-0.5" />
 
-          <button
-            onClick={() => setActiveTool('room')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-              activeTool === 'room'
-                ? 'bg-amber-600 text-neutral-950 font-bold shadow'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-            title="Click and drag to draw rectangular rooms snapped to grid"
-          >
-            <Square className="w-3.5 h-3.5" />
-            <span>Draw Room</span>
-          </button>
+              <button
+                onClick={() => setActiveTool('room')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'room'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Click and drag to draw rectangular rooms snapped to grid"
+              >
+                <Square className="w-3.5 h-3.5" />
+                <span>Draw Room</span>
+              </button>
 
-          <button
-            onClick={() => setActiveTool('corridor')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-              activeTool === 'corridor'
-                ? 'bg-amber-600 text-neutral-950 font-bold shadow'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-            title="Click and drag to connect rooms with corridors"
-          >
-            <Move className="w-3.5 h-3.5" />
-            <span>Draw Corridor</span>
-          </button>
+              <button
+                onClick={() => setActiveTool('corridor')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'corridor'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Click and drag to connect rooms with straight or orthogonal corridors"
+              >
+                <Move className="w-3.5 h-3.5" />
+                <span>Corridor</span>
+              </button>
 
-          <button
-            onClick={() => setActiveTool('wall')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-              activeTool === 'wall'
-                ? 'bg-amber-600 text-neutral-950 font-bold shadow'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-            title="Draw wall segments between two map points"
-          >
-            <Minus className="w-3.5 h-3.5" />
-            <span>Draw Wall</span>
-          </button>
+              {activeTool === 'corridor' && (
+                <div className="flex items-center gap-1 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-700">
+                  <span className="text-[10px] text-neutral-400 font-mono">Width:</span>
+                  <select
+                    value={corridorWidth}
+                    onChange={(e) => setCorridorWidth(Number(e.target.value))}
+                    className="bg-transparent text-amber-300 font-mono text-[11px] focus:outline-none"
+                  >
+                    <option value="1">1 cell (5ft)</option>
+                    <option value="2">2 cells (10ft)</option>
+                    <option value="3">3 cells (15ft)</option>
+                  </select>
+                </div>
+              )}
 
-          <button
-            onClick={() => setActiveTool('door')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-              activeTool === 'door'
-                ? 'bg-amber-600 text-neutral-950 font-bold shadow'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-            title="Click on cell edges to place a door"
-          >
-            <DoorClosed className="w-3.5 h-3.5" />
-            <span>Place Door</span>
-          </button>
+              <button
+                onClick={() => setActiveTool('wall')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'wall'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Draw wall segments between two map points"
+              >
+                <Minus className="w-3.5 h-3.5" />
+                <span>Draw Wall</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTool('door')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'door'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Click on an existing wall to place a door"
+              >
+                <DoorClosed className="w-3.5 h-3.5" />
+                <span>Place Door</span>
+              </button>
+            </>
+          )}
 
           <button
             onClick={() => setActiveTool('measure')}
@@ -658,36 +597,38 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             <span>Ruler</span>
           </button>
 
-          <div className="h-4 w-px bg-neutral-700 mx-0.5" />
-
-          {/* Undo / Redo */}
-          <button
-            onClick={handleUndo}
-            disabled={!canUndo}
-            className={`p-1.5 rounded transition-colors ${
-              canUndo
-                ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200'
-                : 'bg-neutral-900 text-neutral-600 cursor-not-allowed'
-            }`}
-            title="Undo recent geometry edit (Ctrl+Z)"
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={!canRedo}
-            className={`p-1.5 rounded transition-colors ${
-              canRedo
-                ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200'
-                : 'bg-neutral-900 text-neutral-600 cursor-not-allowed'
-            }`}
-            title="Redo recent geometry edit (Ctrl+Y)"
-          >
-            <Redo2 className="w-3.5 h-3.5" />
-          </button>
+          {isDm && (
+            <>
+              <div className="h-4 w-px bg-neutral-700 mx-0.5" />
+              <button
+                onClick={() => battlemapSessionManager.undo(activeMap.id)}
+                disabled={!canUndo}
+                className={`p-1.5 rounded transition-colors ${
+                  canUndo
+                    ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200'
+                    : 'bg-neutral-900 text-neutral-600 cursor-not-allowed'
+                }`}
+                title="Undo recent geometry edit (Ctrl+Z)"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => battlemapSessionManager.redo(activeMap.id)}
+                disabled={!canRedo}
+                className={`p-1.5 rounded transition-colors ${
+                  canRedo
+                    ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200'
+                    : 'bg-neutral-900 text-neutral-600 cursor-not-allowed'
+                }`}
+                title="Redo recent geometry edit (Ctrl+Y)"
+              >
+                <Redo2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Layer Visibility Toggles (Section 6) */}
+        {/* Layer Visibility Toggles */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] uppercase font-mono text-neutral-400 hidden lg:inline">
             Layers:
@@ -747,16 +688,24 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
         <div className="flex items-center gap-2">
           <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span>
-            <strong>Interactive Battlemap Canvas</strong> — Edits to geometry and token positions are presentation previews.
-            Canonical combat, initiative, and persistence are owned solely by the Python runtime.
+            {isDm ? (
+              <>
+                <strong>DM Host Battlemap Workspace</strong> — Geometry edits persist in frontend session memory.
+                Canonical rules and persistence remain with the Python runtime.
+              </>
+            ) : (
+              <>
+                <strong>Player Mode</strong> — Token movement is demonstration preview. Geometry editing is reserved for DM Host.
+              </>
+            )}
           </span>
         </div>
         <span className="text-[10px] text-neutral-400 hidden md:inline">
-          Grid: {activeMap.grid.width}×{activeMap.grid.height} ({activeMap.grid.cellSizePx}px / cell)
+          Grid: {activeMap.grid.width}×{activeMap.grid.height} ({activeMap.grid.cellSizePx}px/cell)
         </span>
       </div>
 
-      {/* Main 3-Column Battlemap Workspace Layout */}
+      {/* Main 3-Column Battlemap Layout */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Panel Toggle Button */}
         <button
@@ -804,14 +753,16 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                         <span className="font-bold text-amber-300 uppercase font-mono text-[10px]">
                           Selected {selectedGeometry.type}
                         </span>
-                        <button
-                          onClick={() => handleDeleteGeometry(selectedGeometry)}
-                          className="flex items-center gap-1 text-[11px] text-rose-400 hover:text-rose-300 transition-colors"
-                          title="Delete selected geometry"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
+                        {isDm && (
+                          <button
+                            onClick={() => handleDeleteGeometry(selectedGeometry)}
+                            className="flex items-center gap-1 text-[11px] text-rose-400 hover:text-rose-300 transition-colors"
+                            title="Delete selected geometry"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        )}
                       </div>
 
                       {/* Room Inspector */}
@@ -821,26 +772,18 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                             <label className="text-[10px] text-neutral-400 font-mono block">Room Name</label>
                             <input
                               type="text"
+                              disabled={!isDm}
                               value={selectedRoom.name}
                               onChange={(e) => {
                                 const newName = e.target.value;
-                                setMapList((prev) =>
-                                  prev.map((m) =>
-                                    m.id === activeMap.id
-                                      ? {
-                                          ...m,
-                                          geometry: {
-                                            ...m.geometry,
-                                            rooms: m.geometry.rooms.map((r) =>
-                                              r.id === selectedRoom.id ? { ...r, name: newName } : r
-                                            ),
-                                          },
-                                        }
-                                      : m
-                                  )
-                                );
+                                battlemapSessionManager.updateGeometry(activeMap.id, {
+                                  ...activeMap.geometry,
+                                  rooms: activeMap.geometry.rooms.map((r) =>
+                                    r.id === selectedRoom.id ? { ...r, name: newName } : r
+                                  ),
+                                });
                               }}
-                              className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-100"
+                              className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-100 disabled:opacity-60"
                             />
                           </div>
 
@@ -864,26 +807,18 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                               Floor Material
                             </label>
                             <select
+                              disabled={!isDm}
                               value={selectedRoom.floorType}
                               onChange={(e) => {
                                 const newFloor = e.target.value as RectangularRoom['floorType'];
-                                setMapList((prev) =>
-                                  prev.map((m) =>
-                                    m.id === activeMap.id
-                                      ? {
-                                          ...m,
-                                          geometry: {
-                                            ...m.geometry,
-                                            rooms: m.geometry.rooms.map((r) =>
-                                              r.id === selectedRoom.id ? { ...r, floorType: newFloor } : r
-                                            ),
-                                          },
-                                        }
-                                      : m
-                                  )
-                                );
+                                battlemapSessionManager.updateGeometry(activeMap.id, {
+                                  ...activeMap.geometry,
+                                  rooms: activeMap.geometry.rooms.map((r) =>
+                                    r.id === selectedRoom.id ? { ...r, floorType: newFloor } : r
+                                  ),
+                                });
                               }}
-                              className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200"
+                              className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 disabled:opacity-60"
                             >
                               <option value="stone">Stone Masonry</option>
                               <option value="wood">Wood Planks</option>
@@ -906,24 +841,16 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
+                                disabled={!isDm}
                                 checked={selectedWall.blocksVision}
                                 onChange={(e) => {
                                   const val = e.target.checked;
-                                  setMapList((prev) =>
-                                    prev.map((m) =>
-                                      m.id === activeMap.id
-                                        ? {
-                                            ...m,
-                                            geometry: {
-                                              ...m.geometry,
-                                              walls: m.geometry.walls.map((w) =>
-                                                w.id === selectedWall.id ? { ...w, blocksVision: val } : w
-                                              ),
-                                            },
-                                          }
-                                        : m
-                                    )
-                                  );
+                                  battlemapSessionManager.updateGeometry(activeMap.id, {
+                                    ...activeMap.geometry,
+                                    walls: activeMap.geometry.walls.map((w) =>
+                                      w.id === selectedWall.id ? { ...w, blocksVision: val } : w
+                                    ),
+                                  });
                                 }}
                                 className="rounded bg-neutral-900 border-neutral-700 text-amber-500"
                               />
@@ -932,24 +859,16 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
+                                disabled={!isDm}
                                 checked={selectedWall.blocksMovement}
                                 onChange={(e) => {
                                   const val = e.target.checked;
-                                  setMapList((prev) =>
-                                    prev.map((m) =>
-                                      m.id === activeMap.id
-                                        ? {
-                                            ...m,
-                                            geometry: {
-                                              ...m.geometry,
-                                              walls: m.geometry.walls.map((w) =>
-                                                w.id === selectedWall.id ? { ...w, blocksMovement: val } : w
-                                              ),
-                                            },
-                                          }
-                                        : m
-                                    )
-                                  );
+                                  battlemapSessionManager.updateGeometry(activeMap.id, {
+                                    ...activeMap.geometry,
+                                    walls: activeMap.geometry.walls.map((w) =>
+                                      w.id === selectedWall.id ? { ...w, blocksMovement: val } : w
+                                    ),
+                                  });
                                 }}
                                 className="rounded bg-neutral-900 border-neutral-700 text-amber-500"
                               />
@@ -1002,7 +921,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                           </div>
                           <div className="flex justify-between text-neutral-300">
                             <span>Width:</span>
-                            <span>{selectedCorridor.widthCells * 5} ft</span>
+                            <span>{(selectedCorridor.widthCells || 2) * 5} ft</span>
                           </div>
                         </div>
                       )}
@@ -1089,22 +1008,44 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Custom map delete button */}
+                  {activeMap.id.startsWith('custom-map-') && isDm && (
+                    <div className="pt-3 border-t border-neutral-800">
+                      <button
+                        onClick={() => battlemapSessionManager.deleteMap(activeMap.id)}
+                        className="w-full py-1.5 rounded bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-200 text-xs font-medium flex items-center justify-center gap-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Custom Map</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Artwork Calibration Tab (Section 4) */}
+              {/* Artwork Calibration Tab */}
               {leftTab === 'artwork' && (
                 <div className="space-y-4">
                   {activeMap.backgroundArtwork ? (
                     <div className="space-y-3 p-3 bg-neutral-950 rounded border border-neutral-800">
                       <div>
                         <span className="font-bold text-amber-300 font-cinzel text-xs block mb-1">
-                          Artwork Alignment & Grid
+                          Artwork Calibration
                         </span>
                         <p className="text-[11px] text-neutral-400 leading-relaxed">
-                          Calibrate image scale, alignment offsets, and cell size to align the grid overlay with the artwork.
+                          Adjust image scale, offsets, and cell size to align grid lines with map artwork.
                         </p>
                       </div>
+
+                      {/* Fit to Grid Button */}
+                      <button
+                        onClick={handleFitArtworkToGrid}
+                        className="w-full py-1.5 rounded bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-600/60 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span>Fit Image to Grid (Preserve Ratio)</span>
+                      </button>
 
                       {/* Scale Slider */}
                       <div>
@@ -1116,11 +1057,15 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                         </div>
                         <input
                           type="range"
-                          min="0.3"
-                          max="2.5"
+                          min="0.2"
+                          max="3.0"
                           step="0.05"
                           value={activeMap.backgroundArtwork.scale ?? 1.0}
-                          onChange={(e) => updateActiveMapArtwork({ scale: parseFloat(e.target.value) })}
+                          onChange={(e) =>
+                            battlemapSessionManager.updateArtwork(activeMap.id, {
+                              scale: parseFloat(e.target.value),
+                            })
+                          }
                           className="w-full accent-amber-500 cursor-pointer"
                         />
                       </div>
@@ -1128,16 +1073,20 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                       {/* Horizontal Offset X */}
                       <div>
                         <div className="flex justify-between text-[11px] font-mono text-neutral-300 mb-1">
-                          <span>Horizontal Offset (X):</span>
+                          <span>Offset X:</span>
                           <span className="text-amber-400">{activeMap.backgroundArtwork.offsetX ?? 0}px</span>
                         </div>
                         <input
                           type="range"
-                          min="-200"
-                          max="200"
+                          min="-300"
+                          max="300"
                           step="2"
                           value={activeMap.backgroundArtwork.offsetX ?? 0}
-                          onChange={(e) => updateActiveMapArtwork({ offsetX: parseInt(e.target.value, 10) })}
+                          onChange={(e) =>
+                            battlemapSessionManager.updateArtwork(activeMap.id, {
+                              offsetX: parseInt(e.target.value, 10),
+                            })
+                          }
                           className="w-full accent-amber-500 cursor-pointer"
                         />
                       </div>
@@ -1145,16 +1094,20 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                       {/* Vertical Offset Y */}
                       <div>
                         <div className="flex justify-between text-[11px] font-mono text-neutral-300 mb-1">
-                          <span>Vertical Offset (Y):</span>
+                          <span>Offset Y:</span>
                           <span className="text-amber-400">{activeMap.backgroundArtwork.offsetY ?? 0}px</span>
                         </div>
                         <input
                           type="range"
-                          min="-200"
-                          max="200"
+                          min="-300"
+                          max="300"
                           step="2"
                           value={activeMap.backgroundArtwork.offsetY ?? 0}
-                          onChange={(e) => updateActiveMapArtwork({ offsetY: parseInt(e.target.value, 10) })}
+                          onChange={(e) =>
+                            battlemapSessionManager.updateArtwork(activeMap.id, {
+                              offsetY: parseInt(e.target.value, 10),
+                            })
+                          }
                           className="w-full accent-amber-500 cursor-pointer"
                         />
                       </div>
@@ -1164,7 +1117,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                         <div className="flex justify-between text-[11px] font-mono text-neutral-300 mb-1">
                           <span>Artwork Opacity:</span>
                           <span className="text-amber-400">
-                            {Math.round((activeMap.backgroundArtwork.opacity ?? 0.8) * 100)}%
+                            {Math.round((activeMap.backgroundArtwork.opacity ?? 0.85) * 100)}%
                           </span>
                         </div>
                         <input
@@ -1172,8 +1125,12 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                           min="0.1"
                           max="1.0"
                           step="0.05"
-                          value={activeMap.backgroundArtwork.opacity ?? 0.8}
-                          onChange={(e) => updateActiveMapArtwork({ opacity: parseFloat(e.target.value) })}
+                          value={activeMap.backgroundArtwork.opacity ?? 0.85}
+                          onChange={(e) =>
+                            battlemapSessionManager.updateArtwork(activeMap.id, {
+                              opacity: parseFloat(e.target.value),
+                            })
+                          }
                           className="w-full accent-amber-500 cursor-pointer"
                         />
                       </div>
@@ -1190,34 +1147,46 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                           max="70"
                           step="2"
                           value={activeMap.grid.cellSizePx}
-                          onChange={(e) => updateActiveMapGrid({ cellSizePx: parseInt(e.target.value, 10) })}
+                          onChange={(e) =>
+                            battlemapSessionManager.updateGrid(activeMap.id, {
+                              cellSizePx: parseInt(e.target.value, 10),
+                            })
+                          }
                           className="w-full accent-amber-500 cursor-pointer"
                         />
                       </div>
 
-                      {/* Reset Calibration Button */}
-                      <div className="pt-2">
-                        <button
-                          onClick={() => {
-                            updateActiveMapArtwork({ scale: 1.0, offsetX: 0, offsetY: 0, opacity: 0.85 });
-                            updateActiveMapGrid({ originX: 0, originY: 0 });
-                          }}
-                          className="w-full py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs transition-colors"
-                        >
-                          Reset Artwork Calibration
-                        </button>
-                      </div>
+                      {/* Reset Calibration */}
+                      <button
+                        onClick={() => {
+                          battlemapSessionManager.updateArtwork(activeMap.id, {
+                            scale: 1.0,
+                            offsetX: 0,
+                            offsetY: 0,
+                            opacity: 0.85,
+                          });
+                          battlemapSessionManager.updateGrid(activeMap.id, {
+                            originX: 0,
+                            originY: 0,
+                          });
+                        }}
+                        className="w-full py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs transition-colors"
+                      >
+                        Reset Alignment
+                      </button>
                     </div>
                   ) : (
                     <div className="p-4 bg-neutral-950 rounded border border-neutral-800 text-center space-y-2">
                       <FileImage className="w-8 h-8 text-neutral-600 mx-auto" />
                       <p className="text-[11px] text-neutral-400">No background artwork attached to this scene.</p>
-                      <button
-                        onClick={() => setShowImportModal(true)}
-                        className="px-3 py-1 bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold rounded text-xs"
-                      >
-                        Import Artwork
-                      </button>
+                      {isDm && (
+                        <button
+                          onClick={() => setShowImportModal(true)}
+                          className="px-3 py-1 bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold rounded text-xs"
+                        >
+                          Import Artwork
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1226,7 +1195,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
           </aside>
         )}
 
-        {/* Center Canvas: Dedicated Layered Battlemap Renderer */}
+        {/* Center Canvas */}
         <main className="flex-1 flex flex-col min-w-0 relative bg-neutral-950">
           <BattlemapCanvas
             mapDefinition={activeMap}
@@ -1237,6 +1206,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             activeTool={activeTool}
             selectedGeometry={selectedGeometry}
             layerVisibility={layers}
+            corridorWidthCells={corridorWidth}
             onSelectEntity={(id, type) => {
               setSelectedEntityId(id);
               setSelectedEntityType(type);
@@ -1301,7 +1271,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                       <span className="text-neutral-200">{selectedChar.speedFt} ft</span>
                     </div>
                     <div className="flex justify-between text-neutral-400">
-                      <span>Coordinates:</span>
+                      <span>Position:</span>
                       <span className="text-amber-400">
                         ({selectedChar.token.x}%, {selectedChar.token.y}%)
                       </span>
@@ -1390,36 +1360,43 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                   </button>
                 ))}
 
-                {npcs.map((n) => {
-                  if (userRole !== 'dm_host' && !n.token.isVisibleToPlayers) return null;
-                  return (
-                    <button
-                      key={n.id}
-                      onClick={() => {
-                        setSelectedEntityId(n.id);
-                        setSelectedEntityType('npc');
-                      }}
-                      className={`w-full text-left p-1.5 rounded flex items-center justify-between transition-colors ${
-                        selectedEntityId === n.id
-                          ? 'bg-amber-900/40 text-amber-200 border border-amber-600/60'
-                          : 'bg-neutral-950 hover:bg-neutral-800 text-neutral-300 border border-neutral-850'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 truncate">
-                        {!n.token.isVisibleToPlayers && <EyeOff className="w-3 h-3 text-rose-400 shrink-0" />}
-                        <span className="font-medium truncate">{n.name}</span>
-                      </div>
-                      <span className="text-[9px] font-mono text-neutral-400">{n.occupation}</span>
-                    </button>
-                  );
-                })}
+                {npcs
+                  .filter((n) => {
+                    // Check if NPC belongs to current map scene
+                    const onMap = activeMap.tokens.some((t) => t.entityId === n.id);
+                    const atLocation = n.currentLocationId === activeMap.locationId;
+                    return onMap || atLocation;
+                  })
+                  .map((n) => {
+                    if (!isDm && !n.token.isVisibleToPlayers) return null;
+                    return (
+                      <button
+                        key={n.id}
+                        onClick={() => {
+                          setSelectedEntityId(n.id);
+                          setSelectedEntityType('npc');
+                        }}
+                        className={`w-full text-left p-1.5 rounded flex items-center justify-between transition-colors ${
+                          selectedEntityId === n.id
+                            ? 'bg-amber-900/40 text-amber-200 border border-amber-600/60'
+                            : 'bg-neutral-950 hover:bg-neutral-800 text-neutral-300 border border-neutral-850'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 truncate">
+                          {!n.token.isVisibleToPlayers && <EyeOff className="w-3 h-3 text-rose-400 shrink-0" />}
+                          <span className="font-medium truncate">{n.name}</span>
+                        </div>
+                        <span className="text-[9px] font-mono text-neutral-400">{n.occupation}</span>
+                      </button>
+                    );
+                  })}
               </div>
             </div>
           </aside>
         )}
       </div>
 
-      {/* Real Local Image & URL Import Modal (Section 4) */}
+      {/* Real Local Image & URL Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl p-6 text-xs text-neutral-200 space-y-4">
@@ -1563,11 +1540,11 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
               {/* Session Notice */}
               <div className="p-3 bg-neutral-950 rounded border border-amber-800/50 text-[11px] text-neutral-300 space-y-1">
                 <span className="font-bold text-amber-400 font-mono block">
-                  AIUI-CP002B Session Memory Notice:
+                  AIUI-CP002B1 Session Memory Notice:
                 </span>
                 <p>
-                  Local files are loaded directly into browser memory for the current session.
-                  They are not uploaded to permanent server storage or written to the Python database.
+                  Local files are validated, decoded, and kept in browser session memory.
+                  They are not persisted to the canonical Python database.
                 </p>
               </div>
 
@@ -1581,9 +1558,10 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-neutral-950 font-bold transition-colors"
+                  disabled={isDecoding}
+                  className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-neutral-950 font-bold transition-colors disabled:opacity-60"
                 >
-                  Create Battlemap
+                  {isDecoding ? 'Decoding Image...' : 'Create Battlemap'}
                 </button>
               </div>
             </form>
@@ -1660,9 +1638,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
       <DiceRollerModal
         isOpen={showDiceModal}
         onClose={() => setShowDiceModal(false)}
-        onApplyRollToGame={(res: any, label: string) => {
-          // Non-authoritative demonstration roll
-        }}
+        onApplyRollToGame={() => {}}
       />
 
       {/* Action Submission Modal */}

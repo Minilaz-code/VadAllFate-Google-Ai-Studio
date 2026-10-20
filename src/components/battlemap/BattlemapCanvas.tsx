@@ -15,6 +15,7 @@ import {
   Lock,
   Layers,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
@@ -32,13 +33,20 @@ import type {
 import {
   gridToMapPixels,
   mapPixelsToGrid,
-  screenToMapSpace,
   clampToGrid,
   calculateDistanceInFeet,
   getMapPixelSize,
   type GridDimensions,
   type ViewportTransform,
 } from '../../utils/coordinateSystem.ts';
+import {
+  computeCorridorSegments,
+  isValidCorridor,
+} from '../../utils/corridorGeometry.ts';
+import {
+  findHostWallForDoor,
+  resolveEffectiveBlockingSegments,
+} from '../../utils/wallTopology.ts';
 
 interface BattlemapCanvasProps {
   mapDefinition: BattlemapDefinition;
@@ -49,6 +57,7 @@ interface BattlemapCanvasProps {
   activeTool?: BattlemapEditorTool;
   selectedGeometry?: SelectedGeometryRef | null;
   layerVisibility?: BattlemapLayerVisibility;
+  corridorWidthCells?: number;
   onSelectEntity?: (id: string, type: 'character' | 'npc') => void;
   onSelectGeometry?: (geom: SelectedGeometryRef | null) => void;
   onMoveToken?: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => void;
@@ -58,8 +67,6 @@ interface BattlemapCanvasProps {
   onAddDoor?: (door: DoorSegment) => void;
   onUpdateDoorState?: (doorId: string, newState: 'open' | 'closed' | 'locked') => void;
   onDeleteGeometry?: (geom: SelectedGeometryRef) => void;
-  onQuickAttack?: (attackerId: string, targetId: string) => void;
-  onOpenDiceRoller?: () => void;
 }
 
 export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
@@ -79,6 +86,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     tokens: true,
     overlays: true,
   },
+  corridorWidthCells = 2,
   onSelectEntity,
   onSelectGeometry,
   onMoveToken,
@@ -106,12 +114,19 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   const [drawStart, setDrawStart] = useState<{ gridX: number; gridY: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ gridX: number; gridY: number } | null>(null);
 
-  // Dragging token state
-  const [draggedToken, setDraggedToken] = useState<{
-    id: string;
+  // Dragging token state with movement threshold to prevent accidental moves on selection
+  const [tokenDrag, setTokenDrag] = useState<{
     entityId: string;
-    type: 'character' | 'npc';
+    entityType: 'character' | 'npc';
+    startX: number;
+    startY: number;
+    currentGridX: number;
+    currentGridY: number;
+    isDragging: boolean;
   } | null>(null);
+
+  // Status message for geometry warnings (e.g. floating door)
+  const [canvasNotice, setCanvasNotice] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
@@ -134,15 +149,17 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     setMeasureCurrent(null);
     setDrawStart(null);
     setDrawCurrent(null);
+    setTokenDrag(null);
+    setCanvasNotice(null);
   }, [mapDefinition.id]);
 
   // Convert client coordinate into map space
   const getMapCoords = useCallback(
-    (e: React.MouseEvent): { mapX: number; mapY: number; gridX: number; gridY: number } | null => {
+    (clientX: number, clientY: number): { mapX: number; mapY: number; gridX: number; gridY: number } | null => {
       if (!surfaceRef.current) return null;
       const rect = surfaceRef.current.getBoundingClientRect();
-      const mapX = (e.clientX - rect.left) / viewport.zoom;
-      const mapY = (e.clientY - rect.top) / viewport.zoom;
+      const mapX = (clientX - rect.left) / viewport.zoom;
+      const mapY = (clientY - rect.top) / viewport.zoom;
       const gridPos = mapPixelsToGrid(mapX, mapY, grid, true);
       const clampedGrid = clampToGrid(gridPos.x, gridPos.y, grid.width, grid.height);
 
@@ -168,16 +185,16 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
   // Canvas Mouse Down
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Middle click or Space+click or 'pan' tool triggers panning
+    // Middle click, Space+click, Shift+click, or 'pan' tool triggers viewport pan
     if (e.button === 1 || e.shiftKey || activeTool === 'pan') {
       setIsPanning(true);
       setPanStart({ x: e.clientX - viewport.panX, y: e.clientY - viewport.panY });
       return;
     }
 
-    if (e.button !== 0) return; // Only primary button for drawing/selecting
+    if (e.button !== 0) return; // Only primary button
 
-    const coords = getMapCoords(e);
+    const coords = getMapCoords(e.clientX, e.clientY);
     if (!coords) return;
 
     if (activeTool === 'measure') {
@@ -185,7 +202,6 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
         setMeasureStart({ x: coords.gridX, y: coords.gridY });
         setMeasureCurrent({ x: coords.gridX, y: coords.gridY });
       } else {
-        // Clear measurement
         setMeasureStart(null);
         setMeasureCurrent(null);
       }
@@ -199,27 +215,43 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     }
 
     if (activeTool === 'door') {
-      // Place door at grid cell edge
-      const isHorizontal = Math.abs(coords.mapX % grid.cellSizePx - grid.cellSizePx / 2) < Math.abs(coords.mapY % grid.cellSizePx - grid.cellSizePx / 2);
+      // Find nearest wall to snap to
+      const host = findHostWallForDoor(coords.gridX, coords.gridY, mapDefinition.geometry.walls, 1.2);
+      if (!host) {
+        setCanvasNotice('Doors must be placed on a valid wall segment. Snap near an existing wall.');
+        setTimeout(() => setCanvasNotice(null), 3000);
+        return;
+      }
+
+      // Check for duplicate door at this exact coordinate
+      const existingDoor = mapDefinition.geometry.doors.find(
+        (d) => d.x === host.snappedX && d.y === host.snappedY
+      );
+      if (existingDoor) {
+        setCanvasNotice('A door already exists at this wall location.');
+        setTimeout(() => setCanvasNotice(null), 3000);
+        return;
+      }
+
       const newDoor: DoorSegment = {
-        id: `door-${Date.now()}`,
-        x: coords.gridX,
-        y: coords.gridY,
-        orientation: isHorizontal ? 'horizontal' : 'vertical',
+        id: `door-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        x: host.snappedX,
+        y: host.snappedY,
+        orientation: host.orientation,
         state: 'closed',
         blocksVisionWhenClosed: true,
       };
       onAddDoor?.(newDoor);
+      setCanvasNotice(null);
       return;
     }
 
     if (activeTool === 'token') {
-      // If user clicks on empty cell with a selected entity, move it there
-      if (selectedEntityId && !draggedToken) {
+      // If user clicks on empty cell while an entity is selected, move it there
+      if (selectedEntityId && !tokenDrag) {
         const char = characters.find((c) => c.id === selectedEntityId);
         const npc = npcs.find((n) => n.id === selectedEntityId);
         const entityType = char ? 'character' : 'npc';
-        // Convert to percentage coordinate for backward compatibility with CP001/CP002A state
         const pctX = Math.round((coords.gridX / grid.width) * 100);
         const pctY = Math.round((coords.gridY / grid.height) * 100);
         onMoveToken?.(selectedEntityId, pctX, pctY, entityType);
@@ -227,97 +259,152 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     }
   };
 
-  // Canvas Mouse Move
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning) {
-      setViewport((prev) => ({
-        ...prev,
-        panX: e.clientX - panStart.x,
-        panY: e.clientY - panStart.y,
-      }));
-      return;
-    }
+  // Global window-level mouse movement and mouse up listeners
+  useEffect(() => {
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      if (isPanning) {
+        setViewport((prev) => ({
+          ...prev,
+          panX: e.clientX - panStart.x,
+          panY: e.clientY - panStart.y,
+        }));
+        return;
+      }
 
-    const coords = getMapCoords(e);
-    if (!coords) return;
+      const coords = getMapCoords(e.clientX, e.clientY);
+      if (!coords) return;
 
-    if (activeTool === 'measure' && measureStart) {
-      setMeasureCurrent({ x: coords.gridX, y: coords.gridY });
-    }
-
-    if (drawStart && (activeTool === 'room' || activeTool === 'corridor' || activeTool === 'wall')) {
-      setDrawCurrent({ gridX: coords.gridX, gridY: coords.gridY });
-    }
-  };
-
-  // Canvas Mouse Up
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (isPanning) {
-      setIsPanning(false);
-      return;
-    }
-
-    if (drawStart && drawCurrent) {
-      const coords = getMapCoords(e) || { gridX: drawCurrent.gridX, gridY: drawCurrent.gridY };
-
-      if (activeTool === 'room') {
-        const x1 = Math.min(drawStart.gridX, coords.gridX);
-        const y1 = Math.min(drawStart.gridY, coords.gridY);
-        const x2 = Math.max(drawStart.gridX, coords.gridX);
-        const y2 = Math.max(drawStart.gridY, coords.gridY);
-        const width = x2 - x1;
-        const height = y2 - y1;
-
-        // Minimum 1x1 room
-        if (width >= 1 && height >= 1) {
-          const roomNumber = (mapDefinition.geometry.rooms.length || 0) + 1;
-          const newRoom: RectangularRoom = {
-            id: `room-${Date.now()}`,
-            name: `Chamber ${roomNumber}`,
-            x: x1,
-            y: y1,
-            width,
-            height,
-            floorType: 'stone',
-          };
-          onAddRoom?.(newRoom);
+      // Handle token dragging
+      if (tokenDrag) {
+        const dist = Math.hypot(e.clientX - tokenDrag.startX, e.clientY - tokenDrag.startY);
+        if (dist > 5) {
+          setTokenDrag((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  currentGridX: coords.gridX,
+                  currentGridY: coords.gridY,
+                  isDragging: true,
+                }
+              : null
+          );
         }
-      } else if (activeTool === 'corridor') {
-        const dx = Math.abs(coords.gridX - drawStart.gridX);
-        const dy = Math.abs(coords.gridY - drawStart.gridY);
-        if (dx > 0 || dy > 0) {
-          const newCorridor: CorridorSegment = {
-            id: `corridor-${Date.now()}`,
-            startX: drawStart.gridX,
-            startY: drawStart.gridY,
-            endX: coords.gridX,
-            endY: coords.gridY,
-            widthCells: 2,
-            floorType: 'stone',
-          };
-          onAddCorridor?.(newCorridor);
+        return;
+      }
+
+      if (activeTool === 'measure' && measureStart) {
+        setMeasureCurrent({ x: coords.gridX, y: coords.gridY });
+      }
+
+      if (drawStart && (activeTool === 'room' || activeTool === 'corridor' || activeTool === 'wall')) {
+        setDrawCurrent({ gridX: coords.gridX, gridY: coords.gridY });
+      }
+    };
+
+    const handleWindowMouseUp = (e: MouseEvent) => {
+      if (isPanning) {
+        setIsPanning(false);
+        return;
+      }
+
+      // Handle token drag release
+      if (tokenDrag) {
+        if (tokenDrag.isDragging) {
+          const coords = getMapCoords(e.clientX, e.clientY);
+          if (coords) {
+            const pctX = Math.round((coords.gridX / grid.width) * 100);
+            const pctY = Math.round((coords.gridY / grid.height) * 100);
+            onMoveToken?.(tokenDrag.entityId, pctX, pctY, tokenDrag.entityType);
+          }
         }
-      } else if (activeTool === 'wall') {
-        if (drawStart.gridX !== coords.gridX || drawStart.gridY !== coords.gridY) {
-          const newWall: WallSegment = {
-            id: `wall-${Date.now()}`,
-            x1: drawStart.gridX,
-            y1: drawStart.gridY,
-            x2: coords.gridX,
-            y2: coords.gridY,
-            blocksMovement: true,
-            blocksVision: true,
-            thickness: 3,
-          };
-          onAddWall?.(newWall);
+        setTokenDrag(null);
+        return;
+      }
+
+      // Handle geometry completion
+      if (drawStart && drawCurrent) {
+        const coords = getMapCoords(e.clientX, e.clientY) || {
+          gridX: drawCurrent.gridX,
+          gridY: drawCurrent.gridY,
+        };
+
+        if (activeTool === 'room') {
+          const x1 = Math.min(drawStart.gridX, coords.gridX);
+          const y1 = Math.min(drawStart.gridY, coords.gridY);
+          const x2 = Math.max(drawStart.gridX, coords.gridX);
+          const y2 = Math.max(drawStart.gridY, coords.gridY);
+          const width = x2 - x1;
+          const height = y2 - y1;
+
+          if (width >= 1 && height >= 1) {
+            const roomNum = (mapDefinition.geometry.rooms.length || 0) + 1;
+            const newRoom: RectangularRoom = {
+              id: `room-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              name: `Chamber ${roomNum}`,
+              x: x1,
+              y: y1,
+              width,
+              height,
+              floorType: 'stone',
+            };
+            onAddRoom?.(newRoom);
+          }
+        } else if (activeTool === 'corridor') {
+          if (isValidCorridor(drawStart.gridX, drawStart.gridY, coords.gridX, coords.gridY)) {
+            const newCorridor: CorridorSegment = {
+              id: `corridor-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              startX: drawStart.gridX,
+              startY: drawStart.gridY,
+              endX: coords.gridX,
+              endY: coords.gridY,
+              widthCells: corridorWidthCells,
+              floorType: 'stone',
+            };
+            onAddCorridor?.(newCorridor);
+          }
+        } else if (activeTool === 'wall') {
+          if (drawStart.gridX !== coords.gridX || drawStart.gridY !== coords.gridY) {
+            const newWall: WallSegment = {
+              id: `wall-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              x1: drawStart.gridX,
+              y1: drawStart.gridY,
+              x2: coords.gridX,
+              y2: coords.gridY,
+              blocksMovement: true,
+              blocksVision: true,
+              thickness: 4,
+            };
+            onAddWall?.(newWall);
+          }
         }
       }
-    }
 
-    setDrawStart(null);
-    setDrawCurrent(null);
-    setDraggedToken(null);
-  };
+      setDrawStart(null);
+      setDrawCurrent(null);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [
+    isPanning,
+    panStart,
+    drawStart,
+    drawCurrent,
+    tokenDrag,
+    activeTool,
+    corridorWidthCells,
+    grid,
+    getMapCoords,
+    mapDefinition,
+    onAddRoom,
+    onAddCorridor,
+    onAddWall,
+    onMoveToken,
+  ]);
 
   // Distance calculation for active measurement
   const measuredDistanceFt =
@@ -372,7 +459,6 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedGeometry) {
-        // Ensure user is not typing in an input
         const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
         if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
         onDeleteGeometry?.(selectedGeometry);
@@ -381,6 +467,21 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedGeometry, onDeleteGeometry]);
+
+  // Resolve effective blocking line segments factoring in door states
+  const effectiveSegments = resolveEffectiveBlockingSegments(
+    mapDefinition.geometry.walls,
+    mapDefinition.geometry.doors
+  );
+
+  // Filter NPCs specific to this active map scene
+  const sceneNpcs = npcs.filter((npc) => {
+    // Check if explicitly placed on this map
+    const onMap = mapDefinition.tokens.some((t) => t.entityId === npc.id);
+    // Or belongs to this location
+    const atLocation = npc.currentLocationId === mapDefinition.locationId;
+    return onMap || atLocation;
+  });
 
   return (
     <div
@@ -435,11 +536,17 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
         </div>
       </div>
 
+      {/* Ephemeral Notice Toast */}
+      {canvasNotice && (
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40 bg-amber-950/95 border border-amber-600 px-3 py-1.5 rounded shadow-2xl text-amber-200 text-xs flex items-center gap-2 font-mono animate-in fade-in">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>{canvasNotice}</span>
+        </div>
+      )}
+
       {/* Main Canvas Scrollable / Pan Container */}
       <div
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
         style={{
           cursor:
             isPanning || activeTool === 'pan'
@@ -449,7 +556,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
               : activeTool === 'room' || activeTool === 'corridor' || activeTool === 'wall'
               ? 'crosshair'
               : activeTool === 'door'
-              ? 'copy'
+              ? 'cell'
               : 'default',
         }}
         className="relative flex-1 overflow-hidden flex items-center justify-center bg-[#090b0e] p-6"
@@ -502,40 +609,43 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           {/* ============================================================ */}
           {layerVisibility.geometry && (
             <div className="absolute inset-0 pointer-events-none">
-              {/* Corridors */}
+              {/* Properly Bounded Corridors (Section 3: No diagonal bounding boxes) */}
               {mapDefinition.geometry.corridors.map((c) => {
                 const isSelected = selectedGeometry?.type === 'corridor' && selectedGeometry?.id === c.id;
-                const minX = Math.min(c.startX, c.endX);
-                const minY = Math.min(c.startY, c.endY);
-                const widthCells = Math.max(Math.abs(c.endX - c.startX), c.widthCells || 2);
-                const heightCells = Math.max(Math.abs(c.endY - c.startY), c.widthCells || 2);
-                const leftPx = minX * grid.cellSizePx;
-                const topPx = minY * grid.cellSizePx;
-                const widthPx = widthCells * grid.cellSizePx;
-                const heightPx = heightCells * grid.cellSizePx;
+                const segments = computeCorridorSegments(
+                  c.startX,
+                  c.startY,
+                  c.endX,
+                  c.endY,
+                  c.widthCells || corridorWidthCells
+                );
                 const style = getFloorStyle(c.floorType || 'stone');
 
                 return (
-                  <div
-                    key={c.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (activeTool === 'select') {
-                        onSelectGeometry?.({ type: 'corridor', id: c.id });
-                      }
-                    }}
-                    style={{
-                      left: `${leftPx}px`,
-                      top: `${topPx}px`,
-                      width: `${widthPx}px`,
-                      height: `${heightPx}px`,
-                      ...style,
-                    }}
-                    className={`absolute rounded border pointer-events-auto cursor-pointer transition-shadow ${
-                      isSelected ? 'ring-2 ring-amber-400 shadow-lg z-10' : 'opacity-90'
-                    }`}
-                    title={`Corridor (${c.widthCells * 5}ft width)`}
-                  />
+                  <g key={c.id}>
+                    {segments.map((seg, idx) => (
+                      <div
+                        key={`${c.id}-seg-${idx}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (activeTool === 'select') {
+                            onSelectGeometry?.({ type: 'corridor', id: c.id });
+                          }
+                        }}
+                        style={{
+                          left: `${seg.x * grid.cellSizePx}px`,
+                          top: `${seg.y * grid.cellSizePx}px`,
+                          width: `${seg.width * grid.cellSizePx}px`,
+                          height: `${seg.height * grid.cellSizePx}px`,
+                          ...style,
+                        }}
+                        className={`absolute rounded border pointer-events-auto cursor-pointer transition-shadow ${
+                          isSelected ? 'ring-2 ring-amber-400 shadow-lg z-10' : 'opacity-90'
+                        }`}
+                        title={`Corridor (${(c.widthCells || 2) * 5}ft width)`}
+                      />
+                    ))}
+                  </g>
                 );
               })}
 
@@ -616,33 +726,41 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* LAYER 4: Walls and Doors                                     */}
+          {/* LAYER 4: Walls and Doors (Section 4: Topology Split)         */}
           {/* ============================================================ */}
           {layerVisibility.walls && (
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
               style={{ zIndex: 15 }}
             >
-              {/* Walls */}
-              {mapDefinition.geometry.walls.map((w) => {
-                const isSelected = selectedGeometry?.type === 'wall' && selectedGeometry?.id === w.id;
-                const x1 = w.x1 * grid.cellSizePx + (grid.originX || 0);
-                const y1 = w.y1 * grid.cellSizePx + (grid.originY || 0);
-                const x2 = w.x2 * grid.cellSizePx + (grid.originX || 0);
-                const y2 = w.y2 * grid.cellSizePx + (grid.originY || 0);
+              {/* Effective Wall Segments (Doorway openings are not blocked when open) */}
+              {effectiveSegments.map((seg) => {
+                const isSelected =
+                  (selectedGeometry?.type === 'wall' && selectedGeometry?.id === seg.sourceId) ||
+                  (selectedGeometry?.type === 'door' && selectedGeometry?.id === seg.sourceId);
+
+                const x1 = seg.x1 * grid.cellSizePx + (grid.originX || 0);
+                const y1 = seg.y1 * grid.cellSizePx + (grid.originY || 0);
+                const x2 = seg.x2 * grid.cellSizePx + (grid.originX || 0);
+                const y2 = seg.y2 * grid.cellSizePx + (grid.originY || 0);
+
+                if (seg.sourceType === 'door') {
+                  // Doorway segment: if open, do not render solid wall line
+                  if (!seg.blocksVision) return null;
+                }
 
                 return (
                   <g
-                    key={w.id}
+                    key={seg.id}
                     className="pointer-events-auto cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (activeTool === 'select') {
-                        onSelectGeometry?.({ type: 'wall', id: w.id });
+                        onSelectGeometry?.({ type: seg.sourceType, id: seg.sourceId });
                       }
                     }}
                   >
-                    {/* Wider transparent hit zone */}
+                    {/* Transparent hover/hit zone */}
                     <line
                       x1={x1}
                       y1={y1}
@@ -652,18 +770,17 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                       strokeWidth={14}
                       strokeLinecap="round"
                     />
-                    {/* Rendered wall stroke */}
+                    {/* Rendered wall line */}
                     <line
                       x1={x1}
                       y1={y1}
                       x2={x2}
                       y2={y2}
                       stroke={isSelected ? '#f59e0b' : '#cbd5e1'}
-                      strokeWidth={isSelected ? 6 : (w.thickness || 4)}
+                      strokeWidth={isSelected ? 6 : 4}
                       strokeLinecap="round"
-                      strokeDasharray={w.blocksVision ? undefined : '6 4'}
+                      strokeDasharray={seg.blocksVision ? undefined : '6 4'}
                     />
-                    {/* Endpoint markers */}
                     <circle cx={x1} cy={y1} r={3} fill={isSelected ? '#f59e0b' : '#94a3b8'} />
                     <circle cx={x2} cy={y2} r={3} fill={isSelected ? '#f59e0b' : '#94a3b8'} />
                   </g>
@@ -672,7 +789,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
             </svg>
           )}
 
-          {/* Doors (HTML overlay elements for rich interactions) */}
+          {/* Interactive Doors Overlay */}
           {layerVisibility.walls && (
             <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 16 }}>
               {mapDefinition.geometry.doors.map((d) => {
@@ -686,8 +803,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                   if (activeTool === 'select') {
                     onSelectGeometry?.({ type: 'door', id: d.id });
                   } else {
-                    // Click door to cycle state: closed -> open -> locked -> closed
-                    const nextState = d.state === 'closed' ? 'open' : d.state === 'open' ? 'locked' : 'closed';
+                    const nextState =
+                      d.state === 'closed' ? 'open' : d.state === 'open' ? 'locked' : 'closed';
                     onUpdateDoorState?.(d.id, nextState);
                   }
                 };
@@ -704,13 +821,13 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                       transform: isHorizontal ? 'translate(0, -6px)' : 'translate(-6px, 0)',
                     }}
                     className={`absolute pointer-events-auto cursor-pointer rounded flex items-center justify-center transition-all ${
-                      isSelected ? 'ring-2 ring-amber-400' : ''
+                      isSelected ? 'ring-2 ring-amber-400 z-10' : ''
                     } ${
                       d.state === 'locked'
                         ? 'bg-rose-900 border border-rose-500 shadow-md shadow-rose-950'
                         : d.state === 'closed'
                         ? 'bg-amber-800 border border-amber-500 shadow-md shadow-amber-950'
-                        : 'bg-emerald-950/60 border border-dashed border-emerald-400 opacity-80'
+                        : 'bg-emerald-950/40 border border-dashed border-emerald-400 opacity-90'
                     }`}
                     title={`Door: ${d.state} (Click to toggle)`}
                   >
@@ -738,24 +855,40 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* LAYER 6: Tokens & Labels                                     */}
+          {/* LAYER 6: Tokens & Labels (Section 2: Live Position Binding)  */}
           {/* ============================================================ */}
           {layerVisibility.tokens && (
             <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 20 }}>
-              {/* Characters */}
+              {/* Characters: Visual position derives strictly from live projection */}
               {characters.map((char) => {
                 const isSelected = selectedEntityId === char.id;
-                // Tokens stored as 0-100% in legacy state, or grid coordinate in battlemap definitions
-                const tokenDef = mapDefinition.tokens.find((t) => t.entityId === char.id);
-                const xPct = tokenDef ? tokenDef.x : char.token.x;
-                const yPct = tokenDef ? tokenDef.y : char.token.y;
+                const isBeingDragged = tokenDrag?.entityId === char.id && tokenDrag.isDragging;
+
+                // Visual position: use live char.token.x / y (never overridden by static definitions)
+                const xPct = isBeingDragged
+                  ? (tokenDrag.currentGridX / grid.width) * 100
+                  : char.token.x;
+                const yPct = isBeingDragged
+                  ? (tokenDrag.currentGridY / grid.height) * 100
+                  : char.token.y;
 
                 return (
                   <div
                     key={char.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectEntity?.(char.id, 'character');
+                    onMouseDown={(e) => {
+                      if (activeTool === 'token') {
+                        e.stopPropagation();
+                        setTokenDrag({
+                          entityId: char.id,
+                          entityType: 'character',
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          currentGridX: Math.round((char.token.x / 100) * grid.width),
+                          currentGridY: Math.round((char.token.y / 100) * grid.height),
+                          isDragging: false,
+                        });
+                        onSelectEntity?.(char.id, 'character');
+                      }
                     }}
                     style={{
                       left: `${xPct}%`,
@@ -764,9 +897,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                     }}
                     className={`absolute pointer-events-auto cursor-pointer flex flex-col items-center group transition-transform ${
                       isSelected ? 'scale-110 z-30' : 'hover:scale-105 z-20'
-                    }`}
+                    } ${isBeingDragged ? 'opacity-80 scale-125 z-40' : ''}`}
                   >
-                    {/* Token Circle */}
                     <div
                       className={`w-9 h-9 rounded-full border-2 flex items-center justify-center font-bold text-xs shadow-lg transition-all ${
                         isSelected
@@ -776,8 +908,6 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                     >
                       {char.name.charAt(0)}
                     </div>
-
-                    {/* Name & HP Badge */}
                     <div className="mt-1 px-1.5 py-0.5 rounded bg-neutral-950/90 border border-neutral-800 text-[9px] font-mono text-neutral-200 whitespace-nowrap flex items-center gap-1 shadow-md">
                       <span>{char.name.split(' ')[0]}</span>
                       <span className="text-emerald-400 font-bold">
@@ -788,24 +918,39 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 );
               })}
 
-              {/* NPCs */}
-              {npcs.map((npc) => {
-                // Role projection filter: hidden tokens only visible to DM
+              {/* NPCs: Scene-specific filtering and live projection */}
+              {sceneNpcs.map((npc) => {
                 if (userRole !== 'dm_host' && !npc.token.isVisibleToPlayers) {
                   return null;
                 }
 
                 const isSelected = selectedEntityId === npc.id;
-                const tokenDef = mapDefinition.tokens.find((t) => t.entityId === npc.id);
-                const xPct = tokenDef ? tokenDef.x : npc.token.x;
-                const yPct = tokenDef ? tokenDef.y : npc.token.y;
+                const isBeingDragged = tokenDrag?.entityId === npc.id && tokenDrag.isDragging;
+
+                const xPct = isBeingDragged
+                  ? (tokenDrag.currentGridX / grid.width) * 100
+                  : npc.token.x;
+                const yPct = isBeingDragged
+                  ? (tokenDrag.currentGridY / grid.height) * 100
+                  : npc.token.y;
 
                 return (
                   <div
                     key={npc.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectEntity?.(npc.id, 'npc');
+                    onMouseDown={(e) => {
+                      if (activeTool === 'token') {
+                        e.stopPropagation();
+                        setTokenDrag({
+                          entityId: npc.id,
+                          entityType: 'npc',
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          currentGridX: Math.round((npc.token.x / 100) * grid.width),
+                          currentGridY: Math.round((npc.token.y / 100) * grid.height),
+                          isDragging: false,
+                        });
+                        onSelectEntity?.(npc.id, 'npc');
+                      }
                     }}
                     style={{
                       left: `${xPct}%`,
@@ -814,9 +959,10 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                     }}
                     className={`absolute pointer-events-auto cursor-pointer flex flex-col items-center group transition-transform ${
                       isSelected ? 'scale-110 z-30' : 'hover:scale-105 z-20'
-                    } ${!npc.token.isVisibleToPlayers ? 'opacity-50 border-dashed' : ''}`}
+                    } ${!npc.token.isVisibleToPlayers ? 'opacity-50 border-dashed' : ''} ${
+                      isBeingDragged ? 'opacity-80 scale-125 z-40' : ''
+                    }`}
                   >
-                    {/* Token Circle */}
                     <div
                       className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs shadow-lg transition-all ${
                         isSelected
@@ -828,8 +974,6 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                     >
                       {npc.name.charAt(0)}
                     </div>
-
-                    {/* Name Badge */}
                     <div className="mt-1 px-1.5 py-0.5 rounded bg-neutral-950/90 border border-neutral-800 text-[9px] font-mono text-neutral-200 whitespace-nowrap flex items-center gap-1 shadow-md">
                       {!npc.token.isVisibleToPlayers && <EyeOff className="w-2.5 h-2.5 text-neutral-400" />}
                       <span>{npc.name.split(' ')[0]}</span>
@@ -841,7 +985,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* LAYER 7: Drawing Previews, Measurement, and Selection Overlay */}
+          {/* LAYER 7: Drawing Previews & Measurement Overlays             */}
           {/* ============================================================ */}
           {layerVisibility.overlays && (
             <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 25 }}>
@@ -905,19 +1049,30 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 </div>
               )}
 
-              {/* Drawing Corridor Preview Box */}
+              {/* Drawing Corridor Preview (Orthogonal, Section 3) */}
               {activeTool === 'corridor' && drawStart && drawCurrent && (
-                <div
-                  style={{
-                    left: `${Math.min(drawStart.gridX, drawCurrent.gridX) * grid.cellSizePx}px`,
-                    top: `${Math.min(drawStart.gridY, drawCurrent.gridY) * grid.cellSizePx}px`,
-                    width: `${Math.max(Math.abs(drawCurrent.gridX - drawStart.gridX), 2) * grid.cellSizePx}px`,
-                    height: `${Math.max(Math.abs(drawCurrent.gridY - drawStart.gridY), 2) * grid.cellSizePx}px`,
-                  }}
-                  className="absolute border-2 border-dashed border-cyan-400 bg-cyan-500/20 rounded flex items-center justify-center text-cyan-200 font-mono text-xs font-bold"
-                >
-                  Corridor Preview (10ft width)
-                </div>
+                <>
+                  {computeCorridorSegments(
+                    drawStart.gridX,
+                    drawStart.gridY,
+                    drawCurrent.gridX,
+                    drawCurrent.gridY,
+                    corridorWidthCells
+                  ).map((seg, i) => (
+                    <div
+                      key={`preview-corridor-${i}`}
+                      style={{
+                        left: `${seg.x * grid.cellSizePx}px`,
+                        top: `${seg.y * grid.cellSizePx}px`,
+                        width: `${seg.width * grid.cellSizePx}px`,
+                        height: `${seg.height * grid.cellSizePx}px`,
+                      }}
+                      className="absolute border-2 border-dashed border-cyan-400 bg-cyan-500/20 rounded flex items-center justify-center text-cyan-200 font-mono text-xs font-bold"
+                    >
+                      Corridor ({corridorWidthCells * 5}ft width)
+                    </div>
+                  ))}
+                </>
               )}
 
               {/* Drawing Wall Preview Line */}
