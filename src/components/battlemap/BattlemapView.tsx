@@ -36,10 +36,14 @@ import {
   FileImage,
   Move,
   CheckCircle,
+  CloudFog,
+  Brush,
+  RotateCcw,
+  BoxSelect,
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
-import type { UserRole, PlayerSafeNpc, SnapshotRef } from '../../types/runtime.ts';
+import type { UserRole, PlayerSafeNpc, SnapshotRef, UserIdentityContext } from '../../types/runtime.ts';
 import type {
   BattlemapDefinition,
   BattlemapEditorTool,
@@ -50,6 +54,8 @@ import type {
   WallSegment,
   DoorSegment,
 } from '../../types/battlemap.ts';
+import { canAccessDmWorkspaces } from '../../runtime/roleAuthority.ts';
+import { manualRevealCells, manualHideCells, resetExploredFog } from '../../utils/lineOfSight.ts';
 import { battlemapSessionManager } from '../../state/battlemapSession.ts';
 import { BattlemapCanvas } from './BattlemapCanvas.tsx';
 import { DiceRollerModal } from '../play/DiceRollerModal.tsx';
@@ -62,6 +68,7 @@ interface BattlemapViewProps {
   userRole: UserRole;
   currentSnapshot: SnapshotRef;
   selectedCharacterId?: string;
+  identity?: UserIdentityContext;
   onNavigateToPlay?: () => void;
   onMoveToken: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => void;
 }
@@ -72,6 +79,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   userRole,
   currentSnapshot,
   selectedCharacterId,
+  identity,
   onNavigateToPlay,
   onMoveToken,
 }) => {
@@ -89,8 +97,8 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   const activeMap = battlemapSessionManager.getActiveMap();
   const activeMapId = battlemapSessionManager.getActiveMapId();
 
-  // Active Tool selection (restricted by role)
-  const isDm = userRole === 'dm_host';
+  // Active Tool selection (restricted strictly by role, independent of hosting)
+  const isDm = identity ? canAccessDmWorkspaces(identity) : userRole === 'dm_host';
   const [activeTool, setActiveTool] = useState<BattlemapEditorTool>('token');
 
   // Selected Geometry pointer
@@ -103,6 +111,12 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   // Corridor width setting (cells)
   const [corridorWidth, setCorridorWidth] = useState<number>(2);
 
+  // Fog brush radius (1, 2, or 3 cells)
+  const [brushRadius, setBrushRadius] = useState<number>(activeMap.fog?.brushRadiusCells || 1);
+
+  // Reset fog confirmation modal
+  const [showResetFogModal, setShowResetFogModal] = useState<boolean>(false);
+
   // Layer Visibility
   const [layers, setLayers] = useState<BattlemapLayerVisibility>({
     artwork: true,
@@ -114,10 +128,10 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
     overlays: true,
   });
 
-  // Collapsible Sidebars
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [leftTab, setLeftTab] = useState<'geometry' | 'artwork'>('geometry');
+  // Collapsible Sidebars (responsive defaults for desktop vs mobile)
+  const [leftPanelOpen, setLeftPanelOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
+  const [rightPanelOpen, setRightPanelOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1200 : true));
+  const [leftTab, setLeftTab] = useState<'geometry' | 'artwork' | 'fog'>('geometry');
 
   // Modals
   const [showImportModal, setShowImportModal] = useState(false);
@@ -342,6 +356,8 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
           enabled: false,
           defaultState: 'revealed',
           revealedCells: [],
+          hiddenCells: [],
+          exploredCells: [],
           previousExploredCells: [],
         },
         lineOfSight: {
@@ -581,6 +597,129 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                 <DoorClosed className="w-3.5 h-3.5" />
                 <span>Place Door</span>
               </button>
+
+              <div className="h-4 w-px bg-neutral-700 mx-0.5" />
+
+              {/* Fog of War Tools */}
+              <button
+                onClick={() => setActiveTool('fog_reveal')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'fog_reveal'
+                    ? 'bg-emerald-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-emerald-300 hover:bg-neutral-700'
+                }`}
+                title="Brush to reveal cells on click and drag"
+              >
+                <Brush className="w-3.5 h-3.5" />
+                <span>Reveal</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTool('fog_hide')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'fog_hide'
+                    ? 'bg-purple-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-purple-300 hover:bg-neutral-700'
+                }`}
+                title="Brush to conceal cells into fog on click and drag"
+              >
+                <CloudFog className="w-3.5 h-3.5" />
+                <span>Hide</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTool('fog_box_reveal')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'fog_box_reveal'
+                    ? 'bg-emerald-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-emerald-300 hover:bg-neutral-700'
+                }`}
+                title="Drag rectangle to reveal all contained cells"
+              >
+                <BoxSelect className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">Box Reveal</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTool('fog_box_hide')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'fog_box_hide'
+                    ? 'bg-purple-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-purple-300 hover:bg-neutral-700'
+                }`}
+                title="Drag rectangle to conceal all contained cells"
+              >
+                <BoxSelect className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">Box Hide</span>
+              </button>
+
+              {(activeTool === 'fog_reveal' || activeTool === 'fog_hide') && (
+                <div className="flex items-center gap-1 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-700">
+                  <span className="text-[10px] text-neutral-400 font-mono">Brush:</span>
+                  <select
+                    value={brushRadius}
+                    onChange={(e) => {
+                      const r = Number(e.target.value);
+                      setBrushRadius(r);
+                      battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                        ...prev,
+                        brushRadiusCells: r,
+                      }));
+                    }}
+                    className="bg-transparent text-amber-300 font-mono text-[11px] focus:outline-none"
+                  >
+                    <option value="1">1 cell (5ft)</option>
+                    <option value="2">2 cells (10ft)</option>
+                    <option value="3">3 cells (15ft)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Fog Toggles */}
+              <div className="h-4 w-px bg-neutral-700 mx-0.5" />
+
+              <button
+                onClick={() =>
+                  battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                    ...prev,
+                    enabled: !prev.enabled,
+                  }))
+                }
+                className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors ${
+                  activeMap.fog.enabled
+                    ? 'bg-emerald-950 border border-emerald-600 text-emerald-200'
+                    : 'bg-neutral-800 border border-neutral-700 text-neutral-400'
+                }`}
+                title="Toggle Fog of War for this map"
+              >
+                {activeMap.fog.enabled ? 'Fog: ON' : 'Fog: OFF'}
+              </button>
+
+              <button
+                onClick={() =>
+                  battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                    ...prev,
+                    previewPlayerFog: !prev.previewPlayerFog,
+                  }))
+                }
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                  activeMap.fog.previewPlayerFog
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Toggle DM Preview of Player Visibility (darkens unexplored areas)"
+              >
+                {activeMap.fog.previewPlayerFog ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                <span className="hidden lg:inline">{activeMap.fog.previewPlayerFog ? 'Exit Preview' : 'Player Fog'}</span>
+              </button>
+
+              <button
+                onClick={() => setShowResetFogModal(true)}
+                className="p-1.5 rounded bg-neutral-800 hover:bg-rose-900/60 text-neutral-400 hover:text-rose-200 border border-neutral-700 hover:border-rose-600 transition-colors"
+                title="Reset Explored Fog for this map"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
             </>
           )}
 
@@ -729,8 +868,20 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                     : 'border-transparent text-neutral-400 hover:text-neutral-200'
                 }`}
               >
-                Geometry ({activeMap.geometry.rooms.length + activeMap.geometry.walls.length})
+                Geometry
               </button>
+              {isDm && (
+                <button
+                  onClick={() => setLeftTab('fog')}
+                  className={`flex-1 py-2 text-center font-medium border-b-2 transition-colors ${
+                    leftTab === 'fog'
+                      ? 'border-amber-500 text-amber-200 bg-neutral-900'
+                      : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  Fog & LOS
+                </button>
+              )}
               <button
                 onClick={() => setLeftTab('artwork')}
                 className={`flex-1 py-2 text-center font-medium border-b-2 transition-colors ${
@@ -739,7 +890,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                     : 'border-transparent text-neutral-400 hover:text-neutral-200'
                 }`}
               >
-                Calibration
+                Artwork
               </button>
             </div>
 
@@ -827,6 +978,46 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                               <option value="dirt">Damp Dirt</option>
                             </select>
                           </div>
+
+                          {isDm && (
+                            <div className="pt-2 border-t border-neutral-800 space-y-1.5">
+                              <span className="text-[10px] text-neutral-400 font-mono block">Chamber Fog:</span>
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    const cells: string[] = [];
+                                    for (let cy = selectedRoom.y; cy < selectedRoom.y + selectedRoom.height; cy++) {
+                                      for (let cx = selectedRoom.x; cx < selectedRoom.x + selectedRoom.width; cx++) {
+                                        cells.push(`${cx},${cy}`);
+                                      }
+                                    }
+                                    battlemapSessionManager.updateFog(activeMap.id, (prev) =>
+                                      manualRevealCells(prev, cells)
+                                    );
+                                  }}
+                                  className="flex-1 px-2 py-1 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-200 hover:bg-emerald-900 text-[10px] font-mono transition-colors"
+                                >
+                                  Reveal Chamber
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const cells: string[] = [];
+                                    for (let cy = selectedRoom.y; cy < selectedRoom.y + selectedRoom.height; cy++) {
+                                      for (let cx = selectedRoom.x; cx < selectedRoom.x + selectedRoom.width; cx++) {
+                                        cells.push(`${cx},${cy}`);
+                                      }
+                                    }
+                                    battlemapSessionManager.updateFog(activeMap.id, (prev) =>
+                                      manualHideCells(prev, cells)
+                                    );
+                                  }}
+                                  className="flex-1 px-2 py-1 rounded bg-purple-950 border border-purple-700/60 text-purple-200 hover:bg-purple-900 text-[10px] font-mono transition-colors"
+                                >
+                                  Conceal Chamber
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1024,6 +1215,242 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                 </div>
               )}
 
+              {/* Fog & Line of Sight Tab */}
+              {leftTab === 'fog' && isDm && (
+                <div className="space-y-4">
+                  {/* Master Fog Switch */}
+                  <div className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <CloudFog className="w-4 h-4 text-amber-400" />
+                        <span className="font-bold text-neutral-100 font-cinzel text-xs">Fog of War</span>
+                      </div>
+                      <button
+                        onClick={() =>
+                          battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                            ...prev,
+                            enabled: !prev.enabled,
+                          }))
+                        }
+                        className={`px-2.5 py-1 rounded text-xs font-mono font-bold transition-colors ${
+                          activeMap.fog.enabled
+                            ? 'bg-emerald-600 text-neutral-950'
+                            : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                        }`}
+                      >
+                        {activeMap.fog.enabled ? 'ENABLED' : 'DISABLED'}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                      Conceals unexplored areas from player view. Explored rooms appear darkened while live vision reveals combatants.
+                    </p>
+                  </div>
+
+                  {/* Player View Preview Toggle */}
+                  <div className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        {activeMap.fog.previewPlayerFog ? (
+                          <Eye className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <EyeOff className="w-4 h-4 text-neutral-400" />
+                        )}
+                        <span className="font-bold text-neutral-100 font-cinzel text-xs">Player Fog Preview</span>
+                      </div>
+                      <button
+                        onClick={() =>
+                          battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                            ...prev,
+                            previewPlayerFog: !prev.previewPlayerFog,
+                          }))
+                        }
+                        className={`px-2.5 py-1 rounded text-xs font-mono font-bold transition-colors ${
+                          activeMap.fog.previewPlayerFog
+                            ? 'bg-amber-600 text-neutral-950'
+                            : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                        }`}
+                      >
+                        {activeMap.fog.previewPlayerFog ? 'PREVIEW ON' : 'PREVIEW OFF'}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                      Preview exactly what players see on this battlemap, rendering full unexplored concealment and dark shroud.
+                    </p>
+                  </div>
+
+                  {/* Dynamic Token Line of Sight */}
+                  <div className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Target className="w-4 h-4 text-cyan-400" />
+                        <span className="font-bold text-neutral-100 font-cinzel text-xs">Dynamic Token Vision</span>
+                      </div>
+                      <button
+                        onClick={() =>
+                          battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                            ...prev,
+                            autoComputeTokenLos: prev.autoComputeTokenLos === false ? true : false,
+                          }))
+                        }
+                        className={`px-2.5 py-1 rounded text-xs font-mono font-bold transition-colors ${
+                          activeMap.fog.autoComputeTokenLos !== false
+                            ? 'bg-cyan-600 text-neutral-950'
+                            : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                        }`}
+                      >
+                        {activeMap.fog.autoComputeTokenLos !== false ? 'ACTIVE' : 'MANUAL'}
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 pt-1 border-t border-neutral-800">
+                      <label className="flex items-center justify-between cursor-pointer">
+                        <span className="text-[11px] text-neutral-300">Party Shared Vision:</span>
+                        <input
+                          type="checkbox"
+                          checked={activeMap.fog.partySharedVision !== false}
+                          onChange={(e) =>
+                            battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                              ...prev,
+                              partySharedVision: e.target.checked,
+                            }))
+                          }
+                          className="rounded bg-neutral-900 border-neutral-700 text-amber-500"
+                        />
+                      </label>
+
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-neutral-300">Default Sight Radius:</span>
+                        <select
+                          value={activeMap.lineOfSight.defaultSightRadiusFeet || 60}
+                          onChange={(e) =>
+                            battlemapSessionManager.updateLineOfSight(activeMap.id, {
+                              defaultSightRadiusFeet: Number(e.target.value),
+                            })
+                          }
+                          className="bg-neutral-900 border border-neutral-700 rounded px-2 py-0.5 text-amber-300 font-mono text-[11px]"
+                        >
+                          <option value="30">30 ft (6 cells)</option>
+                          <option value="60">60 ft (12 cells)</option>
+                          <option value="90">90 ft (18 cells)</option>
+                          <option value="120">120 ft (24 cells)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Manual Brush Configuration */}
+                  <div className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-2">
+                    <span className="font-bold text-neutral-100 font-cinzel text-xs block">
+                      Manual Reveal / Hide Tools
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5 pt-1">
+                      <button
+                        onClick={() => setActiveTool('fog_reveal')}
+                        className={`p-1.5 rounded text-[11px] font-mono flex items-center justify-center gap-1 transition-colors ${
+                          activeTool === 'fog_reveal'
+                            ? 'bg-emerald-600 text-neutral-950 font-bold'
+                            : 'bg-neutral-900 border border-neutral-800 text-emerald-300 hover:bg-neutral-800'
+                        }`}
+                      >
+                        <Brush className="w-3 h-3" />
+                        <span>Reveal Brush</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTool('fog_hide')}
+                        className={`p-1.5 rounded text-[11px] font-mono flex items-center justify-center gap-1 transition-colors ${
+                          activeTool === 'fog_hide'
+                            ? 'bg-purple-600 text-neutral-950 font-bold'
+                            : 'bg-neutral-900 border border-neutral-800 text-purple-300 hover:bg-neutral-800'
+                        }`}
+                      >
+                        <CloudFog className="w-3 h-3" />
+                        <span>Hide Brush</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTool('fog_box_reveal')}
+                        className={`p-1.5 rounded text-[11px] font-mono flex items-center justify-center gap-1 transition-colors ${
+                          activeTool === 'fog_box_reveal'
+                            ? 'bg-emerald-600 text-neutral-950 font-bold'
+                            : 'bg-neutral-900 border border-neutral-800 text-emerald-300 hover:bg-neutral-800'
+                        }`}
+                      >
+                        <BoxSelect className="w-3 h-3" />
+                        <span>Box Reveal</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTool('fog_box_hide')}
+                        className={`p-1.5 rounded text-[11px] font-mono flex items-center justify-center gap-1 transition-colors ${
+                          activeTool === 'fog_box_hide'
+                            ? 'bg-purple-600 text-neutral-950 font-bold'
+                            : 'bg-neutral-900 border border-neutral-800 text-purple-300 hover:bg-neutral-800'
+                        }`}
+                      >
+                        <BoxSelect className="w-3 h-3" />
+                        <span>Box Hide</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] pt-1">
+                      <span className="text-neutral-400">Brush Radius:</span>
+                      <div className="flex gap-1 font-mono">
+                        {[1, 2, 3].map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => {
+                              setBrushRadius(r);
+                              battlemapSessionManager.updateFog(activeMap.id, (prev) => ({
+                                ...prev,
+                                brushRadiusCells: r,
+                              }));
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] ${
+                              brushRadius === r
+                                ? 'bg-amber-600 text-neutral-950 font-bold'
+                                : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'
+                            }`}
+                          >
+                            {r === 1 ? '1 cell' : `${r} cells`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fog Statistics & State Summary */}
+                  <div className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-1.5 font-mono text-[11px]">
+                    <div className="flex justify-between text-neutral-400">
+                      <span>Total Grid Cells:</span>
+                      <span className="text-neutral-200">
+                        {activeMap.grid.width * activeMap.grid.height} cells
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-neutral-400">
+                      <span>Explored Memory:</span>
+                      <span className="text-emerald-400">
+                        {activeMap.fog.exploredCells?.length || 0} cells
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-neutral-400">
+                      <span>Manual Reveals:</span>
+                      <span className="text-amber-400">
+                        {activeMap.fog.revealedCells?.length || 0} cells
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Reset Fog Button */}
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setShowResetFogModal(true)}
+                      className="w-full py-1.5 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 text-rose-200 font-mono text-xs flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset Fog of War...</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Artwork Calibration Tab */}
               {leftTab === 'artwork' && (
                 <div className="space-y-4">
@@ -1207,6 +1634,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             selectedGeometry={selectedGeometry}
             layerVisibility={layers}
             corridorWidthCells={corridorWidth}
+            brushRadiusCells={brushRadius}
             onSelectEntity={(id, type) => {
               setSelectedEntityId(id);
               setSelectedEntityType(type);
@@ -1224,6 +1652,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             onAddDoor={handleAddDoor}
             onUpdateDoorState={handleUpdateDoorState}
             onDeleteGeometry={handleDeleteGeometry}
+            onUpdateFog={(patchOrFn) => battlemapSessionManager.updateFog(activeMap.id, patchOrFn)}
           />
         </main>
 
@@ -1628,6 +2057,83 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                 className="px-4 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-medium"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Fog of War Confirmation Modal */}
+      {showResetFogModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl p-6 text-xs text-neutral-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2 text-rose-400">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h3 className="font-bold font-cinzel text-neutral-100 text-sm">
+                  Reset Fog of War
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowResetFogModal(false)}
+                className="p-1 rounded text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 leading-relaxed text-neutral-300">
+              <p>
+                Resetting fog will clear all dynamic exploration history and manual reveals for{' '}
+                <strong className="text-amber-300 font-cinzel">{activeMap.name}</strong>.
+              </p>
+              <p className="text-[11px] text-neutral-400">
+                Choose the desired starting visibility state:
+              </p>
+
+              <div className="space-y-2 pt-1">
+                <button
+                  onClick={() => {
+                    battlemapSessionManager.updateFog(activeMap.id, (prev) =>
+                      resetExploredFog(prev, 'hidden')
+                    );
+                    setShowResetFogModal(false);
+                  }}
+                  className="w-full p-2.5 rounded bg-neutral-950 hover:bg-neutral-800 border border-neutral-700 text-left transition-colors flex flex-col gap-0.5 group"
+                >
+                  <span className="font-bold text-amber-200 group-hover:text-amber-100">
+                    Reset to Unexplored (Hidden)
+                  </span>
+                  <span className="text-[11px] text-neutral-400">
+                    Conceals the entire map into pitch black darkness for players.
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    battlemapSessionManager.updateFog(activeMap.id, (prev) =>
+                      resetExploredFog(prev, 'revealed')
+                    );
+                    setShowResetFogModal(false);
+                  }}
+                  className="w-full p-2.5 rounded bg-neutral-950 hover:bg-neutral-800 border border-neutral-700 text-left transition-colors flex flex-col gap-0.5 group"
+                >
+                  <span className="font-bold text-cyan-200 group-hover:text-cyan-100">
+                    Reset to Discovered (Explored)
+                  </span>
+                  <span className="text-[11px] text-neutral-400">
+                    Sets terrain to explored memory (darkened) with live LOS still active.
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-neutral-800">
+              <button
+                onClick={() => setShowResetFogModal(false)}
+                className="px-4 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium"
+              >
+                Cancel
               </button>
             </div>
           </div>

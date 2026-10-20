@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   ZoomIn,
   ZoomOut,
@@ -47,6 +47,15 @@ import {
   findHostWallForDoor,
   resolveEffectiveBlockingSegments,
 } from '../../utils/wallTopology.ts';
+import {
+  computeVisibleGridCells,
+  resolveCellVisibility,
+  isEntityVisibleOnBattlemap,
+  manualRevealCells,
+  manualHideCells,
+  type VisionSource,
+} from '../../utils/lineOfSight.ts';
+import type { FogOfWarState } from '../../types/battlemap.ts';
 
 interface BattlemapCanvasProps {
   mapDefinition: BattlemapDefinition;
@@ -58,6 +67,7 @@ interface BattlemapCanvasProps {
   selectedGeometry?: SelectedGeometryRef | null;
   layerVisibility?: BattlemapLayerVisibility;
   corridorWidthCells?: number;
+  brushRadiusCells?: number;
   onSelectEntity?: (id: string, type: 'character' | 'npc') => void;
   onSelectGeometry?: (geom: SelectedGeometryRef | null) => void;
   onMoveToken?: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => void;
@@ -67,6 +77,7 @@ interface BattlemapCanvasProps {
   onAddDoor?: (door: DoorSegment) => void;
   onUpdateDoorState?: (doorId: string, newState: 'open' | 'closed' | 'locked') => void;
   onDeleteGeometry?: (geom: SelectedGeometryRef) => void;
+  onUpdateFog?: (patchOrFn: Partial<FogOfWarState> | ((prev: FogOfWarState) => FogOfWarState)) => void;
 }
 
 export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
@@ -87,6 +98,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     overlays: true,
   },
   corridorWidthCells = 2,
+  brushRadiusCells = 1,
   onSelectEntity,
   onSelectGeometry,
   onMoveToken,
@@ -96,6 +108,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   onAddDoor,
   onUpdateDoorState,
   onDeleteGeometry,
+  onUpdateFog,
 }) => {
   // Viewport navigation (pan & zoom)
   const [viewport, setViewport] = useState<ViewportTransform>({
@@ -113,6 +126,10 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   // Geometry drawing preview state
   const [drawStart, setDrawStart] = useState<{ gridX: number; gridY: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ gridX: number; gridY: number } | null>(null);
+
+  // Manual fog brush state
+  const [isBrushingFog, setIsBrushingFog] = useState(false);
+  const [hoverGridCoords, setHoverGridCoords] = useState<{ gridX: number; gridY: number } | null>(null);
 
   // Dragging token state with movement threshold to prevent accidental moves on selection
   const [tokenDrag, setTokenDrag] = useState<{
@@ -183,6 +200,27 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     }));
   };
 
+  // Get cells under the brush radius
+  const getBrushCells = useCallback(
+    (centerGridX: number, centerGridY: number, radius: number): string[] => {
+      const cells: string[] = [];
+      const r = Math.max(0, radius - 1);
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.hypot(dx, dy) <= r + 0.5) {
+            const gx = Math.round(centerGridX + dx);
+            const gy = Math.round(centerGridY + dy);
+            if (gx >= 0 && gx < grid.width && gy >= 0 && gy < grid.height) {
+              cells.push(`${gx},${gy}`);
+            }
+          }
+        }
+      }
+      return cells;
+    },
+    [grid.width, grid.height]
+  );
+
   // Canvas Mouse Down
   const handleMouseDown = (e: React.MouseEvent) => {
     // Middle click, Space+click, Shift+click, or 'pan' tool triggers viewport pan
@@ -196,6 +234,26 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
     const coords = getMapCoords(e.clientX, e.clientY);
     if (!coords) return;
+
+    if (activeTool === 'fog_reveal') {
+      const cells = getBrushCells(coords.gridX, coords.gridY, brushRadiusCells);
+      onUpdateFog?.((prev) => manualRevealCells(prev, cells));
+      setIsBrushingFog(true);
+      return;
+    }
+
+    if (activeTool === 'fog_hide') {
+      const cells = getBrushCells(coords.gridX, coords.gridY, brushRadiusCells);
+      onUpdateFog?.((prev) => manualHideCells(prev, cells));
+      setIsBrushingFog(true);
+      return;
+    }
+
+    if (activeTool === 'fog_box_reveal' || activeTool === 'fog_box_hide') {
+      setDrawStart({ gridX: coords.gridX, gridY: coords.gridY });
+      setDrawCurrent({ gridX: coords.gridX, gridY: coords.gridY });
+      return;
+    }
 
     if (activeTool === 'measure') {
       if (!measureStart) {
@@ -274,6 +332,20 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
       const coords = getMapCoords(e.clientX, e.clientY);
       if (!coords) return;
 
+      // Track hover coordinates for brush cursor preview
+      setHoverGridCoords({ gridX: coords.gridX, gridY: coords.gridY });
+
+      // Handle continuous fog brushing
+      if (isBrushingFog) {
+        const cells = getBrushCells(coords.gridX, coords.gridY, brushRadiusCells);
+        if (activeTool === 'fog_reveal') {
+          onUpdateFog?.((prev) => manualRevealCells(prev, cells));
+        } else if (activeTool === 'fog_hide') {
+          onUpdateFog?.((prev) => manualHideCells(prev, cells));
+        }
+        return;
+      }
+
       // Handle token dragging
       if (tokenDrag) {
         const dist = Math.hypot(e.clientX - tokenDrag.startX, e.clientY - tokenDrag.startY);
@@ -296,7 +368,14 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
         setMeasureCurrent({ x: coords.gridX, y: coords.gridY });
       }
 
-      if (drawStart && (activeTool === 'room' || activeTool === 'corridor' || activeTool === 'wall')) {
+      if (
+        drawStart &&
+        (activeTool === 'room' ||
+          activeTool === 'corridor' ||
+          activeTool === 'wall' ||
+          activeTool === 'fog_box_reveal' ||
+          activeTool === 'fog_box_hide')
+      ) {
         setDrawCurrent({ gridX: coords.gridX, gridY: coords.gridY });
       }
     };
@@ -304,6 +383,12 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     const handleWindowMouseUp = (e: MouseEvent) => {
       if (isPanning) {
         setIsPanning(false);
+        return;
+      }
+
+      // Finish fog brushing
+      if (isBrushingFog) {
+        setIsBrushingFog(false);
         return;
       }
 
@@ -318,6 +403,30 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           }
         }
         setTokenDrag(null);
+        return;
+      }
+
+      // Handle box fog reveal / hide completion
+      if (drawStart && drawCurrent && (activeTool === 'fog_box_reveal' || activeTool === 'fog_box_hide')) {
+        const minX = Math.min(drawStart.gridX, drawCurrent.gridX);
+        const maxX = Math.max(drawStart.gridX, drawCurrent.gridX);
+        const minY = Math.min(drawStart.gridY, drawCurrent.gridY);
+        const maxY = Math.max(drawStart.gridY, drawCurrent.gridY);
+        const boxCells: string[] = [];
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            boxCells.push(`${x},${y}`);
+          }
+        }
+
+        if (activeTool === 'fog_box_reveal') {
+          onUpdateFog?.((prev) => manualRevealCells(prev, boxCells));
+        } else {
+          onUpdateFog?.((prev) => manualHideCells(prev, boxCells));
+        }
+
+        setDrawStart(null);
+        setDrawCurrent(null);
         return;
       }
 
@@ -395,15 +504,19 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     drawStart,
     drawCurrent,
     tokenDrag,
+    isBrushingFog,
     activeTool,
+    brushRadiusCells,
     corridorWidthCells,
     grid,
     getMapCoords,
+    getBrushCells,
     mapDefinition,
     onAddRoom,
     onAddCorridor,
     onAddWall,
     onMoveToken,
+    onUpdateFog,
   ]);
 
   // Distance calculation for active measurement
@@ -469,10 +582,98 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   }, [selectedGeometry, onDeleteGeometry]);
 
   // Resolve effective blocking line segments factoring in door states
-  const effectiveSegments = resolveEffectiveBlockingSegments(
-    mapDefinition.geometry.walls,
-    mapDefinition.geometry.doors
+  const effectiveSegments = useMemo(
+    () => resolveEffectiveBlockingSegments(mapDefinition.geometry.walls, mapDefinition.geometry.doors),
+    [mapDefinition.geometry.walls, mapDefinition.geometry.doors]
   );
+
+  // Effective DM perspective (false if Player role OR if DM enabled Player Fog Preview)
+  const isEffectiveDm = userRole === 'dm_host' && !mapDefinition.fog.previewPlayerFog;
+
+  // Compute vision sources for player characters
+  const visionSources: VisionSource[] = useMemo(() => {
+    const defaultRadiusCells = Math.round(
+      (mapDefinition.lineOfSight.defaultSightRadiusFeet || 60) / (grid.feetPerCell || 5)
+    );
+    const sources: VisionSource[] = [];
+
+    // Party Shared Vision: all characters provide vision
+    // If partySharedVision is false, only selectedCharacterId provides vision
+    const activeChars =
+      mapDefinition.fog.partySharedVision === false && selectedEntityId
+        ? characters.filter((c) => c.id === selectedEntityId)
+        : characters;
+
+    for (const char of activeChars) {
+      // Find position in grid cells
+      const charX = (char.token.x / 100) * grid.width;
+      const charY = (char.token.y / 100) * grid.height;
+      sources.push({
+        id: char.id,
+        name: char.name,
+        x: charX,
+        y: charY,
+        sightRadiusCells: defaultRadiusCells,
+        entityType: 'character',
+        isVisibleToPlayers: true,
+      });
+    }
+
+    return sources;
+  }, [
+    characters,
+    mapDefinition.fog.partySharedVision,
+    selectedEntityId,
+    grid.width,
+    grid.height,
+    grid.feetPerCell,
+    mapDefinition.lineOfSight.defaultSightRadiusFeet,
+  ]);
+
+  // Compute currently visible grid cells based on vision sources and vision-blocking segments
+  const currentlyVisibleCells = useMemo<Set<string>>(() => {
+    if (!mapDefinition.fog.enabled) {
+      return new Set<string>();
+    }
+    if (mapDefinition.fog.autoComputeTokenLos === false) {
+      return new Set<string>();
+    }
+    return computeVisibleGridCells(visionSources, effectiveSegments, grid.width, grid.height);
+  }, [
+    mapDefinition.fog.enabled,
+    mapDefinition.fog.autoComputeTokenLos,
+    visionSources,
+    effectiveSegments,
+    grid.width,
+    grid.height,
+  ]);
+
+  // Automatically accumulate newly visible cells into exploredCells
+  useEffect(() => {
+    if (!mapDefinition.fog.enabled || mapDefinition.fog.autoComputeTokenLos === false) return;
+    if (currentlyVisibleCells.size === 0) return;
+
+    const exploredSet = new Set(mapDefinition.fog.exploredCells || []);
+    let newlyDiscovered = false;
+    for (const cellKey of currentlyVisibleCells) {
+      if (!exploredSet.has(cellKey)) {
+        exploredSet.add(cellKey);
+        newlyDiscovered = true;
+      }
+    }
+    if (newlyDiscovered) {
+      onUpdateFog?.((prev) => ({
+        ...prev,
+        exploredCells: Array.from(exploredSet),
+      }));
+    }
+  }, [
+    currentlyVisibleCells,
+    mapDefinition.fog.enabled,
+    mapDefinition.fog.autoComputeTokenLos,
+    mapDefinition.fog.exploredCells,
+    onUpdateFog,
+  ]);
 
   // Filter NPCs specific to this active map scene
   const sceneNpcs = npcs.filter((npc) => {
@@ -500,9 +701,20 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           <span className="text-neutral-400 font-mono text-[11px] hidden sm:inline">
             {grid.width}x{grid.height} ({grid.width * (grid.feetPerCell || 5)}ft × {grid.height * (grid.feetPerCell || 5)}ft)
           </span>
+          {mapDefinition.fog.previewPlayerFog && (
+            <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-200 border border-amber-600 font-mono text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+              <Eye className="w-3 h-3 text-amber-400" />
+              <span>Player View Preview</span>
+            </span>
+          )}
           {activeTool !== 'token' && (
             <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700/60 font-mono text-[10px] uppercase font-bold tracking-wider">
-              Tool: {activeTool}
+              Tool: {activeTool.replace('_', ' ')}
+            </span>
+          )}
+          {mapDefinition.fog.enabled && (
+            <span className="px-2 py-0.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-300 font-mono text-[10px] hidden md:inline">
+              Fog: Active ({mapDefinition.fog.autoComputeTokenLos !== false ? 'Dynamic LOS' : 'Manual'})
             </span>
           )}
         </div>
@@ -622,7 +834,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 const style = getFloorStyle(c.floorType || 'stone');
 
                 return (
-                  <g key={c.id}>
+                  <React.Fragment key={c.id}>
                     {segments.map((seg, idx) => (
                       <div
                         key={`${c.id}-seg-${idx}`}
@@ -645,7 +857,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         title={`Corridor (${(c.widthCells || 2) * 5}ft width)`}
                       />
                     ))}
-                  </g>
+                  </React.Fragment>
                 );
               })}
 
@@ -841,17 +1053,145 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* LAYER 5: Fog Overlay Placeholder                             */}
+          {/* LAYER 5: 3-State Fog of War & Line of Sight Layer            */}
           {/* ============================================================ */}
           {layerVisibility.fog && mapDefinition.fog.enabled && (
-            <div
-              className="absolute inset-0 pointer-events-none bg-neutral-950/60 backdrop-blur-[1px]"
+            <svg
+              className="absolute inset-0 pointer-events-none"
+              width={mapWidthPx}
+              height={mapHeightPx}
               style={{ zIndex: 18 }}
             >
-              <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-neutral-900/80 border border-neutral-700 text-[10px] font-mono text-neutral-400">
-                Fog of War Active (CP002C Preview)
-              </div>
-            </div>
+              <defs>
+                {/* DM Pattern: Diagonal purple hatch for unexplored cells */}
+                <pattern
+                  id="dm-unexplored-hatch"
+                  width="8"
+                  height="8"
+                  patternUnits="userSpaceOnUse"
+                  patternTransform="rotate(45)"
+                >
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(168, 85, 247, 0.3)" strokeWidth="1.5" />
+                </pattern>
+                {/* DM Pattern: Faint blue hatch for explored cells */}
+                <pattern
+                  id="dm-explored-hatch"
+                  width="8"
+                  height="8"
+                  patternUnits="userSpaceOnUse"
+                  patternTransform="rotate(-45)"
+                >
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(56, 189, 248, 0.2)" strokeWidth="1" />
+                </pattern>
+              </defs>
+
+              {/* Render each grid cell based on its 3-state visibility */}
+              {Array.from({ length: grid.height }).map((_, cy) =>
+                Array.from({ length: grid.width }).map((_, cx) => {
+                  const state = resolveCellVisibility(cx, cy, mapDefinition.fog, currentlyVisibleCells);
+                  const cellLeft = cx * grid.cellSizePx + (grid.originX || 0);
+                  const cellTop = cy * grid.cellSizePx + (grid.originY || 0);
+
+                  // 1. CURRENTLY VISIBLE
+                  if (state === 'visible') {
+                    if (isEffectiveDm) {
+                      // Faint amber boundary so DM sees what players currently see
+                      return (
+                        <rect
+                          key={`fog-${cx}-${cy}`}
+                          x={cellLeft}
+                          y={cellTop}
+                          width={grid.cellSizePx}
+                          height={grid.cellSizePx}
+                          fill="none"
+                          stroke="rgba(245, 158, 11, 0.12)"
+                          strokeWidth="0.5"
+                        />
+                      );
+                    }
+                    return null; // Crystal clear for players
+                  }
+
+                  // 2. EXPLORED BUT NOT CURRENTLY VISIBLE (Darkened Memory)
+                  if (state === 'explored') {
+                    if (isEffectiveDm) {
+                      return (
+                        <g key={`fog-${cx}-${cy}`}>
+                          <rect
+                            x={cellLeft}
+                            y={cellTop}
+                            width={grid.cellSizePx}
+                            height={grid.cellSizePx}
+                            fill="rgba(15, 23, 42, 0.35)"
+                          />
+                          <rect
+                            x={cellLeft}
+                            y={cellTop}
+                            width={grid.cellSizePx}
+                            height={grid.cellSizePx}
+                            fill="url(#dm-explored-hatch)"
+                          />
+                        </g>
+                      );
+                    }
+                    // Player view: darkened terrain shroud
+                    return (
+                      <rect
+                        key={`fog-${cx}-${cy}`}
+                        x={cellLeft}
+                        y={cellTop}
+                        width={grid.cellSizePx}
+                        height={grid.cellSizePx}
+                        fill="rgba(8, 10, 16, 0.78)"
+                      />
+                    );
+                  }
+
+                  // 3. UNEXPLORED (Concealed from players)
+                  if (isEffectiveDm) {
+                    return (
+                      <g key={`fog-${cx}-${cy}`}>
+                        <rect
+                          x={cellLeft}
+                          y={cellTop}
+                          width={grid.cellSizePx}
+                          height={grid.cellSizePx}
+                          fill="rgba(10, 10, 15, 0.65)"
+                        />
+                        <rect
+                          x={cellLeft}
+                          y={cellTop}
+                          width={grid.cellSizePx}
+                          height={grid.cellSizePx}
+                          fill="url(#dm-unexplored-hatch)"
+                        />
+                        <rect
+                          x={cellLeft}
+                          y={cellTop}
+                          width={grid.cellSizePx}
+                          height={grid.cellSizePx}
+                          fill="none"
+                          stroke="rgba(168, 85, 247, 0.15)"
+                          strokeWidth="0.5"
+                        />
+                      </g>
+                    );
+                  }
+
+                  // Player view: complete pitch black concealment
+                  return (
+                    <rect
+                      key={`fog-${cx}-${cy}`}
+                      x={cellLeft}
+                      y={cellTop}
+                      width={grid.cellSizePx}
+                      height={grid.cellSizePx}
+                      fill="#08080a"
+                    />
+                  );
+                })
+              )}
+            </svg>
           )}
 
           {/* ============================================================ */}
@@ -920,7 +1260,19 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
               {/* NPCs: Scene-specific filtering and live projection */}
               {sceneNpcs.map((npc) => {
-                if (userRole !== 'dm_host' && !npc.token.isVisibleToPlayers) {
+                const npcGridX = (npc.token.x / 100) * grid.width;
+                const npcGridY = (npc.token.y / 100) * grid.height;
+                const isCellVisibleToPlayers = isEntityVisibleOnBattlemap(
+                  npcGridX,
+                  npcGridY,
+                  npc.token.isVisibleToPlayers,
+                  userRole === 'dm_host',
+                  mapDefinition.fog,
+                  currentlyVisibleCells
+                );
+
+                // If not visible to players and current view is not effective DM (i.e. Player or DM Preview):
+                if (!isEffectiveDm && !isCellVisibleToPlayers) {
                   return null;
                 }
 
@@ -933,6 +1285,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 const yPct = isBeingDragged
                   ? (tokenDrag.currentGridY / grid.height) * 100
                   : npc.token.y;
+
+                const isHiddenFromParty = !npc.token.isVisibleToPlayers || !isCellVisibleToPlayers;
 
                 return (
                   <div
@@ -959,7 +1313,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                     }}
                     className={`absolute pointer-events-auto cursor-pointer flex flex-col items-center group transition-transform ${
                       isSelected ? 'scale-110 z-30' : 'hover:scale-105 z-20'
-                    } ${!npc.token.isVisibleToPlayers ? 'opacity-50 border-dashed' : ''} ${
+                    } ${isHiddenFromParty ? 'opacity-70' : ''} ${
                       isBeingDragged ? 'opacity-80 scale-125 z-40' : ''
                     }`}
                   >
@@ -967,6 +1321,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                       className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs shadow-lg transition-all ${
                         isSelected
                           ? 'border-amber-400 bg-rose-950 text-amber-100 ring-4 ring-amber-400/30'
+                          : isHiddenFromParty
+                          ? 'border-dashed border-rose-400 bg-neutral-900/90 text-rose-300'
                           : npc.token.isVisibleToPlayers
                           ? 'border-rose-600 bg-neutral-900 text-rose-300'
                           : 'border-neutral-500 bg-neutral-900 text-neutral-400'
@@ -975,7 +1331,12 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                       {npc.name.charAt(0)}
                     </div>
                     <div className="mt-1 px-1.5 py-0.5 rounded bg-neutral-950/90 border border-neutral-800 text-[9px] font-mono text-neutral-200 whitespace-nowrap flex items-center gap-1 shadow-md">
-                      {!npc.token.isVisibleToPlayers && <EyeOff className="w-2.5 h-2.5 text-neutral-400" />}
+                      {isHiddenFromParty && isEffectiveDm && (
+                        <span className="text-[8px] px-1 rounded bg-rose-950 border border-rose-800 text-rose-300 flex items-center gap-0.5">
+                          <EyeOff className="w-2 h-2 text-rose-400" />
+                          <span>Hidden</span>
+                        </span>
+                      )}
                       <span>{npc.name.split(' ')[0]}</span>
                     </div>
                   </div>
@@ -1091,6 +1452,54 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                   <circle cx={drawStart.gridX * grid.cellSizePx} cy={drawStart.gridY * grid.cellSizePx} r={4} fill="#38bdf8" />
                   <circle cx={drawCurrent.gridX * grid.cellSizePx} cy={drawCurrent.gridY * grid.cellSizePx} r={4} fill="#38bdf8" />
                 </svg>
+              )}
+
+              {/* Fog Box Reveal Preview */}
+              {activeTool === 'fog_box_reveal' && drawStart && drawCurrent && (
+                <div
+                  style={{
+                    left: `${Math.min(drawStart.gridX, drawCurrent.gridX) * grid.cellSizePx}px`,
+                    top: `${Math.min(drawStart.gridY, drawCurrent.gridY) * grid.cellSizePx}px`,
+                    width: `${Math.max(1, Math.abs(drawCurrent.gridX - drawStart.gridX) + 1) * grid.cellSizePx}px`,
+                    height: `${Math.max(1, Math.abs(drawCurrent.gridY - drawStart.gridY) + 1) * grid.cellSizePx}px`,
+                  }}
+                  className="absolute border-2 border-dashed border-emerald-400 bg-emerald-500/25 rounded flex items-center justify-center text-emerald-200 font-mono text-xs font-bold shadow-lg"
+                >
+                  Reveal Fog Area
+                </div>
+              )}
+
+              {/* Fog Box Hide Preview */}
+              {activeTool === 'fog_box_hide' && drawStart && drawCurrent && (
+                <div
+                  style={{
+                    left: `${Math.min(drawStart.gridX, drawCurrent.gridX) * grid.cellSizePx}px`,
+                    top: `${Math.min(drawStart.gridY, drawCurrent.gridY) * grid.cellSizePx}px`,
+                    width: `${Math.max(1, Math.abs(drawCurrent.gridX - drawStart.gridX) + 1) * grid.cellSizePx}px`,
+                    height: `${Math.max(1, Math.abs(drawCurrent.gridY - drawStart.gridY) + 1) * grid.cellSizePx}px`,
+                  }}
+                  className="absolute border-2 border-dashed border-purple-400 bg-purple-500/25 rounded flex items-center justify-center text-purple-200 font-mono text-xs font-bold shadow-lg"
+                >
+                  Conceal Fog Area
+                </div>
+              )}
+
+              {/* Brush Cursor Indicator */}
+              {(activeTool === 'fog_reveal' || activeTool === 'fog_hide') && hoverGridCoords && (
+                <div
+                  style={{
+                    left: `${(hoverGridCoords.gridX + 0.5) * grid.cellSizePx}px`,
+                    top: `${(hoverGridCoords.gridY + 0.5) * grid.cellSizePx}px`,
+                    width: `${brushRadiusCells * 2 * grid.cellSizePx}px`,
+                    height: `${brushRadiusCells * 2 * grid.cellSizePx}px`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                  className={`absolute rounded-full border-2 border-dashed pointer-events-none transition-all ${
+                    activeTool === 'fog_reveal'
+                      ? 'border-emerald-400 bg-emerald-500/15'
+                      : 'border-purple-400 bg-purple-500/15'
+                  }`}
+                />
               )}
             </div>
           )}

@@ -198,6 +198,38 @@ export class BattlemapSessionManager {
     this.notify();
   }
 
+  public updateFog(
+    mapId: string,
+    patchOrFn: Partial<import('../types/battlemap.ts').FogOfWarState> | ((prev: import('../types/battlemap.ts').FogOfWarState) => import('../types/battlemap.ts').FogOfWarState)
+  ): void {
+    this.maps = this.maps.map((m) => {
+      if (m.id !== mapId) return m;
+      const newFog = typeof patchOrFn === 'function' ? patchOrFn(m.fog) : { ...m.fog, ...patchOrFn };
+      return {
+        ...m,
+        fog: newFog,
+      };
+    });
+    this.notify();
+  }
+
+  public updateLineOfSight(
+    mapId: string,
+    patch: Partial<import('../types/battlemap.ts').LineOfSightConfig>
+  ): void {
+    this.maps = this.maps.map((m) => {
+      if (m.id !== mapId) return m;
+      return {
+        ...m,
+        lineOfSight: {
+          ...m.lineOfSight,
+          ...patch,
+        },
+      };
+    });
+    this.notify();
+  }
+
   public resetToDefaults(): void {
     // Revoke all tracked blobs
     this.blobUrls.forEach((url) => {

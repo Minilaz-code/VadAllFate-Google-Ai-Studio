@@ -265,6 +265,7 @@ export default function App() {
                 userRole={effectiveRole}
                 currentSnapshot={activeClient.getCurrentSnapshot()}
                 selectedCharacterId={effectiveCharId}
+                identity={identity}
                 onNavigateToPlay={() => setCurrentTab('play')}
                 onMoveToken={(entityId, targetX, targetY, entityType) => {
                   activeClient.submitActionEnvelope({

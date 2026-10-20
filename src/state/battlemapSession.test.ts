@@ -104,7 +104,7 @@ describe('Battlemap Session Lifecycle & Workspace Persistence (AIUI-CP002B1)', (
         gridColor: 'rgba(255,255,255,0.2)',
       },
       geometry: { rooms: [], corridors: [], walls: [], doors: [] },
-      fog: { enabled: false, defaultState: 'revealed', revealedCells: [], previousExploredCells: [] },
+      fog: { enabled: false, defaultState: 'revealed', revealedCells: [], exploredCells: [], previousExploredCells: [] },
       lineOfSight: { enabled: false, blocksOnWalls: true, blocksOnClosedDoors: true, maxSightRadiusFeet: 60 },
       tokens: [],
     };
@@ -116,5 +116,43 @@ describe('Battlemap Session Lifecycle & Workspace Persistence (AIUI-CP002B1)', (
     session.deleteMap('custom-session-map-1');
     assert.equal(session.getMaps().length, initialCount);
     assert.notEqual(session.getActiveMapId(), 'custom-session-map-1');
+  });
+
+  it('updates and persists map-specific Fog of War and Line of Sight configurations across sessions', () => {
+    const session = new BattlemapSessionManager();
+    const mapId = 'map-yawning-portal';
+    session.setActiveMapId(mapId);
+
+    // Initial state check
+    assert.equal(session.getActiveMap().fog.enabled, false);
+
+    // Enable fog and set custom revealed cells
+    session.updateFog(mapId, {
+      enabled: true,
+      revealedCells: ['4,4', '4,5', '5,4'],
+      previewPlayerFog: true,
+    });
+
+    assert.equal(session.getActiveMap().fog.enabled, true);
+    assert.deepEqual(session.getActiveMap().fog.revealedCells, ['4,4', '4,5', '5,4']);
+    assert.equal(session.getActiveMap().fog.previewPlayerFog, true);
+
+    // Update Line of Sight default sight radius
+    session.updateLineOfSight(mapId, {
+      defaultSightRadiusFeet: 120,
+    });
+
+    assert.equal(session.getActiveMap().lineOfSight.defaultSightRadiusFeet, 120);
+
+    // Switching maps does not overwrite or lose Yawning Portal fog config
+    session.setActiveMapId('map-sunken-vault');
+    assert.equal(session.getActiveMap().id, 'map-sunken-vault');
+    assert.equal(session.getActiveMap().lineOfSight.defaultSightRadiusFeet, 30);
+
+    // Returning to Yawning Portal retains all fog and LOS changes
+    session.setActiveMapId('map-yawning-portal');
+    assert.equal(session.getActiveMap().fog.enabled, true);
+    assert.deepEqual(session.getActiveMap().fog.revealedCells, ['4,4', '4,5', '5,4']);
+    assert.equal(session.getActiveMap().lineOfSight.defaultSightRadiusFeet, 120);
   });
 });

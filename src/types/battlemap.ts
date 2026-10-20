@@ -81,14 +81,18 @@ export interface MapGeometry {
 }
 
 export type BattlemapEditorTool =
-  | 'select'     // Select geometry or inspect elements
-  | 'token'      // Token movement mode (default play mode)
-  | 'pan'        // Pan canvas viewport
-  | 'room'       // Draw rectangular room
-  | 'corridor'   // Draw connecting corridor
-  | 'wall'       // Draw line-segment wall
-  | 'door'       // Place / toggle doors
-  | 'measure';   // Distance ruler tool
+  | 'select'          // Select geometry or inspect elements
+  | 'token'           // Token movement mode (default play mode)
+  | 'pan'             // Pan canvas viewport
+  | 'room'            // Draw rectangular room
+  | 'corridor'        // Draw connecting corridor
+  | 'wall'            // Draw line-segment wall
+  | 'door'            // Place / toggle doors
+  | 'measure'         // Distance ruler tool
+  | 'fog_reveal'      // Brush manual fog reveal
+  | 'fog_hide'        // Brush manual fog hide
+  | 'fog_box_reveal'  // Box manual fog reveal
+  | 'fog_box_hide';   // Box manual fog hide
 
 export interface SelectedGeometryRef {
   type: 'room' | 'corridor' | 'wall' | 'door';
@@ -105,11 +109,19 @@ export interface BattlemapLayerVisibility {
   overlays: boolean;
 }
 
+export type CellVisibilityState = 'unexplored' | 'explored' | 'visible';
+
 export interface FogOfWarState {
   enabled: boolean;
   defaultState: 'hidden' | 'revealed';
-  revealedCells: string[]; // Format: "x,y"
-  previousExploredCells: string[];
+  revealedCells: string[];          // Format: "x,y" - explicitly revealed by DM
+  hiddenCells?: string[];           // Format: "x,y" - explicitly hidden by DM
+  exploredCells: string[];          // Format: "x,y" - previously seen (darkened terrain)
+  previousExploredCells?: string[]; // Legacy compatibility
+  partySharedVision?: boolean;      // Party members share sight lines (default true)
+  autoComputeTokenLos?: boolean;    // Automatic dynamic token LOS (default true)
+  previewPlayerFog?: boolean;       // DM toggle: preview strictly what players see
+  brushRadiusCells?: number;        // Radius for manual fog brush (1, 2, or 3 cells)
 }
 
 export interface LineOfSightConfig {
@@ -117,6 +129,7 @@ export interface LineOfSightConfig {
   blocksOnWalls: boolean;
   blocksOnClosedDoors: boolean;
   maxSightRadiusFeet: number;
+  defaultSightRadiusFeet?: number;
 }
 
 export interface MapTokenPlacement {
@@ -191,13 +204,17 @@ export const SAMPLE_BATTLEMAPS: BattlemapDefinition[] = [
       enabled: false,
       defaultState: 'revealed',
       revealedCells: [],
-      previousExploredCells: [],
+      exploredCells: [],
+      hiddenCells: [],
+      partySharedVision: true,
+      autoComputeTokenLos: true,
     },
     lineOfSight: {
       enabled: false,
       blocksOnWalls: true,
       blocksOnClosedDoors: true,
       maxSightRadiusFeet: 60,
+      defaultSightRadiusFeet: 60,
     },
     tokens: [
       { id: 'tok-kaelen', entityId: 'char-kaelen', entityType: 'character', name: 'Kaelen Shadowstrider', x: 25, y: 35, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
@@ -247,13 +264,17 @@ export const SAMPLE_BATTLEMAPS: BattlemapDefinition[] = [
       enabled: true,
       defaultState: 'hidden',
       revealedCells: ['2,2', '3,2', '4,2', '2,3', '3,3', '4,3', '5,3'],
-      previousExploredCells: [],
+      exploredCells: ['2,2', '3,2', '4,2', '2,3', '3,3', '4,3', '5,3'],
+      hiddenCells: [],
+      partySharedVision: true,
+      autoComputeTokenLos: true,
     },
     lineOfSight: {
       enabled: true,
       blocksOnWalls: true,
       blocksOnClosedDoors: true,
       maxSightRadiusFeet: 30,
+      defaultSightRadiusFeet: 30,
     },
     tokens: [
       { id: 'tok-kaelen-vault', entityId: 'char-kaelen', entityType: 'character', name: 'Kaelen Shadowstrider', x: 15, y: 20, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
@@ -289,13 +310,17 @@ export const SAMPLE_BATTLEMAPS: BattlemapDefinition[] = [
       enabled: false,
       defaultState: 'revealed',
       revealedCells: [],
-      previousExploredCells: [],
+      exploredCells: [],
+      hiddenCells: [],
+      partySharedVision: true,
+      autoComputeTokenLos: true,
     },
     lineOfSight: {
       enabled: false,
       blocksOnWalls: true,
       blocksOnClosedDoors: true,
       maxSightRadiusFeet: 120,
+      defaultSightRadiusFeet: 120,
     },
     tokens: [
       { id: 'tok-kaelen-road', entityId: 'char-kaelen', entityType: 'character', name: 'Kaelen Shadowstrider', x: 45, y: 55, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
