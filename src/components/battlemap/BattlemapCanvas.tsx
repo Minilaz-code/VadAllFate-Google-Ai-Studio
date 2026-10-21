@@ -16,6 +16,17 @@ import {
   Layers,
   Sparkles,
   AlertCircle,
+  AppWindow,
+  Fence,
+  Mountain,
+  Hand,
+  CheckCircle,
+  HelpCircle,
+  Edit2,
+  Trash2,
+  Move,
+  Info,
+  X,
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
@@ -29,6 +40,11 @@ import type {
   CorridorSegment,
   WallSegment,
   DoorSegment,
+  WindowSegment,
+  RailingSegment,
+  TerrainZone,
+  TokenOwnership,
+  MapTokenPlacement,
 } from '../../types/battlemap.ts';
 import {
   gridToMapPixels,
@@ -45,6 +61,7 @@ import {
 } from '../../utils/corridorGeometry.ts';
 import {
   findHostWallForDoor,
+  findHostWallForWindow,
   resolveEffectiveBlockingSegments,
 } from '../../utils/wallTopology.ts';
 import {
@@ -75,9 +92,17 @@ interface BattlemapCanvasProps {
   onAddCorridor?: (corridor: CorridorSegment) => void;
   onAddWall?: (wall: WallSegment) => void;
   onAddDoor?: (door: DoorSegment) => void;
+  onAddWindow?: (win: WindowSegment) => void;
+  onAddRailing?: (railing: RailingSegment) => void;
+  onAddTerrain?: (terrain: TerrainZone) => void;
   onUpdateDoorState?: (doorId: string, newState: 'open' | 'closed' | 'locked') => void;
+  onUpdateWindowState?: (windowId: string, newState: 'clear' | 'obscured' | 'broken') => void;
   onDeleteGeometry?: (geom: SelectedGeometryRef) => void;
   onUpdateFog?: (patchOrFn: Partial<FogOfWarState> | ((prev: FogOfWarState) => FogOfWarState)) => void;
+  onUpdateTokenOwnership?: (tokenId: string, ownership: TokenOwnership) => void;
+  onUpdateTokenVisibility?: (tokenId: string, isVisible: boolean) => void;
+  onDeleteToken?: (tokenId: string) => void;
+  onSetActiveTool?: (tool: BattlemapEditorTool) => void;
 }
 
 export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
@@ -106,9 +131,17 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   onAddCorridor,
   onAddWall,
   onAddDoor,
+  onAddWindow,
+  onAddRailing,
+  onAddTerrain,
   onUpdateDoorState,
+  onUpdateWindowState,
   onDeleteGeometry,
   onUpdateFog,
+  onUpdateTokenOwnership,
+  onUpdateTokenVisibility,
+  onDeleteToken,
+  onSetActiveTool,
 }) => {
   // Viewport navigation (pan & zoom)
   const [viewport, setViewport] = useState<ViewportTransform>({
@@ -190,15 +223,107 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     [viewport.zoom, grid]
   );
 
-  // Mouse wheel zoom
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
-    setViewport((prev) => ({
-      ...prev,
-      zoom: Math.max(0.4, Math.min(2.5, Math.round((prev.zoom + zoomDelta) * 10) / 10)),
-    }));
-  };
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    clientX: number;
+    clientY: number;
+    targetType: 'blank' | 'room' | 'corridor' | 'wall' | 'door' | 'window' | 'railing' | 'terrain' | 'token';
+    targetId?: string;
+    gridX: number;
+    gridY: number;
+    data?: any;
+  }>({
+    isOpen: false,
+    clientX: 0,
+    clientY: 0,
+    targetType: 'blank',
+    gridX: 0,
+    gridY: 0,
+  });
+
+  // Pending Player Door Request Modal State
+  const [pendingDoorRequest, setPendingDoorRequest] = useState<{
+    doorId: string;
+    door: DoorSegment;
+    action: 'open' | 'close' | 'unlock';
+  } | null>(null);
+
+  // Player Movement Intent Flow (Canonical Python R1 intent preview)
+  const [movementIntent, setMovementIntent] = useState<{
+    charId: string;
+    charName: string;
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    distanceFeet: number;
+    speedFeet: number;
+    inDifficultTerrain: boolean;
+    costFeet: number;
+  } | null>(null);
+
+  // Close context menu on outside click or Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+        setPendingDoorRequest(null);
+      }
+    };
+    const handleClickOutside = () => {
+      setContextMenu((prev) => ({ ...prev, isOpen: false }));
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('click', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  // Scoped Non-Passive Wheel Event Listener (AIUI-CP002C1)
+  // Ordinary scrolling must NOT zoom the map. Ctrl + wheel zooms centered around pointer.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onWheel = (e: WheelEvent) => {
+      // Ordinary scroll without Ctrl does NOT zoom!
+      if (!e.ctrlKey && !e.metaKey) {
+        return;
+      }
+      e.preventDefault();
+
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+
+      setViewport((prev) => {
+        const newZoom = Math.max(0.4, Math.min(2.5, Math.round(prev.zoom * zoomFactor * 100) / 100));
+        if (newZoom === prev.zoom) return prev;
+
+        // Pointer-anchored zoom math to keep coordinate under cursor stable
+        const mapX = (mouseX - prev.panX) / prev.zoom;
+        const mapY = (mouseY - prev.panY) / prev.zoom;
+
+        const newPanX = mouseX - mapX * newZoom;
+        const newPanY = mouseY - mapY * newZoom;
+
+        return {
+          zoom: newZoom,
+          panX: Math.round(newPanX),
+          panY: Math.round(newPanY),
+        };
+      });
+    };
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   // Get cells under the brush radius
   const getBrushCells = useCallback(
@@ -266,9 +391,45 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
       return;
     }
 
-    if (activeTool === 'room' || activeTool === 'corridor' || activeTool === 'wall') {
+    if (
+      activeTool === 'room' ||
+      activeTool === 'corridor' ||
+      activeTool === 'wall' ||
+      activeTool === 'railing' ||
+      activeTool === 'terrain'
+    ) {
       setDrawStart({ gridX: coords.gridX, gridY: coords.gridY });
       setDrawCurrent({ gridX: coords.gridX, gridY: coords.gridY });
+      return;
+    }
+
+    if (activeTool === 'window') {
+      const host = findHostWallForWindow(coords.gridX, coords.gridY, mapDefinition.geometry.walls, 1.2);
+      if (!host) {
+        setCanvasNotice('Windows must be placed on a valid wall segment. Snap near an existing wall.');
+        setTimeout(() => setCanvasNotice(null), 3000);
+        return;
+      }
+      const existingWin = (mapDefinition.geometry.windows || []).find(
+        (w) => w.x === host.snappedX && w.y === host.snappedY
+      );
+      if (existingWin) {
+        setCanvasNotice('A window already exists at this wall location.');
+        setTimeout(() => setCanvasNotice(null), 3000);
+        return;
+      }
+      const newWin: WindowSegment = {
+        id: `win-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        x: host.snappedX,
+        y: host.snappedY,
+        orientation: host.orientation,
+        state: 'clear',
+        blocksVisionWhenObscured: true,
+        blocksMovement: true,
+      };
+      onAddWindow?.(newWin);
+      setCanvasNotice('Clear Window placed. Sight passes; walking blocked.');
+      setTimeout(() => setCanvasNotice(null), 2500);
       return;
     }
 
@@ -317,6 +478,61 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     }
   };
 
+  // Context-sensitive right-click handler
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    targetType: 'blank' | 'room' | 'corridor' | 'wall' | 'door' | 'window' | 'railing' | 'terrain' | 'token' = 'blank',
+    targetId?: string,
+    extraData?: any
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const coords = getMapCoords(e.clientX, e.clientY);
+    const gridX = coords ? coords.gridX : 0;
+    const gridY = coords ? coords.gridY : 0;
+
+    let resolvedType = targetType;
+    let resolvedId = targetId;
+    let resolvedData = extraData;
+
+    // Security boundary: Players must NEVER discover or inspect hidden entities/geometry
+    if (!isEffectiveDm && targetType === 'token') {
+      const tok = extraData?.token as MapTokenPlacement | undefined;
+      const isVisible = tok
+        ? isEntityVisibleOnBattlemap(
+            tok.x,
+            tok.y,
+            tok.isVisibleToPlayers,
+            false,
+            mapDefinition.fog,
+            currentlyVisibleCells
+          )
+        : false;
+      if (!isVisible) {
+        resolvedType = 'blank';
+        resolvedId = undefined;
+        resolvedData = undefined;
+      }
+    }
+
+    const menuWidth = 220;
+    const menuHeight = 300;
+    const clientX = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
+    const clientY = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
+
+    setContextMenu({
+      isOpen: true,
+      clientX,
+      clientY,
+      targetType: resolvedType,
+      targetId: resolvedId,
+      gridX,
+      gridY,
+      data: resolvedData,
+    });
+  };
+
   // Global window-level mouse movement and mouse up listeners
   useEffect(() => {
     const handleWindowMouseMove = (e: MouseEvent) => {
@@ -332,7 +548,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
       const coords = getMapCoords(e.clientX, e.clientY);
       if (!coords) return;
 
-      // Track hover coordinates for brush cursor preview
+      // Track hover coordinates for brush cursor preview and movement route preview
       setHoverGridCoords({ gridX: coords.gridX, gridY: coords.gridY });
 
       // Handle continuous fog brushing
@@ -373,6 +589,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
         (activeTool === 'room' ||
           activeTool === 'corridor' ||
           activeTool === 'wall' ||
+          activeTool === 'railing' ||
+          activeTool === 'terrain' ||
           activeTool === 'fog_box_reveal' ||
           activeTool === 'fog_box_hide')
       ) {
@@ -485,6 +703,43 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
             };
             onAddWall?.(newWall);
           }
+        } else if (activeTool === 'railing') {
+          if (drawStart.gridX !== coords.gridX || drawStart.gridY !== coords.gridY) {
+            const newRailing: RailingSegment = {
+              id: `rail-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              x1: drawStart.gridX,
+              y1: drawStart.gridY,
+              x2: coords.gridX,
+              y2: coords.gridY,
+              movementType: 'blocking',
+              blocksVision: false,
+              blocksMovement: true,
+              name: 'Balustrade / Railing',
+            };
+            onAddRailing?.(newRailing);
+          }
+        } else if (activeTool === 'terrain') {
+          const x1 = Math.min(drawStart.gridX, coords.gridX);
+          const y1 = Math.min(drawStart.gridY, coords.gridY);
+          const x2 = Math.max(drawStart.gridX, coords.gridX);
+          const y2 = Math.max(drawStart.gridY, coords.gridY);
+          const width = x2 - x1;
+          const height = y2 - y1;
+          if (width >= 1 && height >= 1) {
+            const newTerrain: TerrainZone = {
+              id: `terrain-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              name: 'Difficult Terrain',
+              x: x1,
+              y: y1,
+              width,
+              height,
+              terrainType: 'rubble',
+              movementCostMultiplier: 2.0,
+              blocksVision: false,
+              isVisibleToPlayers: true,
+            };
+            onAddTerrain?.(newTerrain);
+          }
         }
       }
 
@@ -581,10 +836,23 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedGeometry, onDeleteGeometry]);
 
-  // Resolve effective blocking line segments factoring in door states
+  // Resolve effective blocking line segments factoring in door, window, railing, and terrain states
   const effectiveSegments = useMemo(
-    () => resolveEffectiveBlockingSegments(mapDefinition.geometry.walls, mapDefinition.geometry.doors),
-    [mapDefinition.geometry.walls, mapDefinition.geometry.doors]
+    () =>
+      resolveEffectiveBlockingSegments(
+        mapDefinition.geometry.walls,
+        mapDefinition.geometry.doors,
+        mapDefinition.geometry.windows || [],
+        mapDefinition.geometry.railings || [],
+        mapDefinition.geometry.terrain || []
+      ),
+    [
+      mapDefinition.geometry.walls,
+      mapDefinition.geometry.doors,
+      mapDefinition.geometry.windows,
+      mapDefinition.geometry.railings,
+      mapDefinition.geometry.terrain,
+    ]
   );
 
   // Effective DM perspective (false if Player role OR if DM enabled Player Fog Preview)
@@ -687,7 +955,6 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      onWheel={handleWheel}
       className="relative w-full h-full flex flex-col bg-neutral-950 overflow-hidden select-none"
     >
       {/* Canvas Viewport Toolbar Header */}
@@ -783,6 +1050,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
             transformOrigin: 'center center',
           }}
           className="relative transition-transform duration-75 shadow-2xl rounded border border-neutral-800 bg-[#101317] overflow-hidden"
+          onContextMenu={(e) => handleContextMenu(e, 'blank')}
         >
           {/* ============================================================ */}
           {/* LAYER 1: Background Artwork (Preserves Natural Aspect Ratio) */}
@@ -817,7 +1085,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           )}
 
           {/* ============================================================ */}
-          {/* LAYER 2: Room and Corridor Floors                            */}
+          {/* LAYER 2: Room, Corridor Floors & Difficult Terrain Zones     */}
           {/* ============================================================ */}
           {layerVisibility.geometry && (
             <div className="absolute inset-0 pointer-events-none">
@@ -844,6 +1112,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                             onSelectGeometry?.({ type: 'corridor', id: c.id });
                           }
                         }}
+                        onContextMenu={(e) => handleContextMenu(e, 'corridor', c.id, { corridor: c })}
                         style={{
                           left: `${seg.x * grid.cellSizePx}px`,
                           top: `${seg.y * grid.cellSizePx}px`,
@@ -879,6 +1148,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         onSelectGeometry?.({ type: 'room', id: r.id });
                       }
                     }}
+                    onContextMenu={(e) => handleContextMenu(e, 'room', r.id, { room: r })}
                     style={{
                       left: `${leftPx}px`,
                       top: `${topPx}px`,
@@ -890,7 +1160,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                       isSelected ? 'ring-2 ring-amber-400 shadow-xl z-10' : 'opacity-95 hover:brightness-110'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between pointer-events-none">
                       <span className="text-[10px] font-cinzel font-bold text-neutral-200 bg-neutral-950/70 px-1.5 py-0.5 rounded border border-neutral-700/50 truncate">
                         {r.name}
                       </span>
@@ -898,6 +1168,57 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         {r.width * 5}x{r.height * 5}ft
                       </span>
                     </div>
+                  </div>
+                );
+              })}
+
+              {/* Difficult Terrain Zones */}
+              {(mapDefinition.geometry.terrain || []).map((tz) => {
+                const isSelected = selectedGeometry?.type === 'terrain' && selectedGeometry?.id === tz.id;
+                const leftPx = tz.x * grid.cellSizePx;
+                const topPx = tz.y * grid.cellSizePx;
+                const widthPx = tz.width * grid.cellSizePx;
+                const heightPx = tz.height * grid.cellSizePx;
+
+                let colorClasses = 'bg-amber-950/30 border-amber-600/60 text-amber-200';
+                if (tz.terrainType === 'mud') colorClasses = 'bg-yellow-950/40 border-yellow-700/60 text-yellow-200';
+                if (tz.terrainType === 'water') colorClasses = 'bg-cyan-950/40 border-cyan-600/60 text-cyan-200';
+                if (tz.terrainType === 'undergrowth') colorClasses = 'bg-emerald-950/40 border-emerald-600/60 text-emerald-200';
+
+                return (
+                  <div
+                    key={tz.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (activeTool === 'select') {
+                        onSelectGeometry?.({ type: 'terrain', id: tz.id });
+                      }
+                    }}
+                    onContextMenu={(e) => handleContextMenu(e, 'terrain', tz.id, { terrain: tz })}
+                    style={{
+                      left: `${leftPx}px`,
+                      top: `${topPx}px`,
+                      width: `${widthPx}px`,
+                      height: `${heightPx}px`,
+                    }}
+                    className={`absolute rounded border border-dashed pointer-events-auto cursor-pointer transition-all flex flex-col justify-between p-1 select-none ${colorClasses} ${
+                      isSelected ? 'ring-2 ring-amber-400 z-10' : 'opacity-85 hover:opacity-100'
+                    }`}
+                    title={`${tz.name} (${tz.terrainType}, Cost: ${tz.movementCostMultiplier}x, LOS Block: ${tz.blocksVision ? 'Yes' : 'No'})`}
+                  >
+                    <div className="flex items-center justify-between pointer-events-none">
+                      <span className="text-[9px] font-mono font-bold bg-neutral-950/80 px-1 py-0.5 rounded truncate max-w-[120px]">
+                        {tz.name}
+                      </span>
+                      <span className="text-[9px] font-mono bg-neutral-950/80 px-1 py-0.5 rounded font-bold text-amber-300">
+                        {tz.movementCostMultiplier}x
+                      </span>
+                    </div>
+                    {tz.blocksVision && (
+                      <span className="text-[8px] font-mono text-rose-300 bg-neutral-950/80 px-1 rounded self-start pointer-events-none">
+                        LOS Block
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -971,6 +1292,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         onSelectGeometry?.({ type: seg.sourceType, id: seg.sourceId });
                       }
                     }}
+                    onContextMenu={(e) => handleContextMenu(e, seg.sourceType as any, seg.sourceId, { segment: seg })}
                   >
                     {/* Transparent hover/hit zone */}
                     <line
@@ -998,6 +1320,43 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                   </g>
                 );
               })}
+
+              {/* Railings & Low Barriers */}
+              {(mapDefinition.geometry.railings || []).map((rail) => {
+                const isSelected = selectedGeometry?.type === 'railing' && selectedGeometry?.id === rail.id;
+                const x1 = rail.x1 * grid.cellSizePx + (grid.originX || 0);
+                const y1 = rail.y1 * grid.cellSizePx + (grid.originY || 0);
+                const x2 = rail.x2 * grid.cellSizePx + (grid.originX || 0);
+                const y2 = rail.y2 * grid.cellSizePx + (grid.originY || 0);
+
+                return (
+                  <g
+                    key={rail.id}
+                    className="pointer-events-auto cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (activeTool === 'select') {
+                        onSelectGeometry?.({ type: 'railing', id: rail.id });
+                      }
+                    }}
+                    onContextMenu={(e) => handleContextMenu(e, 'railing', rail.id, { railing: rail })}
+                  >
+                    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth={14} strokeLinecap="round" />
+                    <line
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={isSelected ? '#f59e0b' : '#38bdf8'}
+                      strokeWidth={isSelected ? 5 : 3}
+                      strokeDasharray="5 3"
+                      strokeLinecap="round"
+                    />
+                    <circle cx={x1} cy={y1} r={3.5} fill={isSelected ? '#f59e0b' : '#38bdf8'} stroke="#0f172a" strokeWidth="1" />
+                    <circle cx={x2} cy={y2} r={3.5} fill={isSelected ? '#f59e0b' : '#38bdf8'} stroke="#0f172a" strokeWidth="1" />
+                  </g>
+                );
+              })}
             </svg>
           )}
 
@@ -1014,10 +1373,17 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                   e.stopPropagation();
                   if (activeTool === 'select') {
                     onSelectGeometry?.({ type: 'door', id: d.id });
-                  } else {
+                  } else if (isEffectiveDm) {
                     const nextState =
                       d.state === 'closed' ? 'open' : d.state === 'open' ? 'locked' : 'closed';
                     onUpdateDoorState?.(d.id, nextState);
+                  } else {
+                    // Player interaction intent: cannot directly mutate world state
+                    setPendingDoorRequest({
+                      doorId: d.id,
+                      door: d,
+                      action: d.state === 'closed' ? 'open' : 'close',
+                    });
                   }
                 };
 
@@ -1025,6 +1391,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                   <div
                     key={d.id}
                     onClick={handleDoorClick}
+                    onContextMenu={(e) => handleContextMenu(e, 'door', d.id, { door: d })}
                     style={{
                       left: `${leftPx}px`,
                       top: `${topPx}px`,
@@ -1041,11 +1408,61 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         ? 'bg-amber-800 border border-amber-500 shadow-md shadow-amber-950'
                         : 'bg-emerald-950/40 border border-dashed border-emerald-400 opacity-90'
                     }`}
-                    title={`Door: ${d.state} (Click to toggle)`}
+                    title={`Door: ${d.state} (${isEffectiveDm ? 'Click to toggle' : 'Click to request interaction'})`}
                   >
                     {d.state === 'locked' && <Lock className="w-2.5 h-2.5 text-rose-200" />}
                     {d.state === 'closed' && <DoorClosed className="w-2.5 h-2.5 text-amber-200" />}
                     {d.state === 'open' && <DoorOpen className="w-2.5 h-2.5 text-emerald-300" />}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Interactive Windows Overlay */}
+          {layerVisibility.walls && (
+            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 16 }}>
+              {(mapDefinition.geometry.windows || []).map((w) => {
+                const isSelected = selectedGeometry?.type === 'window' && selectedGeometry?.id === w.id;
+                const leftPx = w.x * grid.cellSizePx + (grid.originX || 0);
+                const topPx = w.y * grid.cellSizePx + (grid.originY || 0);
+                const isHorizontal = w.orientation === 'horizontal';
+
+                const handleWindowClick = (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  if (activeTool === 'select') {
+                    onSelectGeometry?.({ type: 'window', id: w.id });
+                  } else if (isEffectiveDm) {
+                    const nextState =
+                      w.state === 'clear' ? 'obscured' : w.state === 'obscured' ? 'broken' : 'clear';
+                    onUpdateWindowState?.(w.id, nextState);
+                  }
+                };
+
+                return (
+                  <div
+                    key={w.id}
+                    onClick={handleWindowClick}
+                    onContextMenu={(e) => handleContextMenu(e, 'window', w.id, { window: w })}
+                    style={{
+                      left: `${leftPx}px`,
+                      top: `${topPx}px`,
+                      width: isHorizontal ? `${grid.cellSizePx}px` : '12px',
+                      height: isHorizontal ? '12px' : `${grid.cellSizePx}px`,
+                      transform: isHorizontal ? 'translate(0, -6px)' : 'translate(-6px, 0)',
+                    }}
+                    className={`absolute pointer-events-auto cursor-pointer rounded flex items-center justify-center transition-all ${
+                      isSelected ? 'ring-2 ring-amber-400 z-10' : ''
+                    } ${
+                      w.state === 'obscured'
+                        ? 'bg-amber-950/90 border border-amber-600 shadow-md text-amber-300'
+                        : w.state === 'broken'
+                        ? 'bg-neutral-800/80 border border-dashed border-sky-400/80 shadow text-sky-300'
+                        : 'bg-sky-500/25 border border-sky-400 shadow-sm text-sky-200'
+                    }`}
+                    title={`Window: ${w.state} (${w.state === 'clear' ? 'Allows LOS, blocks walking' : w.state === 'obscured' ? 'Blocks LOS & walking' : 'Broken aperture, allows LOS'})`}
+                  >
+                    <AppWindow className="w-2.5 h-2.5" />
                   </div>
                 );
               })}

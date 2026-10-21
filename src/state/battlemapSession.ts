@@ -19,6 +19,7 @@ import {
   type MapGeometry,
   type MapBackgroundArtwork,
   type MapGridConfig,
+  type MapTokenPlacement,
 } from '../types/battlemap.ts';
 
 export class BattlemapSessionManager {
@@ -146,7 +147,113 @@ export class BattlemapSessionManager {
     this.notify();
   }
 
-  public deleteMap(mapId: string): void {
+  public createBlankMap(config: {
+    name: string;
+    sceneSummary?: string;
+    width?: number;
+    height?: number;
+    feetPerCell?: number;
+    cellSizePx?: number;
+    backgroundColor?: string;
+    fogEnabled?: boolean;
+    defaultFogState?: 'hidden' | 'revealed';
+  }): BattlemapDefinition {
+    const id = `map-blank-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const width = Math.max(5, Math.min(60, config.width || 20));
+    const height = Math.max(5, Math.min(60, config.height || 16));
+    const feetPerCell = config.feetPerCell || 5;
+    const cellSizePx = config.cellSizePx || 40;
+    const fogEnabled = config.fogEnabled ?? false;
+    const defaultFogState = config.defaultFogState ?? 'revealed';
+
+    const newMap: BattlemapDefinition = {
+      id,
+      name: config.name.trim() || 'Untitled Blank Map',
+      locationId: `loc-${id}`,
+      sceneSummary: config.sceneSummary?.trim() || 'A blank, unconfigured tactical battlemap.',
+      backgroundColor: config.backgroundColor || '#18181b',
+      grid: {
+        width,
+        height,
+        cellSizePx,
+        feetPerCell,
+        showGrid: true,
+        gridColor: 'rgba(255, 255, 255, 0.15)',
+      },
+      geometry: {
+        rooms: [],
+        corridors: [],
+        walls: [],
+        doors: [],
+        windows: [],
+        railings: [],
+        terrain: [],
+      },
+      fog: {
+        enabled: fogEnabled,
+        defaultState: defaultFogState,
+        revealedCells: [],
+        hiddenCells: [],
+        exploredCells: [],
+        previousExploredCells: [],
+        partySharedVision: true,
+        autoComputeTokenLos: true,
+      },
+      lineOfSight: {
+        enabled: true,
+        blocksOnWalls: true,
+        blocksOnClosedDoors: true,
+        maxSightRadiusFeet: 60,
+        defaultSightRadiusFeet: 60,
+      },
+      tokens: [],
+    };
+
+    this.maps = [...this.maps, newMap];
+    this.activeMapId = id;
+    this.undoStacks[id] = [];
+    this.redoStacks[id] = [];
+    this.notify();
+    return newMap;
+  }
+
+  public renameMap(mapId: string, newName: string, newSummary?: string): void {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    this.maps = this.maps.map((m) => {
+      if (m.id !== mapId) return m;
+      return {
+        ...m,
+        name: trimmed,
+        sceneSummary: newSummary !== undefined ? newSummary.trim() : m.sceneSummary,
+      };
+    });
+    this.notify();
+  }
+
+  public duplicateMap(mapId: string): BattlemapDefinition | null {
+    const sourceMap = this.maps.find((m) => m.id === mapId);
+    if (!sourceMap) return null;
+
+    const newId = `${sourceMap.id}-copy-${Date.now().toString(36)}`;
+    const cloned: BattlemapDefinition = JSON.parse(JSON.stringify(sourceMap));
+    cloned.id = newId;
+    cloned.name = `${sourceMap.name} (Copy)`;
+    cloned.locationId = `loc-${newId}`;
+
+    this.maps = [...this.maps, cloned];
+    this.activeMapId = newId;
+    this.undoStacks[newId] = [];
+    this.redoStacks[newId] = [];
+    this.notify();
+    return cloned;
+  }
+
+  public deleteMap(mapId: string): boolean {
+    if (this.maps.length <= 1) {
+      return false; // Guard against deleting the last remaining map
+    }
+
     const targetMap = this.maps.find((m) => m.id === mapId);
     if (targetMap?.backgroundArtwork?.isLocalBlob && targetMap.backgroundArtwork.url) {
       try {
@@ -167,6 +274,18 @@ export class BattlemapSessionManager {
       this.activeMapId = this.maps[0]?.id || '';
     }
 
+    this.notify();
+    return true;
+  }
+
+  public updateToken(mapId: string, tokenId: string, patch: Partial<MapTokenPlacement>): void {
+    this.maps = this.maps.map((m) => {
+      if (m.id !== mapId) return m;
+      return {
+        ...m,
+        tokens: m.tokens.map((tok) => (tok.id === tokenId ? { ...tok, ...patch } : tok)),
+      };
+    });
     this.notify();
   }
 

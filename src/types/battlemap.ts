@@ -73,11 +73,61 @@ export interface DoorSegment {
   blocksVisionWhenClosed: boolean;
 }
 
+export interface WindowSegment {
+  id: string;
+  x: number;
+  y: number;
+  orientation: 'horizontal' | 'vertical';
+  state: 'clear' | 'obscured' | 'broken';
+  blocksVisionWhenObscured?: boolean; // default true
+  blocksMovement?: boolean; // default true (walking blocked)
+  customDescription?: string;
+}
+
+export interface RailingSegment {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  movementType: 'blocking' | 'conditional' | 'passable_difficult';
+  blocksVision?: boolean; // default false (sight passes through)
+  blocksMovement?: boolean; // default true
+  name?: string;
+}
+
+export type TerrainClassification =
+  | 'rubble'
+  | 'mud'
+  | 'shallow_water'
+  | 'deep_water'
+  | 'undergrowth'
+  | 'ice'
+  | 'custom';
+
+export interface TerrainZone {
+  id: string;
+  name: string;
+  description?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  terrainType: TerrainClassification;
+  movementCostMultiplier: number; // e.g. 2 for standard difficult terrain
+  blocksVision?: boolean; // default false
+  isVisibleToPlayers?: boolean; // default true
+  runtimeEffectRef?: string;
+}
+
 export interface MapGeometry {
   rooms: RectangularRoom[];
   corridors: CorridorSegment[];
   walls: WallSegment[];
   doors: DoorSegment[];
+  windows?: WindowSegment[];
+  railings?: RailingSegment[];
+  terrain?: TerrainZone[];
 }
 
 export type BattlemapEditorTool =
@@ -88,6 +138,9 @@ export type BattlemapEditorTool =
   | 'corridor'        // Draw connecting corridor
   | 'wall'            // Draw line-segment wall
   | 'door'            // Place / toggle doors
+  | 'window'          // Place / toggle windows
+  | 'railing'         // Draw railing / low barrier
+  | 'terrain'         // Draw difficult terrain zone
   | 'measure'         // Distance ruler tool
   | 'fog_reveal'      // Brush manual fog reveal
   | 'fog_hide'        // Brush manual fog hide
@@ -95,7 +148,7 @@ export type BattlemapEditorTool =
   | 'fog_box_hide';   // Box manual fog hide
 
 export interface SelectedGeometryRef {
-  type: 'room' | 'corridor' | 'wall' | 'door';
+  type: 'room' | 'corridor' | 'wall' | 'door' | 'window' | 'railing' | 'terrain';
   id: string;
 }
 
@@ -132,6 +185,12 @@ export interface LineOfSightConfig {
   defaultSightRadiusFeet?: number;
 }
 
+export interface TokenOwnership {
+  controller: 'dm_only' | 'party_shared' | string; // characterId or 'dm_only' or 'party_shared'
+  isDmControlled?: boolean;
+  notes?: string;
+}
+
 export interface MapTokenPlacement {
   id: string;
   entityId: string;
@@ -142,6 +201,7 @@ export interface MapTokenPlacement {
   sizeCells: number; // 1 = Medium/Small (5ft), 2 = Large (10ft), 3 = Huge (15ft)
   isVisibleToPlayers: boolean;
   elevationFt: number;
+  ownership?: TokenOwnership;
 }
 
 export interface BattlemapDefinition {
@@ -151,6 +211,7 @@ export interface BattlemapDefinition {
   sceneSummary: string;
   grid: MapGridConfig;
   backgroundArtwork?: MapBackgroundArtwork;
+  backgroundColor?: string;
   geometry: MapGeometry;
   fog: FogOfWarState;
   lineOfSight: LineOfSightConfig;
