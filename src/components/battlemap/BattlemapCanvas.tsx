@@ -27,6 +27,9 @@ import {
   Move,
   Info,
   X,
+  Square,
+  Minus,
+  MousePointer,
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
@@ -345,6 +348,16 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     },
     [grid.width, grid.height]
   );
+
+  // Center viewport on specific grid cell coordinates
+  const handleCenterView = useCallback((gx: number, gy: number) => {
+    const targetPxX = gx * grid.cellSizePx + grid.cellSizePx / 2;
+    const targetPxY = gy * grid.cellSizePx + grid.cellSizePx / 2;
+    const offsetX = (mapWidthPx / 2 - targetPxX) * viewport.zoom;
+    const offsetY = (mapHeightPx / 2 - targetPxY) * viewport.zoom;
+    setViewport((prev) => ({ ...prev, panX: Math.round(offsetX), panY: Math.round(offsetY) }));
+    setContextMenu((prev) => ({ ...prev, isOpen: false }));
+  }, [grid.cellSizePx, mapWidthPx, mapHeightPx, viewport.zoom]);
 
   // Canvas Mouse Down
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -1180,10 +1193,18 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 const widthPx = tz.width * grid.cellSizePx;
                 const heightPx = tz.height * grid.cellSizePx;
 
-                let colorClasses = 'bg-amber-950/30 border-amber-600/60 text-amber-200';
+                let colorClasses = 'bg-stone-900/60 border-stone-600/60 text-stone-300';
                 if (tz.terrainType === 'mud') colorClasses = 'bg-yellow-950/40 border-yellow-700/60 text-yellow-200';
-                if (tz.terrainType === 'water') colorClasses = 'bg-cyan-950/40 border-cyan-600/60 text-cyan-200';
+                if (
+                  tz.terrainType === 'shallow_water' ||
+                  tz.terrainType === 'deep_water' ||
+                  (tz.terrainType as string) === 'water'
+                ) {
+                  colorClasses = 'bg-cyan-950/40 border-cyan-600/60 text-cyan-200';
+                }
                 if (tz.terrainType === 'undergrowth') colorClasses = 'bg-emerald-950/40 border-emerald-600/60 text-emerald-200';
+                if (tz.terrainType === 'ice') colorClasses = 'bg-sky-950/40 border-sky-400/60 text-sky-100';
+                if (tz.terrainType === 'rubble') colorClasses = 'bg-amber-950/30 border-amber-600/60 text-amber-200';
 
                 return (
                   <div
@@ -1922,6 +1943,868 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           )}
         </div>
       </div>
+
+      {/* Viewport Help Pill (AIUI-CP002C1) */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3.5 py-1 rounded-full bg-neutral-900/90 border border-neutral-700/80 text-[11px] font-mono text-neutral-300 shadow-xl flex items-center gap-2 backdrop-blur-sm">
+        <span className="font-semibold text-amber-400">Ctrl + Scroll:</span> <span>Zoom</span>
+        <span className="text-neutral-600">|</span>
+        <span className="font-semibold text-cyan-400">Middle Drag:</span> <span>Pan</span>
+        {activeTool === 'pan' && <span className="text-amber-300 ml-1 font-semibold">(Pan Tool Active)</span>}
+      </div>
+
+      {/* Context-Sensitive Right-Click Menu */}
+      {contextMenu.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${contextMenu.clientX}px`,
+            top: `${contextMenu.clientY}px`,
+            zIndex: 100,
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-56 bg-neutral-900 border border-neutral-700/90 rounded-lg shadow-2xl py-1 text-xs text-neutral-200 font-sans backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 select-none"
+        >
+          {/* Header */}
+          <div className="px-3 py-1.5 border-b border-neutral-800 text-[10px] font-mono uppercase tracking-wider text-neutral-400 flex items-center justify-between">
+            <span className="font-bold text-amber-300 truncate">
+              {contextMenu.targetType === 'blank' && `Canvas (${contextMenu.gridX}, ${contextMenu.gridY})`}
+              {contextMenu.targetType === 'room' && `Room (${contextMenu.data?.room?.name || 'Chamber'})`}
+              {contextMenu.targetType === 'corridor' && 'Corridor Segment'}
+              {contextMenu.targetType === 'wall' && 'Wall Segment'}
+              {contextMenu.targetType === 'door' && `Door (${contextMenu.data?.door?.state || 'closed'})`}
+              {contextMenu.targetType === 'window' && `Window (${contextMenu.data?.window?.state || 'clear'})`}
+              {contextMenu.targetType === 'railing' && 'Railing / Balustrade'}
+              {contextMenu.targetType === 'terrain' && `Terrain: ${contextMenu.data?.terrain?.name || 'Difficult Zone'}`}
+              {contextMenu.targetType === 'token' && `Token: ${contextMenu.data?.token?.name || 'Entity'}`}
+            </span>
+            <button
+              onClick={() => setContextMenu((prev) => ({ ...prev, isOpen: false }))}
+              className="text-neutral-500 hover:text-neutral-300"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div className="py-1">
+            {/* Blank Canvas Actions */}
+            {contextMenu.targetType === 'blank' && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onSetActiveTool?.('room');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Square className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Draw Room</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSetActiveTool?.('corridor');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Move className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Draw Corridor</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSetActiveTool?.('wall');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Minus className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Draw Wall</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSetActiveTool?.('window');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <AppWindow className="w-3.5 h-3.5 text-sky-300" />
+                      <span>Place Window</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSetActiveTool?.('railing');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Fence className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Place Railing</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSetActiveTool?.('terrain');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Mountain className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Place Difficult Terrain</span>
+                    </button>
+                    <div className="h-px bg-neutral-800 my-1" />
+                    <button
+                      onClick={() => {
+                        onUpdateFog?.((prev) => manualRevealCells(prev, [`${contextMenu.gridX},${contextMenu.gridY}`]));
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Reveal Cell ({contextMenu.gridX}, {contextMenu.gridY})</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateFog?.((prev) => manualHideCells(prev, [`${contextMenu.gridX},${contextMenu.gridY}`]));
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-purple-300"
+                    >
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>Hide Cell in Fog</span>
+                    </button>
+                    <button
+                      onClick={() => handleCenterView(contextMenu.gridX, contextMenu.gridY)}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-300"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5 text-neutral-400" />
+                      <span>Center View Here</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        const inDiff = (mapDefinition.geometry.terrain || []).some(
+                          (tz) =>
+                            contextMenu.gridX >= tz.x &&
+                            contextMenu.gridX < tz.x + tz.width &&
+                            contextMenu.gridY >= tz.y &&
+                            contextMenu.gridY < tz.y + tz.height
+                        );
+                        setCanvasNotice(
+                          `Cell (${contextMenu.gridX}, ${contextMenu.gridY}): ${inDiff ? 'Difficult Terrain (2x move cost)' : 'Standard unobstructed terrain'}.`
+                        );
+                        setTimeout(() => setCanvasNotice(null), 3500);
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Info className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Inspect Visible Area</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSetActiveTool?.('measure');
+                        setMeasureStart({ x: contextMenu.gridX, y: contextMenu.gridY });
+                        setMeasureCurrent({ x: contextMenu.gridX, y: contextMenu.gridY });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-amber-300"
+                    >
+                      <Ruler className="w-3.5 h-3.5" />
+                      <span>Measure Distance From Here</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const activeChar = characters.find((c) => c.id === selectedEntityId) || characters[0];
+                        if (!activeChar) {
+                          setCanvasNotice('No active character selected for movement request.');
+                          setTimeout(() => setCanvasNotice(null), 3000);
+                          setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                          return;
+                        }
+                        const fromX = Math.round((activeChar.token.x / 100) * grid.width);
+                        const fromY = Math.round((activeChar.token.y / 100) * grid.height);
+                        const toX = contextMenu.gridX;
+                        const toY = contextMenu.gridY;
+                        const distFeet = Math.round(Math.hypot(toX - fromX, toY - fromY) * (grid.feetPerCell || 5));
+                        const inDiff = (mapDefinition.geometry.terrain || []).some(
+                          (tz) => toX >= tz.x && toX < tz.x + tz.width && toY >= tz.y && toY < tz.y + tz.height
+                        );
+                        const mult = inDiff ? 2 : 1;
+                        setMovementIntent({
+                          charId: activeChar.id,
+                          charName: activeChar.name,
+                          fromX,
+                          fromY,
+                          toX,
+                          toY,
+                          distanceFeet: distFeet,
+                          speedFeet: activeChar.speedFt || 30,
+                          inDifficultTerrain: inDiff,
+                          costFeet: distFeet * mult,
+                        });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
+                    >
+                      <Footprints className="w-3.5 h-3.5" />
+                      <span>Request Movement to Here</span>
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Room / Corridor Actions */}
+            {(contextMenu.targetType === 'room' || contextMenu.targetType === 'corridor') && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onSelectGeometry?.({ type: contextMenu.targetType as any, id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Info className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Select / Inspect</span>
+                    </button>
+                    {contextMenu.targetType === 'room' && contextMenu.data?.room && (
+                      <>
+                        <button
+                          onClick={() => {
+                            const r = contextMenu.data.room as RectangularRoom;
+                            const cells: string[] = [];
+                            for (let y = r.y; y < r.y + r.height; y++) {
+                              for (let x = r.x; x < r.x + r.width; x++) {
+                                cells.push(`${x},${y}`);
+                              }
+                            }
+                            onUpdateFog?.((prev) => manualRevealCells(prev, cells));
+                            setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Reveal Room</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const r = contextMenu.data.room as RectangularRoom;
+                            const cells: string[] = [];
+                            for (let y = r.y; y < r.y + r.height; y++) {
+                              for (let x = r.x; x < r.x + r.width; x++) {
+                                cells.push(`${x},${y}`);
+                              }
+                            }
+                            onUpdateFog?.((prev) => manualHideCells(prev, cells));
+                            setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-purple-300"
+                        >
+                          <EyeOff className="w-3.5 h-3.5" />
+                          <span>Conceal Room in Fog</span>
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => {
+                        onDeleteGeometry?.({ type: contextMenu.targetType as any, id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-rose-950/50 flex items-center gap-2 text-rose-300"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete {contextMenu.targetType === 'room' ? 'Room' : 'Corridor'}</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="px-3 py-1.5 text-neutral-400 italic text-[11px]">
+                    Inspect Area (DM controls restricted)
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Wall Actions */}
+            {contextMenu.targetType === 'wall' && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onSelectGeometry?.({ type: 'wall', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Info className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Inspect Wall</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const host = findHostWallForDoor(
+                          contextMenu.gridX,
+                          contextMenu.gridY,
+                          mapDefinition.geometry.walls,
+                          1.5
+                        );
+                        if (host) {
+                          onAddDoor?.({
+                            id: `door-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                            x: host.snappedX,
+                            y: host.snappedY,
+                            orientation: host.orientation,
+                            state: 'closed',
+                            blocksVisionWhenClosed: true,
+                          });
+                        }
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-amber-300"
+                    >
+                      <DoorClosed className="w-3.5 h-3.5" />
+                      <span>Add Door Here</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const host = findHostWallForWindow(
+                          contextMenu.gridX,
+                          contextMenu.gridY,
+                          mapDefinition.geometry.walls,
+                          1.5
+                        );
+                        if (host) {
+                          onAddWindow?.({
+                            id: `win-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                            x: host.snappedX,
+                            y: host.snappedY,
+                            orientation: host.orientation,
+                            state: 'clear',
+                            blocksVisionWhenObscured: true,
+                            blocksMovement: true,
+                          });
+                        }
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-sky-300"
+                    >
+                      <AppWindow className="w-3.5 h-3.5" />
+                      <span>Add Window Here</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const wall = mapDefinition.geometry.walls.find((w) => w.id === contextMenu.targetId);
+                        if (wall) {
+                          onDeleteGeometry?.({ type: 'wall', id: wall.id });
+                          onAddRailing?.({
+                            id: `rail-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                            x1: wall.x1,
+                            y1: wall.y1,
+                            x2: wall.x2,
+                            y2: wall.y2,
+                            movementType: 'blocking',
+                            blocksVision: false,
+                            blocksMovement: true,
+                            name: 'Converted Railing',
+                          });
+                        }
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-teal-300"
+                    >
+                      <Fence className="w-3.5 h-3.5" />
+                      <span>Convert to Railing</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDeleteGeometry?.({ type: 'wall', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-rose-950/50 flex items-center gap-2 text-rose-300"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Wall</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="px-3 py-1.5 text-neutral-400 italic text-[11px]">Solid masonry barrier.</div>
+                )}
+              </>
+            )}
+
+            {/* Door Actions */}
+            {contextMenu.targetType === 'door' && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onUpdateDoorState?.(contextMenu.targetId!, 'open');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
+                    >
+                      <DoorOpen className="w-3.5 h-3.5" />
+                      <span>Open Door</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateDoorState?.(contextMenu.targetId!, 'closed');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-amber-300"
+                    >
+                      <DoorClosed className="w-3.5 h-3.5" />
+                      <span>Close Door</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateDoorState?.(contextMenu.targetId!, 'locked');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-rose-300"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Lock Door</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDeleteGeometry?.({ type: 'door', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-rose-950/50 flex items-center gap-2 text-rose-300"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Door</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="px-3 py-1 text-neutral-400 text-[10px] font-mono">
+                      State: {contextMenu.data?.door?.state || 'closed'}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const d = contextMenu.data?.door as DoorSegment;
+                        setPendingDoorRequest({
+                          doorId: contextMenu.targetId!,
+                          door: d,
+                          action: 'open',
+                        });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
+                    >
+                      <DoorOpen className="w-3.5 h-3.5" />
+                      <span>Request Open</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const d = contextMenu.data?.door as DoorSegment;
+                        setPendingDoorRequest({
+                          doorId: contextMenu.targetId!,
+                          door: d,
+                          action: 'close',
+                        });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-amber-300"
+                    >
+                      <DoorClosed className="w-3.5 h-3.5" />
+                      <span>Request Close</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const d = contextMenu.data?.door as DoorSegment;
+                        setPendingDoorRequest({
+                          doorId: contextMenu.targetId!,
+                          door: d,
+                          action: 'unlock',
+                        });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-rose-300"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Request Force / Unlock</span>
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Window Actions */}
+            {contextMenu.targetType === 'window' && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onUpdateWindowState?.(contextMenu.targetId!, 'clear');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-sky-300"
+                    >
+                      <AppWindow className="w-3.5 h-3.5" />
+                      <span>Set Clear (Sight Passes)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateWindowState?.(contextMenu.targetId!, 'obscured');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-amber-300"
+                    >
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>Set Obscured (Blocks Sight)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateWindowState?.(contextMenu.targetId!, 'broken');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-300"
+                    >
+                      <AppWindow className="w-3.5 h-3.5" />
+                      <span>Set Broken (Clear LOS)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDeleteGeometry?.({ type: 'window', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-rose-950/50 flex items-center gap-2 text-rose-300"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Window</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="px-3 py-1.5 text-neutral-400 italic text-[11px]">
+                    Window: {contextMenu.data?.window?.state || 'clear'} (Sight passes, walking blocked)
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Railing Actions */}
+            {contextMenu.targetType === 'railing' && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onSelectGeometry?.({ type: 'railing', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-teal-300"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                      <span>Inspect Railing</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDeleteGeometry?.({ type: 'railing', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-rose-950/50 flex items-center gap-2 text-rose-300"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Railing</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="px-3 py-1.5 text-neutral-400 italic text-[11px]">
+                    Low barrier: vision passes through, movement blocked or vaulted.
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Terrain Zone Actions */}
+            {contextMenu.targetType === 'terrain' && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onSelectGeometry?.({ type: 'terrain', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-amber-300"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                      <span>Inspect Terrain Zone</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDeleteGeometry?.({ type: 'terrain', id: contextMenu.targetId! });
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-rose-950/50 flex items-center gap-2 text-rose-300"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Terrain Zone</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="px-3 py-1.5 text-neutral-300 text-[11px] space-y-1">
+                    <p className="font-bold text-amber-300">{contextMenu.data?.terrain?.name || 'Difficult Terrain'}</p>
+                    <p className="text-neutral-400">Movement Cost: {contextMenu.data?.terrain?.movementCostMultiplier || 2}x</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Token Actions */}
+            {contextMenu.targetType === 'token' && (
+              <>
+                {isEffectiveDm ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onSelectEntity?.(contextMenu.targetId!, contextMenu.data?.entityType || 'character');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Info className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Inspect Combatant</span>
+                    </button>
+                    {contextMenu.data?.entityType === 'npc' && (
+                      <button
+                        onClick={() => {
+                          const currentVis = contextMenu.data?.token?.isVisibleToPlayers ?? true;
+                          onUpdateTokenVisibility?.(contextMenu.targetId!, !currentVis);
+                          setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-amber-300"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Toggle Player Visibility</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        onDeleteToken?.(contextMenu.targetId!);
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-rose-950/50 flex items-center gap-2 text-rose-300"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove from Map</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        onSelectEntity?.(contextMenu.targetId!, 'character');
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
+                    >
+                      <MousePointer className="w-3.5 h-3.5" />
+                      <span>Select Token</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const char = characters.find((c) => c.id === contextMenu.targetId);
+                        setCanvasNotice(
+                          char
+                            ? `${char.name}: Speed ${char.speedFt}ft, HP ${char.currentHp}/${char.maxHp}, AC ${char.armorClass}`
+                            : 'Character information'
+                        );
+                        setTimeout(() => setCanvasNotice(null), 3500);
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                    >
+                      <Info className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Inspect Character Info</span>
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Player Door Request Modal */}
+      {pendingDoorRequest && (
+        <div
+          className="fixed inset-0 z-50 bg-neutral-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPendingDoorRequest(null)}
+        >
+          <div
+            className="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-lg p-5 shadow-2xl text-neutral-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <DoorClosed className="w-5 h-5 text-amber-400" />
+                <h3 className="font-cinzel font-bold text-amber-100 text-base">Door Interaction Intent</h3>
+              </div>
+              <button
+                onClick={() => setPendingDoorRequest(null)}
+                className="text-neutral-400 hover:text-neutral-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs font-mono bg-neutral-950 p-3 rounded border border-neutral-800">
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Door Position:</span>
+                <span className="text-amber-300">({pendingDoorRequest.door.x}, {pendingDoorRequest.door.y})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Current Door State:</span>
+                <span className="capitalize font-bold text-neutral-200">{pendingDoorRequest.door.state}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Requested Action:</span>
+                <span className="uppercase font-bold text-emerald-400">{pendingDoorRequest.action}</span>
+              </div>
+            </div>
+
+            <div className="text-xs text-neutral-400 bg-amber-950/40 border border-amber-800/60 p-3 rounded space-y-1">
+              <p className="font-semibold text-amber-300 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Runtime Authority Boundary</span>
+              </p>
+              <p>
+                Authoritative rules, trap triggers, locking DC checks and world state updates are governed exclusively by canonical Python R1.
+              </p>
+              <p className="text-[11px] text-neutral-400 pt-1">
+                The gateway is currently in local session mode. This intent does not mutate world state without DM approval.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-800">
+              <button
+                onClick={() => setPendingDoorRequest(null)}
+                className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setCanvasNotice(
+                    `Door intent (${pendingDoorRequest.action}) recorded for DM / Python R1 resolution.`
+                  );
+                  setTimeout(() => setCanvasNotice(null), 3500);
+                  setPendingDoorRequest(null);
+                }}
+                className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-neutral-950 text-xs font-bold transition-colors shadow"
+              >
+                Submit Action Intent
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Player Movement Intent Modal */}
+      {movementIntent && (
+        <div
+          className="fixed inset-0 z-50 bg-neutral-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setMovementIntent(null)}
+        >
+          <div
+            className="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-lg p-5 shadow-2xl text-neutral-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Footprints className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-cinzel font-bold text-amber-100 text-base">Movement Route Intent</h3>
+              </div>
+              <button
+                onClick={() => setMovementIntent(null)}
+                className="text-neutral-400 hover:text-neutral-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs font-mono bg-neutral-950 p-3 rounded border border-neutral-800">
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Character:</span>
+                <span className="font-bold text-amber-300">{movementIntent.charName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">From / To Cells:</span>
+                <span className="text-neutral-300">
+                  ({movementIntent.fromX}, {movementIntent.fromY}) → ({movementIntent.toX}, {movementIntent.toY})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Direct Distance:</span>
+                <span className="text-cyan-300">{movementIntent.distanceFeet} ft</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-500">Terrain Cost Multiplier:</span>
+                <span className={movementIntent.inDifficultTerrain ? 'text-amber-400 font-bold' : 'text-neutral-400'}>
+                  {movementIntent.inDifficultTerrain ? '2.0x (Difficult Terrain)' : '1.0x (Normal)'}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-neutral-800 pt-1.5">
+                <span className="text-neutral-400 font-bold">Total Movement Required:</span>
+                <span
+                  className={`font-bold ${
+                    movementIntent.costFeet > movementIntent.speedFeet ? 'text-rose-400' : 'text-emerald-400'
+                  }`}
+                >
+                  {movementIntent.costFeet} ft / {movementIntent.speedFeet} ft speed
+                </span>
+              </div>
+            </div>
+
+            {movementIntent.costFeet > movementIntent.speedFeet && (
+              <div className="text-xs text-rose-300 bg-rose-950/40 border border-rose-800/60 p-2.5 rounded flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Movement exceeds available speed limit ({movementIntent.speedFeet}ft). Requires Dash action or DM grant.</span>
+              </div>
+            )}
+
+            <div className="text-xs text-neutral-400 bg-neutral-950 p-3 rounded border border-neutral-800 space-y-1">
+              <p className="text-amber-300/90 font-semibold">Rules Authority Notice</p>
+              <p>
+                Combat turn order, opportunity attacks, traps and Dash action resolution belong strictly to canonical Python R1.
+              </p>
+              <p className="text-[11px] text-neutral-500 pt-0.5">
+                Token position remains unchanged until approved by the DM or game engine.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-800">
+              <button
+                onClick={() => setMovementIntent(null)}
+                className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setCanvasNotice(
+                    `Movement intent (${movementIntent.charName} -> ${movementIntent.distanceFeet}ft) submitted.`
+                  );
+                  setTimeout(() => setCanvasNotice(null), 3500);
+                  setMovementIntent(null);
+                }}
+                className="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-neutral-950 text-xs font-bold transition-colors shadow"
+              >
+                Confirm Intent
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -40,6 +40,12 @@ import {
   Brush,
   RotateCcw,
   BoxSelect,
+  Plus,
+  Copy,
+  Edit3,
+  AppWindow,
+  Fence,
+  Mountain,
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
@@ -53,6 +59,10 @@ import type {
   CorridorSegment,
   WallSegment,
   DoorSegment,
+  WindowSegment,
+  RailingSegment,
+  TerrainZone,
+  TerrainClassification,
 } from '../../types/battlemap.ts';
 import { canAccessDmWorkspaces } from '../../runtime/roleAuthority.ts';
 import { manualRevealCells, manualHideCells, resetExploredFog } from '../../utils/lineOfSight.ts';
@@ -149,6 +159,29 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   const [isDecoding, setIsDecoding] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // Blank Map Creation Dialog State
+  const [showBlankMapModal, setShowBlankMapModal] = useState(false);
+  const [blankMapName, setBlankMapName] = useState('New Tactical Map');
+  const [blankMapSummary, setBlankMapSummary] = useState('');
+  const [blankMapWidth, setBlankMapWidth] = useState(20);
+  const [blankMapHeight, setBlankMapHeight] = useState(16);
+  const [blankMapFeetPerCell, setBlankMapFeetPerCell] = useState(5);
+  const [blankMapCellSizePx, setBlankMapCellSizePx] = useState(42);
+  const [blankMapBgColor, setBlankMapBgColor] = useState('#18181b');
+  const [blankMapFogEnabled, setBlankMapFogEnabled] = useState(false);
+  const [blankMapDefaultFogState, setBlankMapDefaultFogState] = useState<'hidden' | 'revealed'>('revealed');
+
+  // Map Rename, Delete, and New Map dropdown states
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameName, setRenameName] = useState('');
+  const [renameSummary, setRenameSummary] = useState('');
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showNewMapMenu, setShowNewMapMenu] = useState(false);
+
+  // Active Tool modifiers for Railing & Terrain
+  const [activeTerrainType, setActiveTerrainType] = useState<TerrainClassification>('rubble');
+  const [activeRailingType, setActiveRailingType] = useState<'blocking' | 'conditional' | 'passable_difficult'>('blocking');
+
   // Undo / Redo capabilities from session manager
   const canUndo = battlemapSessionManager.canUndo(activeMap.id);
   const canRedo = battlemapSessionManager.canRedo(activeMap.id);
@@ -217,6 +250,33 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
     setSelectedGeometry({ type: 'door', id: newDoor.id });
   };
 
+  const handleAddWindow = (newWindow: WindowSegment) => {
+    if (!isDm) return;
+    battlemapSessionManager.updateGeometry(activeMap.id, {
+      ...activeMap.geometry,
+      windows: [...(activeMap.geometry.windows || []), newWindow],
+    });
+    setSelectedGeometry({ type: 'window', id: newWindow.id });
+  };
+
+  const handleAddRailing = (newRailing: RailingSegment) => {
+    if (!isDm) return;
+    battlemapSessionManager.updateGeometry(activeMap.id, {
+      ...activeMap.geometry,
+      railings: [...(activeMap.geometry.railings || []), newRailing],
+    });
+    setSelectedGeometry({ type: 'railing', id: newRailing.id });
+  };
+
+  const handleAddTerrain = (newTerrain: TerrainZone) => {
+    if (!isDm) return;
+    battlemapSessionManager.updateGeometry(activeMap.id, {
+      ...activeMap.geometry,
+      terrain: [...(activeMap.geometry.terrain || []), newTerrain],
+    });
+    setSelectedGeometry({ type: 'terrain', id: newTerrain.id });
+  };
+
   const handleUpdateDoorState = (doorId: string, newState: 'open' | 'closed' | 'locked') => {
     const updatedDoors = activeMap.geometry.doors.map((d) =>
       d.id === doorId ? { ...d, state: newState } : d
@@ -225,6 +285,28 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
       ...activeMap.geometry,
       doors: updatedDoors,
     });
+  };
+
+  const handleUpdateWindowState = (windowId: string, newState: 'clear' | 'obscured' | 'broken') => {
+    const updatedWindows = (activeMap.geometry.windows || []).map((w) =>
+      w.id === windowId ? { ...w, state: newState } : w
+    );
+    battlemapSessionManager.updateGeometry(activeMap.id, {
+      ...activeMap.geometry,
+      windows: updatedWindows,
+    });
+  };
+
+  const handleUpdateTokenVisibility = (tokenId: string, isVisible: boolean) => {
+    const updatedTokens = activeMap.tokens.map((t) =>
+      t.entityId === tokenId ? { ...t, isVisibleToPlayers: isVisible } : t
+    );
+    battlemapSessionManager.updateTokens(activeMap.id, updatedTokens);
+  };
+
+  const handleDeleteToken = (tokenId: string) => {
+    const updatedTokens = activeMap.tokens.filter((t) => t.entityId !== tokenId);
+    battlemapSessionManager.updateTokens(activeMap.id, updatedTokens);
   };
 
   const handleDeleteGeometry = (geom: SelectedGeometryRef) => {
@@ -248,6 +330,21 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
       battlemapSessionManager.updateGeometry(activeMap.id, {
         ...activeMap.geometry,
         doors: activeMap.geometry.doors.filter((d) => d.id !== geom.id),
+      });
+    } else if (geom.type === 'window') {
+      battlemapSessionManager.updateGeometry(activeMap.id, {
+        ...activeMap.geometry,
+        windows: (activeMap.geometry.windows || []).filter((w) => w.id !== geom.id),
+      });
+    } else if (geom.type === 'railing') {
+      battlemapSessionManager.updateGeometry(activeMap.id, {
+        ...activeMap.geometry,
+        railings: (activeMap.geometry.railings || []).filter((r) => r.id !== geom.id),
+      });
+    } else if (geom.type === 'terrain') {
+      battlemapSessionManager.updateGeometry(activeMap.id, {
+        ...activeMap.geometry,
+        terrain: (activeMap.geometry.terrain || []).filter((t) => t.id !== geom.id),
       });
     }
     setSelectedGeometry(null);
@@ -351,6 +448,9 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
           corridors: [],
           walls: [],
           doors: [],
+          windows: [],
+          railings: [],
+          terrain: [],
         },
         fog: {
           enabled: false,
@@ -382,7 +482,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
     }
   };
 
-  // Inspect selected room, corridor, wall, door
+  // Inspect selected room, corridor, wall, door, window, railing, terrain
   const selectedRoom =
     selectedGeometry?.type === 'room'
       ? activeMap.geometry.rooms.find((r) => r.id === selectedGeometry.id)
@@ -399,14 +499,36 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
     selectedGeometry?.type === 'door'
       ? activeMap.geometry.doors.find((d) => d.id === selectedGeometry.id)
       : null;
+  const selectedWindow =
+    selectedGeometry?.type === 'window'
+      ? (activeMap.geometry.windows || []).find((w) => w.id === selectedGeometry.id)
+      : null;
+  const selectedRailing =
+    selectedGeometry?.type === 'railing'
+      ? (activeMap.geometry.railings || []).find((r) => r.id === selectedGeometry.id)
+      : null;
+  const selectedTerrain =
+    selectedGeometry?.type === 'terrain'
+      ? (activeMap.geometry.terrain || []).find((t) => t.id === selectedGeometry.id)
+      : null;
 
   const selectedChar = characters.find((c) => c.id === selectedEntityId);
   const selectedNpc = npcs.find((n) => n.id === selectedEntityId);
 
+  // Categorize maps for clean organization
+  const isCustomBlankMap = (m: BattlemapDefinition) =>
+    m.id.startsWith('map-blank-') || m.id.includes('-blank-') || m.sceneSummary?.toLowerCase().includes('blank');
+
+  const isCustomImportedMap = (m: BattlemapDefinition) =>
+    m.id.startsWith('custom-map-') || Boolean(m.backgroundArtwork?.isLocalBlob);
+
+  const isSampleScene = (m: BattlemapDefinition) =>
+    !isCustomBlankMap(m) && !isCustomImportedMap(m);
+
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-53px)] bg-neutral-950 overflow-hidden select-none">
       {/* Top Workspace Bar */}
-      <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center justify-between gap-4 z-20 shrink-0">
+      <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center justify-between gap-4 z-30 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <MapIcon className="w-4 h-4 text-amber-400" />
@@ -416,6 +538,57 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
           </div>
 
           <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
+
+          {/* New Map Dropdown Button (DM only) */}
+          {isDm && (
+            <div className="relative">
+              <button
+                onClick={() => setShowNewMapMenu(!showNewMapMenu)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-neutral-950 font-bold text-xs transition-colors shadow"
+                title="Create a new blank tactical map or import an image"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Map</span>
+              </button>
+
+              {showNewMapMenu && (
+                <div
+                  className="absolute left-0 mt-1 w-52 bg-neutral-900 border border-neutral-700 rounded-lg shadow-2xl py-1 z-50 text-xs text-neutral-200 animate-in fade-in select-none"
+                  onClick={() => setShowNewMapMenu(false)}
+                >
+                  <button
+                    onClick={() => {
+                      setBlankMapName(`Tactical Map ${mapList.length + 1}`);
+                      setBlankMapSummary('');
+                      setBlankMapWidth(20);
+                      setBlankMapHeight(16);
+                      setShowBlankMapModal(true);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                  >
+                    <Square className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <div>
+                      <div className="font-semibold text-neutral-100">Create Blank Map</div>
+                      <div className="text-[10px] text-neutral-400">Zero-geometry custom grid</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setImportError(null);
+                      setShowImportModal(true);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <div>
+                      <div className="font-semibold text-neutral-100">Import Map Image</div>
+                      <div className="text-[10px] text-neutral-400">PNG, JPG, or WebP battlemap</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Map Selector */}
           <div className="flex items-center gap-2">
@@ -428,30 +601,78 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                 battlemapSessionManager.setActiveMapId(e.target.value);
                 setSelectedGeometry(null);
               }}
-              className="bg-neutral-950 border border-neutral-700 rounded px-2.5 py-1 text-xs text-neutral-200 focus:outline-none focus:border-amber-500 font-medium cursor-pointer"
+              className="bg-neutral-950 border border-neutral-700 rounded px-2.5 py-1 text-xs text-neutral-200 focus:outline-none focus:border-amber-500 font-medium cursor-pointer max-w-[220px] truncate"
             >
               <optgroup label="Sample Scenes">
-                {mapList
-                  .filter((m) => !m.id.startsWith('custom-map-'))
-                  .map((m) => (
+                {mapList.filter(isSampleScene).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.grid.width}×{m.grid.height})
+                  </option>
+                ))}
+              </optgroup>
+              {mapList.some(isCustomBlankMap) && (
+                <optgroup label="Custom Blank Maps">
+                  {mapList.filter(isCustomBlankMap).map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name} ({m.grid.width}×{m.grid.height})
                     </option>
                   ))}
-              </optgroup>
-              {mapList.some((m) => m.id.startsWith('custom-map-')) && (
+                </optgroup>
+              )}
+              {mapList.some(isCustomImportedMap) && (
                 <optgroup label="Custom Imported Maps">
-                  {mapList
-                    .filter((m) => m.id.startsWith('custom-map-'))
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.grid.width}×{m.grid.height})
-                      </option>
-                    ))}
+                  {mapList.filter(isCustomImportedMap).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.grid.width}×{m.grid.height})
+                    </option>
+                  ))}
                 </optgroup>
               )}
             </select>
           </div>
+
+          {/* DM Map Actions: Rename, Duplicate, Delete */}
+          {isDm && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  setRenameName(activeMap.name);
+                  setRenameSummary(activeMap.sceneSummary || '');
+                  setShowRenameModal(true);
+                }}
+                className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors border border-neutral-700/60"
+                title="Rename Active Map"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+              </button>
+              <button
+                onClick={() => {
+                  battlemapSessionManager.duplicateMap(activeMap.id);
+                }}
+                className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors border border-neutral-700/60"
+                title="Duplicate Active Map (Independent copy)"
+              >
+                <Copy className="w-3.5 h-3.5 text-cyan-400" />
+              </button>
+              <button
+                disabled={mapList.length <= 1}
+                onClick={() => setShowDeleteConfirmModal(true)}
+                className="p-1.5 rounded bg-neutral-800 hover:bg-rose-950 text-neutral-400 hover:text-rose-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-neutral-700/60"
+                title={mapList.length <= 1 ? 'Cannot delete the last remaining map' : 'Delete Active Map'}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              </button>
+            </div>
+          )}
+
+          {/* Session Memory Notice Badge */}
+          <span
+            className="hidden 2xl:flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-950 text-neutral-400 border border-neutral-800 font-mono text-[10px]"
+            title="All map geometry, fog, and changes are maintained in session memory until backend persistence contracts are approved."
+          >
+            <Info className="w-3 h-3 text-amber-500/80" />
+            <span>Session Only</span>
+          </span>
 
           {/* Quick Action: Import Map Artwork (DM Host only) */}
           {isDm && (
@@ -597,6 +818,63 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                 <DoorClosed className="w-3.5 h-3.5" />
                 <span>Place Door</span>
               </button>
+
+              <button
+                onClick={() => setActiveTool('window')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'window'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Click on an existing wall to place a window (sight passes, walking blocked)"
+              >
+                <AppWindow className="w-3.5 h-3.5" />
+                <span>Window</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTool('railing')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'railing'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Click and drag to draw railings and balustrades (low barrier, sight passes)"
+              >
+                <Fence className="w-3.5 h-3.5" />
+                <span>Railing</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTool('terrain')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                  activeTool === 'terrain'
+                    ? 'bg-amber-600 text-neutral-950 font-bold shadow'
+                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+                title="Click and drag to place difficult terrain zones"
+              >
+                <Mountain className="w-3.5 h-3.5" />
+                <span>Difficult Terrain</span>
+              </button>
+
+              {activeTool === 'terrain' && (
+                <div className="flex items-center gap-1 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-700">
+                  <span className="text-[10px] text-neutral-400 font-mono">Type:</span>
+                  <select
+                    value={activeTerrainType}
+                    onChange={(e) => setActiveTerrainType(e.target.value as TerrainClassification)}
+                    className="bg-transparent text-amber-300 font-mono text-[11px] focus:outline-none"
+                  >
+                    <option value="rubble">Rubble (2x)</option>
+                    <option value="mud">Mud (2x)</option>
+                    <option value="shallow_water">Shallow Water (2x)</option>
+                    <option value="deep_water">Deep Water (2x)</option>
+                    <option value="undergrowth">Undergrowth (2x)</option>
+                    <option value="ice">Ice (2x)</option>
+                  </select>
+                </div>
+              )}
 
               <div className="h-4 w-px bg-neutral-700 mx-0.5" />
 
@@ -1116,10 +1394,90 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                           </div>
                         </div>
                       )}
+
+                      {/* Window Inspector */}
+                      {selectedWindow && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center font-mono text-[11px]">
+                            <span className="text-neutral-400">Orientation:</span>
+                            <span className="capitalize text-neutral-200">{selectedWindow.orientation}</span>
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-neutral-400 font-mono block mb-1">
+                              Window State
+                            </label>
+                            <div className="flex gap-1">
+                              {(['clear', 'obscured', 'broken'] as const).map((st) => (
+                                <button
+                                  key={st}
+                                  onClick={() => handleUpdateWindowState(selectedWindow.id, st)}
+                                  className={`flex-1 py-1 rounded text-[11px] font-mono capitalize transition-colors ${
+                                    selectedWindow.state === st
+                                      ? 'bg-amber-600 text-neutral-950 font-bold'
+                                      : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                                  }`}
+                                >
+                                  {st}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="text-[10px] text-neutral-400 font-mono leading-relaxed bg-neutral-950 p-2 rounded border border-neutral-850">
+                            {selectedWindow.state === 'clear' && 'Clear window: line of sight travels through, walking blocked.'}
+                            {selectedWindow.state === 'obscured' && 'Obscured window: sight and movement both blocked.'}
+                            {selectedWindow.state === 'broken' && 'Broken aperture: sight travels through unobstructed.'}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Railing Inspector */}
+                      {selectedRailing && (
+                        <div className="space-y-2 font-mono text-[11px]">
+                          <div className="flex justify-between text-neutral-300">
+                            <span>From:</span>
+                            <span>({selectedRailing.x1}, {selectedRailing.y1})</span>
+                          </div>
+                          <div className="flex justify-between text-neutral-300">
+                            <span>To:</span>
+                            <span>({selectedRailing.x2}, {selectedRailing.y2})</span>
+                          </div>
+                          <div className="flex justify-between text-neutral-300">
+                            <span>Barrier Type:</span>
+                            <span className="capitalize text-amber-300">{selectedRailing.movementType}</span>
+                          </div>
+                          <div className="text-[10px] text-neutral-400 leading-relaxed bg-neutral-950 p-2 rounded border border-neutral-850">
+                            Low barrier: Line of sight travels over freely while movement is restricted.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Terrain Zone Inspector */}
+                      {selectedTerrain && (
+                        <div className="space-y-2 font-mono text-[11px]">
+                          <div className="flex justify-between text-neutral-300">
+                            <span>Zone Name:</span>
+                            <span className="text-amber-200">{selectedTerrain.name}</span>
+                          </div>
+                          <div className="flex justify-between text-neutral-300">
+                            <span>Terrain Type:</span>
+                            <span className="capitalize text-cyan-300">{selectedTerrain.terrainType}</span>
+                          </div>
+                          <div className="flex justify-between text-neutral-300">
+                            <span>Movement Cost:</span>
+                            <span className="text-amber-300 font-bold">{selectedTerrain.movementCostMultiplier}x</span>
+                          </div>
+                          <div className="flex justify-between text-neutral-300">
+                            <span>LOS Blocking:</span>
+                            <span className={selectedTerrain.blocksVision ? 'text-rose-400' : 'text-emerald-400'}>
+                              {selectedTerrain.blocksVision ? 'Blocks Sight' : 'Clear Sight'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="p-3 bg-neutral-950/60 rounded border border-neutral-800 text-center text-neutral-500 text-[11px]">
-                      No geometry selected. Click on a room, wall, or door with the{' '}
+                      No geometry selected. Click on a room, wall, door, window, railing, or terrain zone with the{' '}
                       <strong className="text-neutral-300">Select Geom</strong> tool to inspect or edit.
                     </div>
                   )}
@@ -1650,9 +2008,16 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             onAddCorridor={handleAddCorridor}
             onAddWall={handleAddWall}
             onAddDoor={handleAddDoor}
+            onAddWindow={handleAddWindow}
+            onAddRailing={handleAddRailing}
+            onAddTerrain={handleAddTerrain}
             onUpdateDoorState={handleUpdateDoorState}
+            onUpdateWindowState={handleUpdateWindowState}
             onDeleteGeometry={handleDeleteGeometry}
             onUpdateFog={(patchOrFn) => battlemapSessionManager.updateFog(activeMap.id, patchOrFn)}
+            onUpdateTokenVisibility={handleUpdateTokenVisibility}
+            onDeleteToken={handleDeleteToken}
+            onSetActiveTool={setActiveTool}
           />
         </main>
 
@@ -2134,6 +2499,324 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
                 className="px-4 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blank Map Creation Modal (AIUI-CP002C1) */}
+      {showBlankMapModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowBlankMapModal(false)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl p-6 text-xs text-neutral-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Square className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold font-cinzel text-neutral-100 text-sm">
+                  Create Blank Tactical Battlemap
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowBlankMapModal(false)}
+                className="p-1 rounded text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                battlemapSessionManager.createBlankMap({
+                  name: blankMapName.trim() || 'Untitled Blank Map',
+                  sceneSummary: blankMapSummary.trim() || undefined,
+                  width: blankMapWidth,
+                  height: blankMapHeight,
+                  feetPerCell: blankMapFeetPerCell,
+                  cellSizePx: blankMapCellSizePx,
+                  backgroundColor: blankMapBgColor,
+                  fogEnabled: blankMapFogEnabled,
+                  defaultFogState: blankMapDefaultFogState,
+                });
+                setSelectedGeometry(null);
+                setShowBlankMapModal(false);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="text-neutral-300 font-medium block mb-1">
+                  Map Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={blankMapName}
+                  onChange={(e) => setBlankMapName(e.target.value)}
+                  placeholder="e.g. Underdark Cavern, Fortress Courtyard"
+                  className="w-full px-3 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-neutral-400 block mb-1">Description (Optional)</label>
+                <input
+                  type="text"
+                  value={blankMapSummary}
+                  onChange={(e) => setBlankMapSummary(e.target.value)}
+                  placeholder="Tactical encounter notes or chamber description"
+                  className="w-full px-3 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-amber-500 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-neutral-400 block mb-1">Grid Columns (Width)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="60"
+                    value={blankMapWidth}
+                    onChange={(e) => setBlankMapWidth(Math.max(5, Math.min(60, Number(e.target.value))))}
+                    className="w-full px-3 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <span className="text-[10px] text-neutral-500">5 - 60 cells ({blankMapWidth * blankMapFeetPerCell}ft)</span>
+                </div>
+                <div>
+                  <label className="text-neutral-400 block mb-1">Grid Rows (Height)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="60"
+                    value={blankMapHeight}
+                    onChange={(e) => setBlankMapHeight(Math.max(5, Math.min(60, Number(e.target.value))))}
+                    className="w-full px-3 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <span className="text-[10px] text-neutral-500">5 - 60 cells ({blankMapHeight * blankMapFeetPerCell}ft)</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-neutral-400 block mb-1">Feet Per Cell</label>
+                  <select
+                    value={blankMapFeetPerCell}
+                    onChange={(e) => setBlankMapFeetPerCell(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-amber-500 font-mono"
+                  >
+                    <option value="5">5 ft (Standard D&D)</option>
+                    <option value="10">10 ft</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-neutral-400 block mb-1">Floor Background</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={blankMapBgColor}
+                      onChange={(e) => setBlankMapBgColor(e.target.value)}
+                      className="w-8 h-8 rounded border border-neutral-700 cursor-pointer bg-neutral-950 p-0.5"
+                    />
+                    <span className="text-[11px] text-neutral-400 font-mono">{blankMapBgColor}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-neutral-200 block">Enable Fog of War</span>
+                    <span className="text-[10px] text-neutral-500">Start with exploration fog on this map</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={blankMapFogEnabled}
+                    onChange={(e) => setBlankMapFogEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-amber-500 cursor-pointer"
+                  />
+                </div>
+
+                {blankMapFogEnabled && (
+                  <div className="flex items-center justify-between pt-1 border-t border-neutral-850">
+                    <span className="text-[11px] text-neutral-400">Default Fog State:</span>
+                    <div className="flex gap-3">
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="defaultFog"
+                          checked={blankMapDefaultFogState === 'revealed'}
+                          onChange={() => setBlankMapDefaultFogState('revealed')}
+                          className="text-amber-500"
+                        />
+                        <span className="text-[11px] text-neutral-300">Explored</span>
+                      </label>
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="defaultFog"
+                          checked={blankMapDefaultFogState === 'hidden'}
+                          onChange={() => setBlankMapDefaultFogState('hidden')}
+                          className="text-amber-500"
+                        />
+                        <span className="text-[11px] text-neutral-300">Concealed</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="text-[11px] text-amber-400/80 bg-amber-950/20 border border-amber-800/40 p-2.5 rounded flex items-center gap-1.5">
+                <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Creates an empty tactical canvas with zero initial geometry or encounters. Session memory only.</span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setShowBlankMapModal(false)}
+                  className="px-4 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-neutral-950 font-bold transition-colors shadow"
+                >
+                  Create Blank Map
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Map Modal */}
+      {showRenameModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowRenameModal(false)}
+        >
+          <div
+            className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl p-6 text-xs text-neutral-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold font-cinzel text-neutral-100 text-sm">Rename Battlemap</h3>
+              </div>
+              <button
+                onClick={() => setShowRenameModal(false)}
+                className="p-1 rounded text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                battlemapSessionManager.renameMap(activeMap.id, renameName, renameSummary);
+                setShowRenameModal(false);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="text-neutral-300 font-medium block mb-1">
+                  Map Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-neutral-400 block mb-1">Scene Description</label>
+                <input
+                  type="text"
+                  value={renameSummary}
+                  onChange={(e) => setRenameSummary(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded bg-neutral-950 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-amber-500 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setShowRenameModal(false)}
+                  className="px-4 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-neutral-950 font-bold transition-colors shadow"
+                >
+                  Save Rename
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Map Confirmation Modal */}
+      {showDeleteConfirmModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowDeleteConfirmModal(false)}
+        >
+          <div
+            className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl p-6 text-xs text-neutral-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2 text-rose-400">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h3 className="font-bold font-cinzel text-neutral-100 text-sm">Delete Battlemap</h3>
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="p-1 rounded text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-neutral-300">
+              <p>
+                Are you sure you want to delete <strong className="text-amber-300 font-cinzel">{activeMap.name}</strong>?
+              </p>
+              <p className="text-[11px] text-neutral-400">
+                All rooms, corridors, walls, doors, windows, and fog states on this map will be permanently removed from this session.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-800">
+              <button
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="px-4 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  battlemapSessionManager.deleteMap(activeMap.id);
+                  setSelectedGeometry(null);
+                  setShowDeleteConfirmModal(false);
+                }}
+                className="px-4 py-1.5 rounded bg-rose-700 hover:bg-rose-600 text-white font-bold transition-colors shadow"
+              >
+                Delete Map
               </button>
             </div>
           </div>

@@ -289,6 +289,17 @@ export class BattlemapSessionManager {
     this.notify();
   }
 
+  public updateTokens(mapId: string, tokens: MapTokenPlacement[]): void {
+    this.maps = this.maps.map((m) => {
+      if (m.id !== mapId) return m;
+      return {
+        ...m,
+        tokens,
+      };
+    });
+    this.notify();
+  }
+
   public updateArtwork(mapId: string, patch: Partial<MapBackgroundArtwork>): void {
     this.maps = this.maps.map((m) => {
       if (m.id !== mapId || !m.backgroundArtwork) return m;
