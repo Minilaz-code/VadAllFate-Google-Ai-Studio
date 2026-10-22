@@ -299,13 +299,59 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
 
   const handleUpdateTokenVisibility = (tokenId: string, isVisible: boolean) => {
     const updatedTokens = activeMap.tokens.map((t) =>
-      t.entityId === tokenId ? { ...t, isVisibleToPlayers: isVisible } : t
+      t.entityId === tokenId || t.id === tokenId ? { ...t, isVisibleToPlayers: isVisible } : t
     );
     battlemapSessionManager.updateTokens(activeMap.id, updatedTokens);
   };
 
+  const handleUpdateTokenOwnership = (tokenId: string, ownership: import('../../types/battlemap.ts').TokenOwnership) => {
+    const existing = activeMap.tokens.find((t) => t.entityId === tokenId || t.id === tokenId);
+    if (existing) {
+      const updatedTokens = activeMap.tokens.map((t) =>
+        t.entityId === tokenId || t.id === tokenId ? { ...t, ownership } : t
+      );
+      battlemapSessionManager.updateTokens(activeMap.id, updatedTokens);
+    } else {
+      const char = characters.find((c) => c.id === tokenId);
+      const npc = npcs.find((n) => n.id === tokenId);
+      if (char) {
+        battlemapSessionManager.updateTokens(activeMap.id, [
+          ...activeMap.tokens,
+          {
+            id: `tok-${char.id}`,
+            entityId: char.id,
+            entityType: 'character',
+            name: char.name,
+            x: char.token.x,
+            y: char.token.y,
+            sizeCells: 1,
+            isVisibleToPlayers: true,
+            elevationFt: 0,
+            ownership,
+          },
+        ]);
+      } else if (npc) {
+        battlemapSessionManager.updateTokens(activeMap.id, [
+          ...activeMap.tokens,
+          {
+            id: `tok-${npc.id}`,
+            entityId: npc.id,
+            entityType: 'npc',
+            name: npc.name,
+            x: npc.token.x,
+            y: npc.token.y,
+            sizeCells: 1,
+            isVisibleToPlayers: npc.token.isVisibleToPlayers,
+            elevationFt: 0,
+            ownership,
+          },
+        ]);
+      }
+    }
+  };
+
   const handleDeleteToken = (tokenId: string) => {
-    const updatedTokens = activeMap.tokens.filter((t) => t.entityId !== tokenId);
+    const updatedTokens = activeMap.tokens.filter((t) => t.entityId !== tokenId && t.id !== tokenId);
     battlemapSessionManager.updateTokens(activeMap.id, updatedTokens);
   };
 
@@ -1987,6 +2033,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             characters={characters}
             npcs={npcs}
             userRole={userRole}
+            identity={identity}
             selectedEntityId={selectedEntityId}
             activeTool={activeTool}
             selectedGeometry={selectedGeometry}
@@ -2015,6 +2062,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             onUpdateWindowState={handleUpdateWindowState}
             onDeleteGeometry={handleDeleteGeometry}
             onUpdateFog={(patchOrFn) => battlemapSessionManager.updateFog(activeMap.id, patchOrFn)}
+            onUpdateTokenOwnership={handleUpdateTokenOwnership}
             onUpdateTokenVisibility={handleUpdateTokenVisibility}
             onDeleteToken={handleDeleteToken}
             onSetActiveTool={setActiveTool}

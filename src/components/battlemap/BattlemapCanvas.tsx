@@ -33,7 +33,8 @@ import {
 } from 'lucide-react';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
-import type { UserRole, PlayerSafeNpc } from '../../types/runtime.ts';
+import type { UserRole, PlayerSafeNpc, UserIdentityContext } from '../../types/runtime.ts';
+import { canAccessDmWorkspaces } from '../../runtime/roleAuthority.ts';
 import type {
   BattlemapDefinition,
   BattlemapEditorTool,
@@ -82,6 +83,7 @@ interface BattlemapCanvasProps {
   characters: CharacterSheet[];
   npcs: (NonPlayerCharacter | PlayerSafeNpc)[];
   userRole: UserRole;
+  identity?: UserIdentityContext;
   selectedEntityId?: string;
   activeTool?: BattlemapEditorTool;
   selectedGeometry?: SelectedGeometryRef | null;
@@ -113,6 +115,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   characters,
   npcs,
   userRole,
+  identity,
   selectedEntityId,
   activeTool = 'token',
   selectedGeometry = null,
@@ -491,60 +494,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     }
   };
 
-  // Context-sensitive right-click handler
-  const handleContextMenu = (
-    e: React.MouseEvent,
-    targetType: 'blank' | 'room' | 'corridor' | 'wall' | 'door' | 'window' | 'railing' | 'terrain' | 'token' = 'blank',
-    targetId?: string,
-    extraData?: any
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
 
-    const coords = getMapCoords(e.clientX, e.clientY);
-    const gridX = coords ? coords.gridX : 0;
-    const gridY = coords ? coords.gridY : 0;
-
-    let resolvedType = targetType;
-    let resolvedId = targetId;
-    let resolvedData = extraData;
-
-    // Security boundary: Players must NEVER discover or inspect hidden entities/geometry
-    if (!isEffectiveDm && targetType === 'token') {
-      const tok = extraData?.token as MapTokenPlacement | undefined;
-      const isVisible = tok
-        ? isEntityVisibleOnBattlemap(
-            tok.x,
-            tok.y,
-            tok.isVisibleToPlayers,
-            false,
-            mapDefinition.fog,
-            currentlyVisibleCells
-          )
-        : false;
-      if (!isVisible) {
-        resolvedType = 'blank';
-        resolvedId = undefined;
-        resolvedData = undefined;
-      }
-    }
-
-    const menuWidth = 220;
-    const menuHeight = 300;
-    const clientX = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
-    const clientY = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
-
-    setContextMenu({
-      isOpen: true,
-      clientX,
-      clientY,
-      targetType: resolvedType,
-      targetId: resolvedId,
-      gridX,
-      gridY,
-      data: resolvedData,
-    });
-  };
 
   // Global window-level mouse movement and mouse up listeners
   useEffect(() => {
@@ -869,7 +819,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   );
 
   // Effective DM perspective (false if Player role OR if DM enabled Player Fog Preview)
-  const isEffectiveDm = userRole === 'dm_host' && !mapDefinition.fog.previewPlayerFog;
+  const isEffectiveDm = identity
+    ? canAccessDmWorkspaces(identity) && !mapDefinition.fog.previewPlayerFog
+    : (userRole === 'dm_host' || (userRole as string) === 'dm') && !mapDefinition.fog.previewPlayerFog;
 
   // Compute vision sources for player characters
   const visionSources: VisionSource[] = useMemo(() => {
@@ -929,6 +881,66 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     grid.height,
   ]);
 
+  // Helpers to determine whether cells and geometry are revealed/explored under active Fog of War
+  const isCellExploredOrVisible = useCallback(
+    (cx: number, cy: number): boolean => {
+      if (isEffectiveDm || !mapDefinition.fog.enabled) return true;
+      const state = resolveCellVisibility(cx, cy, mapDefinition.fog, currentlyVisibleCells);
+      return state === 'explored' || state === 'visible';
+    },
+    [isEffectiveDm, mapDefinition.fog, currentlyVisibleCells]
+  );
+
+  const isRoomDiscovered = useCallback(
+    (r: RectangularRoom): boolean => {
+      if (isEffectiveDm || !mapDefinition.fog.enabled) return true;
+      for (let cy = r.y; cy < r.y + r.height; cy++) {
+        for (let cx = r.x; cx < r.x + r.width; cx++) {
+          if (isCellExploredOrVisible(cx, cy)) return true;
+        }
+      }
+      return false;
+    },
+    [isEffectiveDm, mapDefinition.fog.enabled, isCellExploredOrVisible]
+  );
+
+  const isCorridorDiscovered = useCallback(
+    (c: CorridorSegment): boolean => {
+      if (isEffectiveDm || !mapDefinition.fog.enabled) return true;
+      const segments = computeCorridorSegments(
+        c.startX,
+        c.startY,
+        c.endX,
+        c.endY,
+        c.widthCells || corridorWidthCells
+      );
+      return segments.some((seg) => {
+        for (let cy = seg.y; cy < seg.y + seg.height; cy++) {
+          for (let cx = seg.x; cx < seg.x + seg.width; cx++) {
+            if (isCellExploredOrVisible(cx, cy)) return true;
+          }
+        }
+        return false;
+      });
+    },
+    [isEffectiveDm, mapDefinition.fog.enabled, isCellExploredOrVisible, corridorWidthCells]
+  );
+
+  const isTerrainDiscovered = useCallback(
+    (tz: TerrainZone): boolean => {
+      if (isEffectiveDm) return true;
+      if (tz.isVisibleToPlayers === false) return false;
+      if (!mapDefinition.fog.enabled) return true;
+      for (let cy = tz.y; cy < tz.y + tz.height; cy++) {
+        for (let cx = tz.x; cx < tz.x + tz.width; cx++) {
+          if (isCellExploredOrVisible(cx, cy)) return true;
+        }
+      }
+      return false;
+    },
+    [isEffectiveDm, mapDefinition.fog.enabled, isCellExploredOrVisible]
+  );
+
   // Automatically accumulate newly visible cells into exploredCells
   useEffect(() => {
     if (!mapDefinition.fog.enabled || mapDefinition.fog.autoComputeTokenLos === false) return;
@@ -965,6 +977,133 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     return onMap || atLocation;
   });
 
+  // Observable DEMO-ONLY Intent Queue (AIUI-CP002C1-R2)
+  const [demoIntentQueue, setDemoIntentQueue] = useState<
+    Array<{ id: string; type: 'door' | 'movement'; description: string; timestamp: string }>
+  >([]);
+  const [showDemoQueueModal, setShowDemoQueueModal] = useState(false);
+
+  // Security Hardened Context Menu Handler (AIUI-CP002C1-R2)
+  // Evaluates actual player visibility across all geometry & token targets.
+  // Suppresses all target identification, metadata, and hit testing for concealed objects.
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    targetType: 'blank' | 'room' | 'corridor' | 'wall' | 'door' | 'window' | 'railing' | 'terrain' | 'token' = 'blank',
+    targetId?: string,
+    extraData?: any
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const coords = getMapCoords(e.clientX, e.clientY);
+    const gridX = coords ? coords.gridX : 0;
+    const gridY = coords ? coords.gridY : 0;
+
+    let resolvedType = targetType;
+    let resolvedId = targetId;
+    let resolvedData = extraData;
+
+    // Security boundary: Players / Player-Preview must NEVER discover or inspect hidden entities/geometry
+    if (!isEffectiveDm) {
+      const cellIsExplored = isCellExploredOrVisible(gridX, gridY);
+
+      if (!cellIsExplored) {
+        // Complete pitch-black unexplored area: completely suppress all geometry, token, and target data
+        resolvedType = 'blank';
+        resolvedId = undefined;
+        resolvedData = { isUnexplored: true };
+      } else {
+        // Cell is explored or visible; check target-specific permissions
+        if (targetType === 'token') {
+          const isNpc = extraData?.entityType === 'npc';
+          if (isNpc) {
+            const npc = extraData?.npc as (NonPlayerCharacter | PlayerSafeNpc) | undefined;
+            const isVis = npc
+              ? isEntityVisibleOnBattlemap(
+                  (npc.token.x / 100) * grid.width,
+                  (npc.token.y / 100) * grid.height,
+                  npc.token.isVisibleToPlayers,
+                  false,
+                  mapDefinition.fog,
+                  currentlyVisibleCells
+                )
+              : false;
+            if (!isVis) {
+              resolvedType = 'blank';
+              resolvedId = undefined;
+              resolvedData = undefined;
+            }
+          }
+        } else if (targetType === 'door') {
+          const d = extraData?.door as DoorSegment | undefined;
+          if (d && !isCellExploredOrVisible(d.x, d.y)) {
+            resolvedType = 'blank';
+            resolvedId = undefined;
+            resolvedData = undefined;
+          }
+        } else if (targetType === 'window') {
+          const w = extraData?.window as WindowSegment | undefined;
+          if (w && !isCellExploredOrVisible(w.x, w.y)) {
+            resolvedType = 'blank';
+            resolvedId = undefined;
+            resolvedData = undefined;
+          }
+        } else if (targetType === 'room') {
+          const r = extraData?.room as RectangularRoom | undefined;
+          if (r && !isRoomDiscovered(r)) {
+            resolvedType = 'blank';
+            resolvedId = undefined;
+            resolvedData = undefined;
+          }
+        } else if (targetType === 'corridor') {
+          const c = extraData?.corridor as CorridorSegment | undefined;
+          if (c && !isCorridorDiscovered(c)) {
+            resolvedType = 'blank';
+            resolvedId = undefined;
+            resolvedData = undefined;
+          }
+        } else if (targetType === 'railing') {
+          const rail = extraData?.railing as RailingSegment | undefined;
+          if (rail && !isCellExploredOrVisible(rail.x1, rail.y1) && !isCellExploredOrVisible(rail.x2, rail.y2)) {
+            resolvedType = 'blank';
+            resolvedId = undefined;
+            resolvedData = undefined;
+          }
+        } else if (targetType === 'terrain') {
+          const tz = extraData?.terrain as TerrainZone | undefined;
+          if (tz && (tz.isVisibleToPlayers === false || !isTerrainDiscovered(tz))) {
+            resolvedType = 'blank';
+            resolvedId = undefined;
+            resolvedData = undefined;
+          }
+        } else if (targetType === 'wall') {
+          const seg = extraData?.segment as WallSegment | undefined;
+          if (seg && !isCellExploredOrVisible(seg.x1, seg.y1) && !isCellExploredOrVisible(seg.x2, seg.y2)) {
+            resolvedType = 'blank';
+            resolvedId = undefined;
+            resolvedData = undefined;
+          }
+        }
+      }
+    }
+
+    const menuWidth = 240;
+    const menuHeight = 360;
+    const clientX = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
+    const clientY = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
+
+    setContextMenu({
+      isOpen: true,
+      clientX,
+      clientY,
+      targetType: resolvedType,
+      targetId: resolvedId,
+      gridX,
+      gridY,
+      data: resolvedData,
+    });
+  };
+
   return (
     <div
       ref={containerRef}
@@ -996,6 +1135,16 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
             <span className="px-2 py-0.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-300 font-mono text-[10px] hidden md:inline">
               Fog: Active ({mapDefinition.fog.autoComputeTokenLos !== false ? 'Dynamic LOS' : 'Manual'})
             </span>
+          )}
+          {demoIntentQueue.length > 0 && (
+            <button
+              onClick={() => setShowDemoQueueModal(true)}
+              className="px-2 py-0.5 rounded bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-600/70 font-mono text-[10px] flex items-center gap-1 cursor-pointer transition-colors shadow"
+              title="View in-memory DEMO-ONLY request queue"
+            >
+              <Info className="w-3 h-3 text-amber-400" />
+              <span>[DEMO-ONLY Queue: {demoIntentQueue.length}]</span>
+            </button>
           )}
         </div>
 
@@ -1104,6 +1253,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
             <div className="absolute inset-0 pointer-events-none">
               {/* Properly Bounded Corridors (Section 3: No diagonal bounding boxes) */}
               {mapDefinition.geometry.corridors.map((c) => {
+                if (!isEffectiveDm && !isCorridorDiscovered(c)) {
+                  return null;
+                }
                 const isSelected = selectedGeometry?.type === 'corridor' && selectedGeometry?.id === c.id;
                 const segments = computeCorridorSegments(
                   c.startX,
@@ -1136,7 +1288,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         className={`absolute rounded border pointer-events-auto cursor-pointer transition-shadow ${
                           isSelected ? 'ring-2 ring-amber-400 shadow-lg z-10' : 'opacity-90'
                         }`}
-                        title={`Corridor (${(c.widthCells || 2) * 5}ft width)`}
+                        title={isEffectiveDm ? `Corridor (${(c.widthCells || 2) * 5}ft width)` : undefined}
                       />
                     ))}
                   </React.Fragment>
@@ -1145,6 +1297,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
               {/* Rectangular Rooms */}
               {mapDefinition.geometry.rooms.map((r) => {
+                if (!isEffectiveDm && !isRoomDiscovered(r)) {
+                  return null;
+                }
                 const isSelected = selectedGeometry?.type === 'room' && selectedGeometry?.id === r.id;
                 const leftPx = r.x * grid.cellSizePx;
                 const topPx = r.y * grid.cellSizePx;
@@ -1187,6 +1342,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
               {/* Difficult Terrain Zones */}
               {(mapDefinition.geometry.terrain || []).map((tz) => {
+                if (!isEffectiveDm && (tz.isVisibleToPlayers === false || !isTerrainDiscovered(tz))) {
+                  return null;
+                }
                 const isSelected = selectedGeometry?.type === 'terrain' && selectedGeometry?.id === tz.id;
                 const leftPx = tz.x * grid.cellSizePx;
                 const topPx = tz.y * grid.cellSizePx;
@@ -1289,6 +1447,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
             >
               {/* Effective Wall Segments (Doorway openings are not blocked when open) */}
               {effectiveSegments.map((seg) => {
+                if (!isEffectiveDm && !isCellExploredOrVisible(seg.x1, seg.y1) && !isCellExploredOrVisible(seg.x2, seg.y2)) {
+                  return null;
+                }
                 const isSelected =
                   (selectedGeometry?.type === 'wall' && selectedGeometry?.id === seg.sourceId) ||
                   (selectedGeometry?.type === 'door' && selectedGeometry?.id === seg.sourceId);
@@ -1344,6 +1505,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
               {/* Railings & Low Barriers */}
               {(mapDefinition.geometry.railings || []).map((rail) => {
+                if (!isEffectiveDm && !isCellExploredOrVisible(rail.x1, rail.y1) && !isCellExploredOrVisible(rail.x2, rail.y2)) {
+                  return null;
+                }
                 const isSelected = selectedGeometry?.type === 'railing' && selectedGeometry?.id === rail.id;
                 const x1 = rail.x1 * grid.cellSizePx + (grid.originX || 0);
                 const y1 = rail.y1 * grid.cellSizePx + (grid.originY || 0);
@@ -1385,6 +1549,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           {layerVisibility.walls && (
             <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 16 }}>
               {mapDefinition.geometry.doors.map((d) => {
+                if (!isEffectiveDm && !isCellExploredOrVisible(d.x, d.y)) {
+                  return null;
+                }
                 const isSelected = selectedGeometry?.type === 'door' && selectedGeometry?.id === d.id;
                 const leftPx = d.x * grid.cellSizePx + (grid.originX || 0);
                 const topPx = d.y * grid.cellSizePx + (grid.originY || 0);
@@ -1444,6 +1611,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           {layerVisibility.walls && (
             <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 16 }}>
               {(mapDefinition.geometry.windows || []).map((w) => {
+                if (!isEffectiveDm && !isCellExploredOrVisible(w.x, w.y)) {
+                  return null;
+                }
                 const isSelected = selectedGeometry?.type === 'window' && selectedGeometry?.id === w.id;
                 const leftPx = w.x * grid.cellSizePx + (grid.originX || 0);
                 const topPx = w.y * grid.cellSizePx + (grid.originY || 0);
@@ -1668,6 +1838,26 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         onSelectEntity?.(char.id, 'character');
                       }
                     }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const tok = mapDefinition.tokens.find((t) => t.entityId === char.id || t.id === char.id);
+                      handleContextMenu(e, 'token', char.id, {
+                        entityType: 'character',
+                        character: char,
+                        token: tok || {
+                          id: `tok-${char.id}`,
+                          entityId: char.id,
+                          entityType: 'character',
+                          name: char.name,
+                          x: char.token.x,
+                          y: char.token.y,
+                          sizeCells: 1,
+                          isVisibleToPlayers: true,
+                          elevationFt: 0,
+                        },
+                      });
+                    }}
                     style={{
                       left: `${xPct}%`,
                       top: `${yPct}%`,
@@ -1743,6 +1933,26 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                         });
                         onSelectEntity?.(npc.id, 'npc');
                       }
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const tok = mapDefinition.tokens.find((t) => t.entityId === npc.id || t.id === npc.id);
+                      handleContextMenu(e, 'token', npc.id, {
+                        entityType: 'npc',
+                        npc: npc,
+                        token: tok || {
+                          id: `tok-${npc.id}`,
+                          entityId: npc.id,
+                          entityType: 'npc',
+                          name: npc.name,
+                          x: npc.token.x,
+                          y: npc.token.y,
+                          sizeCells: 1,
+                          isVisibleToPlayers: npc.token.isVisibleToPlayers,
+                          elevationFt: 0,
+                        },
+                      });
                     }}
                     style={{
                       left: `${xPct}%`,
@@ -1967,7 +2177,10 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           {/* Header */}
           <div className="px-3 py-1.5 border-b border-neutral-800 text-[10px] font-mono uppercase tracking-wider text-neutral-400 flex items-center justify-between">
             <span className="font-bold text-amber-300 truncate">
-              {contextMenu.targetType === 'blank' && `Canvas (${contextMenu.gridX}, ${contextMenu.gridY})`}
+              {contextMenu.targetType === 'blank' &&
+                (contextMenu.data?.isUnexplored
+                  ? 'Unexplored Area'
+                  : `Canvas (${contextMenu.gridX}, ${contextMenu.gridY})`)}
               {contextMenu.targetType === 'room' && `Room (${contextMenu.data?.room?.name || 'Chamber'})`}
               {contextMenu.targetType === 'corridor' && 'Corridor Segment'}
               {contextMenu.targetType === 'wall' && 'Wall Segment'}
@@ -1975,7 +2188,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
               {contextMenu.targetType === 'window' && `Window (${contextMenu.data?.window?.state || 'clear'})`}
               {contextMenu.targetType === 'railing' && 'Railing / Balustrade'}
               {contextMenu.targetType === 'terrain' && `Terrain: ${contextMenu.data?.terrain?.name || 'Difficult Zone'}`}
-              {contextMenu.targetType === 'token' && `Token: ${contextMenu.data?.token?.name || 'Entity'}`}
+              {contextMenu.targetType === 'token' &&
+                `Token: ${contextMenu.data?.token?.name || contextMenu.data?.character?.name || contextMenu.data?.npc?.name || 'Entity'}`}
             </span>
             <button
               onClick={() => setContextMenu((prev) => ({ ...prev, isOpen: false }))}
@@ -2080,6 +2294,16 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                       <span>Center View Here</span>
                     </button>
                   </>
+                ) : contextMenu.data?.isUnexplored ? (
+                  <div className="px-3 py-2 text-[11px] text-neutral-400 space-y-1">
+                    <div className="flex items-center gap-1.5 text-neutral-300 font-semibold">
+                      <EyeOff className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>Unexplored Territory</span>
+                    </div>
+                    <p className="text-[10px] text-neutral-500 leading-relaxed">
+                      This area is shrouded in fog of war. Tokens cannot target or interact with unrevealed locations.
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <button
@@ -2597,35 +2821,107 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Remove from Map</span>
                     </button>
-                  </>
-                ) : (
-                  <>
+
+                    {/* DM Token Ownership Assignment (Session Metadata) */}
+                    <div className="h-px bg-neutral-800 my-1" />
+                    <div className="px-3 py-1 text-[10px] font-mono text-neutral-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>Ownership</span>
+                      <span className="text-[9px] text-amber-400 font-normal">Session-Only</span>
+                    </div>
                     <button
                       onClick={() => {
-                        onSelectEntity?.(contextMenu.targetId!, 'character');
+                        onUpdateTokenOwnership?.(contextMenu.targetId!, {
+                          controller: 'dm_only',
+                          isDmControlled: true,
+                          notes: 'Controlled exclusively by DM (Session Demo)',
+                        });
+                        setCanvasNotice('Token ownership set to: DM Only (Session Demo).');
+                        setTimeout(() => setCanvasNotice(null), 3000);
+                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-rose-300"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Assign: DM Only</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateTokenOwnership?.(contextMenu.targetId!, {
+                          controller: 'party_shared',
+                          isDmControlled: false,
+                          notes: 'Shared control by party (Session Demo)',
+                        });
+                        setCanvasNotice('Token ownership set to: Party Shared (Session Demo).');
+                        setTimeout(() => setCanvasNotice(null), 3000);
                         setContextMenu((prev) => ({ ...prev, isOpen: false }));
                       }}
                       className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
                     >
-                      <MousePointer className="w-3.5 h-3.5" />
-                      <span>Select Token</span>
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Assign: Party Shared</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        const char = characters.find((c) => c.id === contextMenu.targetId);
-                        setCanvasNotice(
-                          char
-                            ? `${char.name}: Speed ${char.speedFt}ft, HP ${char.currentHp}/${char.maxHp}, AC ${char.armorClass}`
-                            : 'Character information'
-                        );
-                        setTimeout(() => setCanvasNotice(null), 3500);
-                        setContextMenu((prev) => ({ ...prev, isOpen: false }));
-                      }}
-                      className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
-                    >
-                      <Info className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Inspect Character Info</span>
-                    </button>
+                    {characters.map((char) => (
+                      <button
+                        key={char.id}
+                        onClick={() => {
+                          onUpdateTokenOwnership?.(contextMenu.targetId!, {
+                            controller: char.id,
+                            isDmControlled: false,
+                            notes: `Assigned to ${char.name} (Session Demo)`,
+                          });
+                          setCanvasNotice(`Token ownership assigned to: ${char.name} (Session Demo).`);
+                          setTimeout(() => setCanvasNotice(null), 3000);
+                          setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-cyan-300 truncate"
+                      >
+                        <MousePointer className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span className="truncate">Assign: {char.name}</span>
+                      </button>
+                    ))}
+                    <div className="px-3 py-0.5 text-[9px] text-neutral-500 italic">
+                      Session metadata — not production auth.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {contextMenu.data?.entityType === 'npc' ? (
+                      <div className="px-3 py-2 text-neutral-300 text-xs space-y-1">
+                        <div className="font-bold text-amber-300">{contextMenu.data?.npc?.name || 'Creature'}</div>
+                        <p className="text-[10px] text-neutral-400">
+                          Target identified. Authoritative combat actions & rules reserved for Python runtime.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            onSelectEntity?.(contextMenu.targetId!, 'character');
+                            setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-emerald-300"
+                        >
+                          <MousePointer className="w-3.5 h-3.5" />
+                          <span>Select Token</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const char = characters.find((c) => c.id === contextMenu.targetId);
+                            setCanvasNotice(
+                              char
+                                ? `${char.name}: Speed ${char.speedFt}ft, HP ${char.currentHp}/${char.maxHp}, AC ${char.armorClass}`
+                                : 'Character information'
+                            );
+                            setTimeout(() => setCanvasNotice(null), 3500);
+                            setContextMenu((prev) => ({ ...prev, isOpen: false }));
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-neutral-800 flex items-center gap-2 text-neutral-200"
+                        >
+                          <Info className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Inspect Character Info</span>
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
               </>
@@ -2657,6 +2953,11 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
               </button>
             </div>
 
+            <div className="px-3 py-2 bg-rose-950/80 border border-rose-700/80 rounded flex items-center gap-2 text-rose-200 text-xs font-semibold">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>Preview Only — Not Sent to DM or Python Runtime.</span>
+            </div>
+
             <div className="space-y-2 text-xs font-mono bg-neutral-950 p-3 rounded border border-neutral-800">
               <div className="flex justify-between">
                 <span className="text-neutral-500">Door Position:</span>
@@ -2672,15 +2973,15 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
               </div>
             </div>
 
-            <div className="text-xs text-neutral-400 bg-amber-950/40 border border-amber-800/60 p-3 rounded space-y-1">
+            <div className="text-xs text-neutral-400 bg-neutral-950 border border-neutral-800 p-3 rounded space-y-1">
               <p className="font-semibold text-amber-300 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
                 <span>Runtime Authority Boundary</span>
               </p>
               <p>
                 Authoritative rules, trap triggers, locking DC checks and world state updates are governed exclusively by canonical Python R1.
               </p>
-              <p className="text-[11px] text-neutral-400 pt-1">
+              <p className="text-[11px] text-neutral-500 pt-1">
                 The gateway is currently in local session mode. This intent does not mutate world state without DM approval.
               </p>
             </div>
@@ -2690,19 +2991,26 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 onClick={() => setPendingDoorRequest(null)}
                 className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-300 transition-colors"
               >
-                Cancel
+                Dismiss
               </button>
               <button
                 onClick={() => {
+                  const newIntent = {
+                    id: `door-${Date.now()}`,
+                    type: 'door' as const,
+                    description: `Door at (${pendingDoorRequest.door.x}, ${pendingDoorRequest.door.y}): ${pendingDoorRequest.action.toUpperCase()} intent queued.`,
+                    timestamp: new Date().toLocaleTimeString(),
+                  };
+                  setDemoIntentQueue((prev) => [newIntent, ...prev]);
                   setCanvasNotice(
-                    `Door intent (${pendingDoorRequest.action}) recorded for DM / Python R1 resolution.`
+                    `[DEMO-ONLY] Door ${pendingDoorRequest.action} intent queued. Preview Only — Not Sent to DM or Python Runtime.`
                   );
                   setTimeout(() => setCanvasNotice(null), 3500);
                   setPendingDoorRequest(null);
                 }}
                 className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-neutral-950 text-xs font-bold transition-colors shadow"
               >
-                Submit Action Intent
+                Queue Demo Request (Non-Authoritative)
               </button>
             </div>
           </div>
@@ -2730,6 +3038,11 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="px-3 py-2 bg-rose-950/80 border border-rose-700/80 rounded flex items-center gap-2 text-rose-200 text-xs font-semibold">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>Preview Only — Not Sent to DM or Python Runtime.</span>
             </div>
 
             <div className="space-y-2 text-xs font-mono bg-neutral-950 p-3 rounded border border-neutral-800">
@@ -2787,19 +3100,96 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 onClick={() => setMovementIntent(null)}
                 className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-300 transition-colors"
               >
-                Cancel
+                Dismiss
               </button>
               <button
                 onClick={() => {
+                  const newIntent = {
+                    id: `move-${Date.now()}`,
+                    type: 'movement' as const,
+                    description: `${movementIntent.charName}: Move (${movementIntent.fromX}, ${movementIntent.fromY}) → (${movementIntent.toX}, ${movementIntent.toY}) [${movementIntent.distanceFeet}ft]`,
+                    timestamp: new Date().toLocaleTimeString(),
+                  };
+                  setDemoIntentQueue((prev) => [newIntent, ...prev]);
                   setCanvasNotice(
-                    `Movement intent (${movementIntent.charName} -> ${movementIntent.distanceFeet}ft) submitted.`
+                    `[DEMO-ONLY] Movement intent queued (${movementIntent.charName} -> ${movementIntent.distanceFeet}ft). Preview Only — Not Sent to DM or Python Runtime.`
                   );
                   setTimeout(() => setCanvasNotice(null), 3500);
                   setMovementIntent(null);
                 }}
                 className="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-neutral-950 text-xs font-bold transition-colors shadow"
               >
-                Confirm Intent
+                Queue Demo Movement (Non-Authoritative)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Observable DEMO-ONLY Intent Queue Modal */}
+      {showDemoQueueModal && (
+        <div
+          className="fixed inset-0 z-50 bg-neutral-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowDemoQueueModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-lg p-5 shadow-2xl text-neutral-200 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-amber-400" />
+                <h3 className="font-cinzel font-bold text-amber-100 text-base">In-Memory DEMO-ONLY Queue</h3>
+              </div>
+              <button
+                onClick={() => setShowDemoQueueModal(false)}
+                className="text-neutral-400 hover:text-neutral-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-3 py-2 bg-rose-950/80 border border-rose-700/80 rounded flex items-center gap-2 text-rose-200 text-xs font-semibold">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>Preview Only — Not Sent to DM or Python Runtime.</span>
+            </div>
+
+            <p className="text-xs text-neutral-400">
+              This client queue tracks local demonstration intents. Neither map state nor token coordinates have been modified.
+            </p>
+
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 font-mono text-xs">
+              {demoIntentQueue.length === 0 ? (
+                <div className="text-neutral-500 italic text-center py-4">Queue is empty.</div>
+              ) : (
+                demoIntentQueue.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-2.5 rounded bg-neutral-950 border border-neutral-800 flex flex-col gap-1"
+                  >
+                    <div className="flex items-center justify-between text-[10px] text-neutral-500">
+                      <span className="uppercase font-bold text-amber-400">{item.type} intent</span>
+                      <span>{item.timestamp}</span>
+                    </div>
+                    <div className="text-neutral-200">{item.description}</div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-neutral-800">
+              <button
+                onClick={() => setDemoIntentQueue([])}
+                disabled={demoIntentQueue.length === 0}
+                className="px-3 py-1.5 rounded bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-medium disabled:opacity-40 transition-colors"
+              >
+                Clear Queue
+              </button>
+              <button
+                onClick={() => setShowDemoQueueModal(false)}
+                className="px-4 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-neutral-200 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>
@@ -2808,3 +3198,5 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     </div>
   );
 };
+
+

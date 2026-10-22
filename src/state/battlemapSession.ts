@@ -27,12 +27,39 @@ export class BattlemapSessionManager {
   private activeMapId: string;
   private undoStacks: Record<string, MapGeometry[]> = {};
   private redoStacks: Record<string, MapGeometry[]> = {};
-  private blobUrls: Set<string> = new Set();
+  private blobUrlRefCounts: Map<string, number> = new Map();
   private listeners: Set<() => void> = new Set();
 
   constructor() {
     this.maps = JSON.parse(JSON.stringify(SAMPLE_BATTLEMAPS));
     this.activeMapId = this.maps[0]?.id || 'map-yawning-portal';
+  }
+
+  public retainBlobUrl(url: string): void {
+    if (!url || !url.startsWith('blob:')) return;
+    const count = this.blobUrlRefCounts.get(url) || 0;
+    this.blobUrlRefCounts.set(url, count + 1);
+  }
+
+  public releaseBlobUrl(url: string): void {
+    if (!url || !url.startsWith('blob:')) return;
+    const count = this.blobUrlRefCounts.get(url) || 0;
+    if (count <= 1) {
+      this.blobUrlRefCounts.delete(url);
+      try {
+        if (typeof window !== 'undefined' && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+          window.URL.revokeObjectURL(url);
+        }
+      } catch {
+        // ignore
+      }
+    } else {
+      this.blobUrlRefCounts.set(url, count - 1);
+    }
+  }
+
+  public getBlobRefCount(url: string): number {
+    return this.blobUrlRefCounts.get(url) || 0;
   }
 
   public subscribe(listener: () => void): () => void {
@@ -140,7 +167,7 @@ export class BattlemapSessionManager {
 
   public addCustomMap(newMap: BattlemapDefinition): void {
     if (newMap.backgroundArtwork?.isLocalBlob && newMap.backgroundArtwork.url) {
-      this.blobUrls.add(newMap.backgroundArtwork.url);
+      this.retainBlobUrl(newMap.backgroundArtwork.url);
     }
     this.maps = [...this.maps, newMap];
     this.activeMapId = newMap.id;
@@ -241,6 +268,10 @@ export class BattlemapSessionManager {
     cloned.name = `${sourceMap.name} (Copy)`;
     cloned.locationId = `loc-${newId}`;
 
+    if (cloned.backgroundArtwork?.isLocalBlob && cloned.backgroundArtwork.url) {
+      this.retainBlobUrl(cloned.backgroundArtwork.url);
+    }
+
     this.maps = [...this.maps, cloned];
     this.activeMapId = newId;
     this.undoStacks[newId] = [];
@@ -256,14 +287,7 @@ export class BattlemapSessionManager {
 
     const targetMap = this.maps.find((m) => m.id === mapId);
     if (targetMap?.backgroundArtwork?.isLocalBlob && targetMap.backgroundArtwork.url) {
-      try {
-        if (typeof window !== 'undefined' && window.URL) {
-          window.URL.revokeObjectURL(targetMap.backgroundArtwork.url);
-        }
-      } catch {
-        // ignore
-      }
-      this.blobUrls.delete(targetMap.backgroundArtwork.url);
+      this.releaseBlobUrl(targetMap.backgroundArtwork.url);
     }
 
     this.maps = this.maps.filter((m) => m.id !== mapId);
@@ -301,6 +325,21 @@ export class BattlemapSessionManager {
   }
 
   public updateArtwork(mapId: string, patch: Partial<MapBackgroundArtwork>): void {
+    const existing = this.maps.find((m) => m.id === mapId);
+    if (existing?.backgroundArtwork) {
+      const oldUrl = existing.backgroundArtwork.url;
+      const oldIsBlob = existing.backgroundArtwork.isLocalBlob;
+      const newUrl = patch.url !== undefined ? patch.url : oldUrl;
+      const newIsBlob = patch.isLocalBlob !== undefined ? patch.isLocalBlob : oldIsBlob;
+
+      if (oldIsBlob && oldUrl && newUrl !== oldUrl) {
+        this.releaseBlobUrl(oldUrl);
+      }
+      if (newIsBlob && newUrl && newUrl !== oldUrl) {
+        this.retainBlobUrl(newUrl);
+      }
+    }
+
     this.maps = this.maps.map((m) => {
       if (m.id !== mapId || !m.backgroundArtwork) return m;
       return {
@@ -361,17 +400,17 @@ export class BattlemapSessionManager {
   }
 
   public resetToDefaults(): void {
-    // Revoke all tracked blobs
-    this.blobUrls.forEach((url) => {
+    // Revoke all tracked blobs safely
+    this.blobUrlRefCounts.forEach((_, url) => {
       try {
-        if (typeof window !== 'undefined' && window.URL) {
+        if (typeof window !== 'undefined' && window.URL && typeof window.URL.revokeObjectURL === 'function') {
           window.URL.revokeObjectURL(url);
         }
       } catch {
         // ignore
       }
     });
-    this.blobUrls.clear();
+    this.blobUrlRefCounts.clear();
 
     this.maps = JSON.parse(JSON.stringify(SAMPLE_BATTLEMAPS));
     this.activeMapId = this.maps[0]?.id || 'map-yawning-portal';
