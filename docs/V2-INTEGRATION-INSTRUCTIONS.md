@@ -42,3 +42,16 @@ These frontend instructions consume the master contract. They do **not** create 
 ## Gate
 
 Do not implement backend-facing DTOs or SQL schemas from guesses. First complete KGP-00 source schema/ACL audit and HAR-00 runtime adapter contract review from the canonical instructions. Existing QA checkpoints and active runtime holds remain in force.
+
+## Authored Notes, Confirmed Plans and Implemented Homebrew
+
+**Normative cross-reference:** [V2 authored notes/plans/homebrew architecture](https://github.com/Minilaz-code/VadAllFate/blob/main/docs/V2-AUTHORED-NOTES-PLANS-HOMEBREW-LIFECYCLES.md). Do not independently invent frontend authority.
+
+- **Player Journal:** create/edit versioned `.md` notes; private-by-default, explicitly party-shared or DM-shared. A player's suspicion or rumour remains authored text, never automatically game canon.
+- **DM Planning:** Draft Markdown -> Submit Proposal (frozen source revision, durable SQLite `proposed`) -> Confirm (authorised SQLite `confirmed` future intention). A confirmed plan may guide scenes but is **not an occurred save-state event**. Present approved revisions, diffs, cancellation/supersession and campaign/session scope.
+- **Homebrew Workshop:** Draft -> Validate -> Implement into the selected world/campaign/ruleset scope. Active content requires authoritative version activation, resolver integration and explicit revision control. Never edit read-only SRD source rows.
+- **Knowledge graph:** independently selectable `Notes`, `DM proposed plans`, `DM confirmed plans`, and `Implemented homebrew` overlays, in addition to world/adventure/campaign/save/player/faction views; backend ACL filters nodes and edges before returning them.
+- **UI boundary:** graph movement is display only; note writes go via authorised note service, plan confirmation and homebrew implementation via approved backend write/commit pathways. On absent backend, disable apparent activation/confirmation.
+- **Harness:** single queued inference orchestration, no additional agents/models for separate workspaces. Models can propose drafts, not confirm or implement.
+
+The details are implementation-gated pending existing SQLite schema and R1 gateway audit; do not claim frontend controls or tests exist solely due to this instruction.
