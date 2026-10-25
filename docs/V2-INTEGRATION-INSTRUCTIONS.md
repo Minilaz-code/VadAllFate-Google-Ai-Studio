@@ -1,7 +1,8 @@
 # VadAllFate Google AI Studio Frontend — V2 Integration Instructions
 
 **Status:** Architectural instructions; UI/transport implementation is not claimed.  
-**Canonical architecture:** https://github.com/Minilaz-code/VadAllFate/blob/main/docs/V2-ARCHITECTURE-INSTRUCTIONS-HARNESS-KNOWLEDGE-GRAPH.md
+**Canonical architecture:** https://github.com/Minilaz-code/VadAllFate/blob/main/docs/V2-ARCHITECTURE-INSTRUCTIONS-HARNESS-KNOWLEDGE-GRAPH.md  
+**KG-001 binding authoring/confirmation decision:** https://github.com/Minilaz-code/VadAllFate/issues/49
 
 These frontend instructions consume the master contract. They do **not** create a competing architecture or permit local AI Studio mock state to act as authoritative Python game state.
 
@@ -15,11 +16,11 @@ These frontend instructions consume the master contract. They do **not** create 
 
 ## Planning and Homebrew Knowledge Explorer
 
-- Integrate an Obsidian-style graph, Markdown linked notes, backlinks and optional JSON Canvas-compatible boards natively into existing **DM Planning** and **Homebrew Workshop**. Player Journal may expose its own server-authorised subset.
-- Use backend **read-only graph projections over canonical SQLite sources**. Nodes reference existing NPC/location/faction/quest/scene/knowledge IDs rather than carrying another set of mutable facts.
+- Native Markdown notes are for brainstorming, preparation and player journals. They do not create registered game entities. The graph and Canvas use SQLite registered entities; notes can link to them without making duplicated factual records.
+- Backend graph queries expose read-only, permitted SQLite node/edge projections. Separate note annotations and draft plan overlays must not be confused with confirmed plan or implemented homebrew records.
 - Expose saved graph *layouts*, zoom and filter presets as **presentation-only** metadata. Do not create independent factual 'graph NPC', 'graph location' or 'graph faction' stores.
 - Query filters may combine world, adventure, campaign, save snapshot, faction, quest, NPC network, location, actor/party knowledge, provenance, time/revision and established/proposed status.
-- Do not embed a copy of the proprietary Obsidian application. Use independent UI implementations and appropriately licensed Markdown/JSON Canvas libraries; interoperability is optional.
+- Native Markdown note persistence is a separate noncanonical authoring responsibility subject to KGP-00 audit; optional .md/Canvas import/export must not change registered SQLite facts automatically.
 
 ## Frontend security rules
 
@@ -38,6 +39,7 @@ These frontend instructions consume the master contract. They do **not** create 
 - [ ] Live narration continues when deep background tasks are queued; only one GPU model call runs by default on baseline hardware.
 - [ ] AI malformatted tool calls and stale writes fail closed without changing frontend authoritative projections.
 - [ ] Map/Canvas layout moves remain presentation-only and cannot rewrite world geometry or game state.
+- [ ] Saving or editing a note does not create an SQLite world relation, confirmed plan, active homebrew item or Save event.
 
 ## Gate
 
@@ -47,11 +49,11 @@ Do not implement backend-facing DTOs or SQL schemas from guesses. First complete
 
 **Normative cross-reference:** [V2 authored notes/plans/homebrew architecture](https://github.com/Minilaz-code/VadAllFate/blob/main/docs/V2-AUTHORED-NOTES-PLANS-HOMEBREW-LIFECYCLES.md). Do not independently invent frontend authority.
 
-- **Player Journal:** create/edit versioned `.md` notes; private-by-default, explicitly party-shared or DM-shared. A player's suspicion or rumour remains authored text, never automatically game canon.
-- **DM Planning:** Draft Markdown -> Submit Proposal (frozen source revision, durable SQLite `proposed`) -> Confirm (authorised SQLite `confirmed` future intention). A confirmed plan may guide scenes but is **not an occurred save-state event**. Present approved revisions, diffs, cancellation/supersession and campaign/session scope.
-- **Homebrew Workshop:** Draft -> Validate -> Implement into the selected world/campaign/ruleset scope. Active content requires authoritative version activation, resolver integration and explicit revision control. Never edit read-only SRD source rows.
+- **Player Journal:** create and edit noncanonical notes, optionally Markdown documents in a controlled authoring workspace. Sharing requires permissions; note claims never establish canonical facts.
+- **DM Planning:** note/draft -> structured proposed review -> authorised confirmation -> approved SQLite confirmed future plan. A confirmed intention is not an occurred gameplay event.
+- **Homebrew Workshop:** note/draft -> structured definition -> validation -> authorised implementation in the approved versioned SQLite-backed source/mod domain. No automatic gameplay changes from note saves.
 - **Knowledge graph:** independently selectable `Notes`, `DM proposed plans`, `DM confirmed plans`, and `Implemented homebrew` overlays, in addition to world/adventure/campaign/save/player/faction views; backend ACL filters nodes and edges before returning them.
-- **UI boundary:** graph movement is display only; note writes go via authorised note service, plan confirmation and homebrew implementation via approved backend write/commit pathways. On absent backend, disable apparent activation/confirmation.
+- **UI boundary:** note edits affect note content only; confirmed plans and implemented homebrew require distinct authorised backend operations. Canvas layout never mutates registered facts. Missing backend means no simulated success.
 - **Harness:** single queued inference orchestration, no additional agents/models for separate workspaces. Models can propose drafts, not confirm or implement.
 
 The details are implementation-gated pending existing SQLite schema and R1 gateway audit; do not claim frontend controls or tests exist solely due to this instruction.
