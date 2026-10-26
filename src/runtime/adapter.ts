@@ -1036,7 +1036,20 @@ export class PythonRuntimeGateway implements CampaignClient {
   }
 
   public advanceTime(minutes: number): void {
-    throw new Error('Cannot advance time: Python runtime disconnected.');
+    if (!this.connected) {
+      throw new Error('Cannot advance time: Python runtime disconnected.');
+    }
+    const nonce = `nonce-adv-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    void this.submitAction({
+      actionId: `act-adv-${Date.now()}`,
+      clientNonce: nonce,
+      actorId: 'dm-1',
+      actorRole: 'dm_host',
+      actionType: 'ADVANCE_TIME',
+      snapshotRef: this.getCurrentSnapshot(),
+      payload: { minutes },
+      timestampUtc: new Date().toISOString(),
+    });
   }
 
   public toggleClockPause(): void {
@@ -1087,10 +1100,21 @@ class CampaignClientManager {
     this.demoClient = new DemoCampaignClient();
     this.pythonGateway = new PythonRuntimeGateway();
     this.activeClient = this.demoClient;
+    this.pythonGateway.subscribe(() => {
+      if (!this.isDemoMode) {
+        for (const listener of this.listeners) {
+          listener();
+        }
+      }
+    });
   }
 
   public getClient(): CampaignClient {
     return this.activeClient;
+  }
+
+  public getPythonGateway(): PythonRuntimeGateway {
+    return this.pythonGateway;
   }
 
   public isUsingDemo(): boolean {
@@ -1103,6 +1127,16 @@ class CampaignClientManager {
     for (const listener of this.listeners) {
       listener();
     }
+  }
+
+  public async connectPythonGateway(): Promise<boolean> {
+    const ok = await this.pythonGateway.connectToLiveBackend();
+    this.isDemoMode = false;
+    this.activeClient = this.pythonGateway;
+    for (const listener of this.listeners) {
+      listener();
+    }
+    return ok;
   }
 
   public subscribe(callback: () => void): () => void {

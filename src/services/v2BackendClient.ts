@@ -113,6 +113,11 @@ export interface V2HomebrewRecord {
 export interface V2TtsSynthesisResult {
   contract_version: string;
   backend_used: string;
+  is_neural_speech?: boolean;
+  ada_voice_id?: string;
+  voice_display_name?: string;
+  played_on_host_device?: boolean;
+  playback_detail?: string;
   preset: {
     preset_id: string;
     display_name: string;
@@ -724,7 +729,8 @@ export class V2BackendClient {
   public async synthesizeSpeech(
     text: string,
     presetId: string = 'dm-narrator',
-    speakingRate?: number
+    speakingRate?: number,
+    playLocally: boolean = false
   ): Promise<V2TtsSynthesisResult> {
     try {
       const resp = await fetch(`${this.baseUrl}/tts/synthesize`, {
@@ -734,6 +740,7 @@ export class V2BackendClient {
           text,
           preset_id: presetId,
           speaking_rate: speakingRate,
+          play_locally: playLocally,
         }),
       });
       if (resp.ok) {
@@ -745,8 +752,9 @@ export class V2BackendClient {
     const minimalWavBase64 =
       'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     return {
-      contract_version: 'v2.tts.0.1.0',
+      contract_version: 'v2.tts.0.2.0',
       backend_used: 'browser_offline_fallback',
+      is_neural_speech: false,
       preset: {
         preset_id: presetId,
         display_name: presetId,

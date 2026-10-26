@@ -24,11 +24,11 @@ export const VadAllVoxBar: React.FC<Props> = ({
   const [ttsEngineLabel, setTtsEngineLabel] = useState('VadAllVox TTS');
 
   const voices = [
-    { id: 'dm-narrator', name: 'Archivist Narrator (Chatterbox Nano • Baritone)', engine: 'Chatterbox-Nano' },
-    { id: 'npc-scholar', name: 'Jorren Vale / Highgate Scholar (Articulate)', engine: 'Chatterbox-Nano' },
-    { id: 'npc-gruff', name: 'Veteran Mercenary / Guard (Gravelly)', engine: 'Chatterbox-Nano' },
-    { id: 'npc-mystic', name: 'Planar Oracle / Seer (Harmonic)', engine: 'Chatterbox-Nano' },
-    { id: 'system-herald', name: 'Tactical Rules Herald (Neutral)', engine: 'LocalTTS' },
+    { id: 'dm-narrator', name: 'Archivist Narrator (Chatterbox Nano • VOICE-NARRATOR-001)', engine: 'Chatterbox-Nano' },
+    { id: 'npc-scholar', name: 'Jorren Vale / Volo (Chatterbox Nano • Clone State)', engine: 'Chatterbox-Nano' },
+    { id: 'npc-gruff', name: 'Veteran Mercenary / Guard (Chatterbox Nano • Clone State)', engine: 'Chatterbox-Nano' },
+    { id: 'npc-mystic', name: 'Primara / Planar Oracle (Chatterbox Nano • Clone State)', engine: 'Chatterbox-Nano' },
+    { id: 'system-herald', name: 'Tactical Rules Herald (Chatterbox Nano • Clone State)', engine: 'Chatterbox-Nano' },
   ];
 
   const handlePlayToggle = async () => {
@@ -38,8 +38,20 @@ export const VadAllVoxBar: React.FC<Props> = ({
     }
     setIsPlaying(true);
     setPlaybackProgress(75);
-    const res = await v2BackendClient.synthesizeSpeech(lastDialogueText, selectedVoice);
-    setTtsEngineLabel(`${res.backend_used} (${res.duration_sec}s)`);
+    const res = await v2BackendClient.synthesizeSpeech(
+      lastDialogueText,
+      selectedVoice,
+      undefined,
+      !isMuted
+    );
+    const voiceBadge = res.ada_voice_id ? ` • ${res.ada_voice_id}` : '';
+    setTtsEngineLabel(`${res.backend_used}${voiceBadge} (${res.duration_sec}s)`);
+
+    if (res.played_on_host_device) {
+      setPlaybackProgress(100);
+      setIsPlaying(false);
+      return;
+    }
 
     if (!isMuted && typeof Audio !== 'undefined' && res.audio_data_url) {
       try {

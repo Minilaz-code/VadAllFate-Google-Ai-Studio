@@ -129,6 +129,23 @@ export interface PlayerSafeNpc {
 /**
  * Common projection properties.
  */
+export interface CombatantTurnEntry {
+  entityId: string;
+  name: string;
+  entityType: 'character' | 'npc';
+  roll: number;
+  initiativeBonus: number;
+  initiative: number;
+  isVisibleToPlayers: boolean;
+}
+
+export interface CombatTurnState {
+  isActive: boolean;
+  round: number;
+  activeTurnIndex: number;
+  combatants: CombatantTurnEntry[];
+}
+
 export interface BaseCampaignProjection {
   campaignId: string;
   name: string;
@@ -136,6 +153,7 @@ export interface BaseCampaignProjection {
   worldClock: MasterWorldClock;
   characters: CharacterSheet[];
   sourcePacks: SourcePack[];
+  combatState?: CombatTurnState;
   isServerVerifiedProjection: boolean; // false in demo mode
   projectionGeneratedAtUtc: string;
 }
@@ -235,6 +253,13 @@ export type DemoActionType =
   | 'USE_ITEM'
   | 'REST_SHORT'
   | 'REST_LONG'
+  | 'START_ENCOUNTER'
+  | 'ROLL_INITIATIVE'
+  | 'NEXT_TURN'
+  | 'END_ENCOUNTER'
+  | 'APPLY_CONDITION'
+  | 'REMOVE_CONDITION'
+  | 'DEATH_SAVE'
   | 'FREEFORM_ROLEPLAY'
   | 'DM_OVERRIDE_STATE'
   | 'ADVANCE_TIME';
@@ -267,6 +292,8 @@ export type DemoCommitStatus =
   | 'REJECTED_OUT_OF_BOUNDS'
   | 'REJECTED_INVALID_TARGET'
   | 'REJECTED_UNAUTHORIZED_TARGET'
+  | 'REJECTED_UNAUTHORIZED_ROLE'
+  | 'REJECTED_MONSTER_COMBAT_HOLD'
   | 'REJECTED_DUPLICATE_NONCE';
 
 export interface DemoCommitReceipt {
@@ -279,7 +306,7 @@ export interface DemoCommitReceipt {
   appliedPatchesCount: number;
   resultingWorldMinute: number;
   error?: string;
-  isSimulatedDemoReceipt: true; // Explicit indicator
+  isSimulatedDemoReceipt: boolean;
 }
 
 export interface DemoCausalEvent {

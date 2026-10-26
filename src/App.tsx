@@ -160,7 +160,14 @@ export default function App() {
         onOpenAudit={() => setIsAuditModalOpen(true)}
         runtimeStatusText={connectionStatus.statusLabel}
         isUsingDemoClient={isUsingDemo}
-        onToggleClientMode={(useDemo) => clientManager.switchClient(useDemo)}
+        onToggleClientMode={(useDemo) => {
+          if (useDemo) {
+            clientManager.switchClient(true);
+          } else {
+            clientManager.switchClient(false);
+            void clientManager.connectPythonGateway();
+          }
+        }}
         onExitPreview={handleExitPreview}
         onEnterPreview={handleEnterPreview}
       />
@@ -194,19 +201,27 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 gap-2">
               <button
                 onClick={() => setIsAuditModalOpen(true)}
                 className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs transition-colors"
               >
                 Inspect Architectural Register
               </button>
-              <button
-                onClick={() => clientManager.switchClient(true)}
-                className="px-4 py-1.5 rounded bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold text-xs transition-colors shadow-md"
-              >
-                Switch to In-Memory Demo Adapter
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void clientManager.connectPythonGateway()}
+                  className="px-3 py-1.5 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold text-xs transition-colors"
+                >
+                  Retry Live Python V2 Connection
+                </button>
+                <button
+                  onClick={() => clientManager.switchClient(true)}
+                  className="px-4 py-1.5 rounded bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold text-xs transition-colors shadow-md"
+                >
+                  Switch to In-Memory Demo Adapter
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -242,6 +257,7 @@ export default function App() {
                 spotlightMetrics={
                   isDmFullProjection(projection) ? projection.spotlightMetrics : []
                 }
+                combatState={projection.combatState}
                 selectedCharacterId={effectiveCharId}
                 onSelectOperatingMode={(mode) => {
                   if (canAccessDmWorkspaces(identity)) {

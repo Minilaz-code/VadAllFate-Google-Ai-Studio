@@ -39,7 +39,7 @@ import {
 import type { CharacterSheet, RuleCitation } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type { Quest } from '../../types/world.ts';
-import type { CausalEvent, SnapshotRef, UserRole, OperatingMode, PlayerSafeNpc, PlayerSafeQuest } from '../../types/runtime.ts';
+import type { CausalEvent, SnapshotRef, UserRole, OperatingMode, PlayerSafeNpc, PlayerSafeQuest, CombatTurnState, DemoActionType } from '../../types/runtime.ts';
 import type { DirectorProfile, DirectorRecommendation, PlayerSpotlightMetric } from '../../types/director.ts';
 import { CharacterSheetModal } from './CharacterSheetModal.tsx';
 import { DiceRollerModal } from './DiceRollerModal.tsx';
@@ -67,6 +67,7 @@ interface NarrativePlayViewProps {
   activeDirectorProfileId: string;
   recommendations: DirectorRecommendation[];
   spotlightMetrics: PlayerSpotlightMetric[];
+  combatState?: CombatTurnState;
   selectedCharacterId?: string;
   onSelectOperatingMode: (mode: OperatingMode) => void;
   onSelectDirectorProfile: (profileId: string) => void;
@@ -85,6 +86,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
   activeDirectorProfileId,
   recommendations,
   spotlightMetrics,
+  combatState,
   selectedCharacterId = 'char-kaelen',
   onSelectOperatingMode,
   onSelectDirectorProfile,
@@ -302,8 +304,75 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
           </div>
         </div>
 
-        {/* Action: Open Battlemap */}
+        {/* Action: Encounter Controls & Open Battlemap */}
         <div className="flex items-center gap-2">
+          {!combatState?.isActive ? (
+            <button
+              onClick={() => {
+                setSceneMode('combat');
+                void runtimeService.submitAction({
+                  actionId: `act-enc-start-${Date.now()}`,
+                  clientNonce: `nonce-enc-start-${Date.now()}`,
+                  actorId: userRole === 'dm_host' ? 'dm-1' : selectedCharacterId || 'char-lyra-01',
+                  actorRole: userRole,
+                  actionType: 'START_ENCOUNTER' as DemoActionType,
+                  snapshotRef: runtimeService.getCurrentSnapshot(),
+                  payload: {},
+                  timestampUtc: new Date().toISOString(),
+                });
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700/60 font-semibold text-xs transition-colors"
+              title="Roll Authoritative Initiative & Start Encounter"
+            >
+              <Sword className="w-3.5 h-3.5 text-red-400" />
+              <span>Roll Initiative</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 bg-red-950/50 border border-red-800/70 rounded px-2 py-1 text-xs">
+              <span className="font-mono font-bold text-red-300">
+                Round {combatState.round}
+              </span>
+              <span className="text-neutral-600">•</span>
+              <span className="text-amber-200 font-semibold">
+                Turn: {combatState.combatants[combatState.activeTurnIndex]?.name || 'Active'}
+              </span>
+              <button
+                onClick={() =>
+                  void runtimeService.submitAction({
+                    actionId: `act-enc-next-${Date.now()}`,
+                    clientNonce: `nonce-enc-next-${Date.now()}`,
+                    actorId: userRole === 'dm_host' ? 'dm-1' : selectedCharacterId || 'char-lyra-01',
+                    actorRole: userRole,
+                    actionType: 'NEXT_TURN' as DemoActionType,
+                    snapshotRef: runtimeService.getCurrentSnapshot(),
+                    payload: {},
+                    timestampUtc: new Date().toISOString(),
+                  })
+                }
+                className="ml-1 px-2 py-0.5 rounded bg-amber-800 hover:bg-amber-700 text-amber-100 font-semibold text-[11px]"
+              >
+                Next Turn
+              </button>
+              <button
+                onClick={() =>
+                  void runtimeService.submitAction({
+                    actionId: `act-enc-end-${Date.now()}`,
+                    clientNonce: `nonce-enc-end-${Date.now()}`,
+                    actorId: userRole === 'dm_host' ? 'dm-1' : selectedCharacterId || 'char-lyra-01',
+                    actorRole: userRole,
+                    actionType: 'END_ENCOUNTER' as DemoActionType,
+                    snapshotRef: runtimeService.getCurrentSnapshot(),
+                    payload: {},
+                    timestampUtc: new Date().toISOString(),
+                  })
+                }
+                className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px]"
+              >
+                End
+              </button>
+            </div>
+          )}
+
           {onNavigateToBattlemap && (
             <button
               onClick={onNavigateToBattlemap}
@@ -316,6 +385,31 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Active Initiative Turn Order Ribbon */}
+      {combatState?.isActive && combatState.combatants.length > 0 && (
+        <div className="px-4 py-1.5 bg-red-950/30 border-b border-red-900/50 flex items-center gap-2 overflow-x-auto text-xs">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-red-400 font-bold shrink-0">
+            Initiative Order:
+          </span>
+          {combatState.combatants.map((c, idx) => {
+            const isCurrent = idx === combatState.activeTurnIndex;
+            return (
+              <div
+                key={c.entityId}
+                className={`px-2 py-0.5 rounded flex items-center gap-1.5 shrink-0 border ${
+                  isCurrent
+                    ? 'bg-amber-950/90 border-amber-500 text-amber-200 font-bold shadow-sm'
+                    : 'bg-neutral-900/80 border-neutral-800 text-neutral-400'
+                }`}
+              >
+                <span className="font-mono text-[10px] text-amber-400">{c.initiative}</span>
+                <span>{c.name}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* 2. Main Narrative Workspace Area */}
       <div className="flex-1 flex overflow-hidden relative">

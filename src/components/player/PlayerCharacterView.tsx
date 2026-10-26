@@ -13,7 +13,9 @@ import {
   Footprints,
 } from 'lucide-react';
 import type { CharacterSheet, AbilityScores } from '../../types/dnd5e.ts';
+import type { DemoActionType } from '../../types/runtime.ts';
 import { calculateAbilityModifier } from '../../runtime/rules.ts';
+import { runtimeService } from '../../runtime/adapter.ts';
 
 interface PlayerCharacterViewProps {
   characters: CharacterSheet[];
@@ -31,6 +33,7 @@ export const PlayerCharacterView: React.FC<PlayerCharacterViewProps> = ({
   const activeChar =
     characters.find((c) => c.id === selectedCharacterId) || characters[0];
   const [activeTab, setActiveTab] = useState<'combat' | 'spells' | 'inventory' | 'bio'>('combat');
+  const [lastActionBanner, setLastActionBanner] = useState<string | null>(null);
 
   if (!activeChar) {
     return (
@@ -39,6 +42,26 @@ export const PlayerCharacterView: React.FC<PlayerCharacterViewProps> = ({
       </div>
     );
   }
+
+  const dispatchCharAction = async (actionType: DemoActionType, payload: Record<string, any> = {}) => {
+    try {
+      const res = await runtimeService.submitAction({
+        actionId: `act-char-${Date.now()}`,
+        clientNonce: `nonce-char-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        actorId: activeChar.id,
+        actorRole: 'player',
+        actionType,
+        snapshotRef: runtimeService.getCurrentSnapshot(),
+        payload,
+        timestampUtc: new Date().toISOString(),
+      });
+      setLastActionBanner(
+        res.event?.summary || `${actionType} -> ${res.receipt.status} (Seq #${res.receipt.commitSequence})`
+      );
+    } catch (err: any) {
+      setLastActionBanner(`Error: ${err.message}`);
+    }
+  };
 
   const abilityKeys: (keyof AbilityScores)[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -90,17 +113,52 @@ export const PlayerCharacterView: React.FC<PlayerCharacterViewProps> = ({
           </div>
         )}
 
-        {/* Quick Dice Roller Trigger */}
-        {onOpenDiceModal && (
+        {/* Quick Rest, Death Save & Dice Roller Controls */}
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={onOpenDiceModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-amber-300 border border-amber-600/40 text-xs font-semibold transition-colors"
+            onClick={() => void dispatchCharAction('REST_SHORT')}
+            className="px-2.5 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-emerald-300 border border-emerald-700/50 text-xs font-semibold transition-colors"
+            title="Short Rest (+1 Hour, Spend Hit Die)"
           >
-            <Dices className="w-4 h-4 text-amber-400" />
-            <span>Roll Dice</span>
+            Short Rest
           </button>
-        )}
+          <button
+            onClick={() => void dispatchCharAction('REST_LONG')}
+            className="px-2.5 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-cyan-300 border border-cyan-700/50 text-xs font-semibold transition-colors"
+            title="Long Rest (+8 Hours, Full HP & Slots)"
+          >
+            Long Rest
+          </button>
+          <button
+            onClick={() => void dispatchCharAction('DEATH_SAVE', { targetId: activeChar.id })}
+            className="px-2.5 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-red-300 border border-red-700/50 text-xs font-semibold transition-colors"
+            title="Roll Authoritative Death Saving Throw"
+          >
+            Death Save ({activeChar.deathSaves?.successes ?? 0}S/{activeChar.deathSaves?.failures ?? 0}F)
+          </button>
+          {onOpenDiceModal && (
+            <button
+              onClick={onOpenDiceModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-amber-300 border border-amber-600/40 text-xs font-semibold transition-colors"
+            >
+              <Dices className="w-4 h-4 text-amber-400" />
+              <span>Roll Dice</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {lastActionBanner && (
+        <div className="px-6 py-1.5 bg-amber-950/60 border-b border-amber-800/60 text-[11px] font-mono text-amber-200 flex items-center justify-between">
+          <span>Authoritative Commit: {lastActionBanner}</span>
+          <button
+            onClick={() => setLastActionBanner(null)}
+            className="text-amber-400 hover:text-amber-200"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-6 max-w-7xl mx-auto w-full space-y-6">
@@ -344,7 +402,22 @@ export const PlayerCharacterView: React.FC<PlayerCharacterViewProps> = ({
                   <p className="text-[11px] text-neutral-400">{item.description}</p>
                   <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500 pt-1">
                     <span>Qty: {item.quantity}</span>
-                    <span>{item.weightLbs} lbs</span>
+                    <div className="flex items-center gap-2">
+                      <span>{item.weightLbs} lbs</span>
+                      {item.quantity > 0 && (item.type === 'potion' || item.name.toLowerCase().includes('potion')) && (
+                        <button
+                          onClick={() =>
+                            void dispatchCharAction('USE_ITEM', {
+                              itemId: item.id,
+                              itemName: item.name,
+                            })
+                          }
+                          className="px-2 py-0.5 rounded bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/60 font-sans font-semibold"
+                        >
+                          Use
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
