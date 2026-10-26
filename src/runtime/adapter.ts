@@ -889,6 +889,7 @@ export class DemoCampaignClient implements CampaignClient {
 export class PythonRuntimeGateway implements CampaignClient {
   private endpoint: string;
   private connected: boolean = false;
+  private sessionToken: string | null = null;
   private cachedSnapshot: DemoSnapshotRef = {
     campaignId: 'DISCONNECTED',
     commitSequence: 0,
@@ -904,11 +905,48 @@ export class PythonRuntimeGateway implements CampaignClient {
     this.endpoint = endpoint.replace(/\/$/, '');
   }
 
+  public getSessionToken(): string | null {
+    return this.sessionToken;
+  }
+
+  public async authenticateSession(
+    actorId: string = 'dm-1',
+    role: UserRole = 'dm_host',
+    isHost: boolean = true,
+    assignedCharacterId?: string
+  ): Promise<string | null> {
+    try {
+      const resp = await fetch(`${this.endpoint}/auth/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actorId,
+          role,
+          isHost,
+          assignedCharacterId,
+        }),
+      });
+      if (!resp || !resp.ok) return null;
+      const data = await resp.json();
+      if (data && typeof data.sessionToken === 'string') {
+        this.sessionToken = data.sessionToken;
+        return this.sessionToken;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   public async connectToLiveBackend(): Promise<boolean> {
     try {
+      const headers: Record<string, string> = {};
+      if (this.sessionToken) {
+        headers['X-VadAllFate-Session-Token'] = this.sessionToken;
+      }
       const [statusResp, dmResp, playerResp] = await Promise.all([
-        fetch(`${this.endpoint}/status`),
-        fetch(`${this.endpoint}/projection?role=dm_host`),
+        fetch(`${this.endpoint}/status`, { headers }),
+        fetch(`${this.endpoint}/projection?role=dm_host`, { headers }),
         fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01`),
       ]);
       if (!statusResp.ok || !dmResp.ok || !playerResp.ok) {
@@ -918,6 +956,10 @@ export class PythonRuntimeGateway implements CampaignClient {
       const statusData = await statusResp.json();
       const dmData = await dmResp.json();
       const playerData = await playerResp.json();
+
+      if (!this.sessionToken) {
+        await this.authenticateSession('dm-1', 'dm_host', true);
+      }
 
       this.connected = true;
       this.cachedSnapshot = {
@@ -1014,9 +1056,13 @@ export class PythonRuntimeGateway implements CampaignClient {
         'Action submission rejected: Python R1 runtime gateway is disconnected. Automatic fallback to local demonstration is disabled.'
       );
     }
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (this.sessionToken) {
+      headers['X-VadAllFate-Session-Token'] = this.sessionToken;
+    }
     const resp = await fetch(`${this.endpoint}/actions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(envelope),
     });
     if (!resp.ok) {
@@ -1057,15 +1103,74 @@ export class PythonRuntimeGateway implements CampaignClient {
   }
 
   public setOperatingMode(mode: OperatingMode): void {
-    throw new Error('Cannot set operating mode: Python runtime disconnected.');
+    if (!this.connected) {
+      throw new Error('Cannot set operating mode: Python runtime disconnected.');
+    }
+    if (this.cachedDmProjection) {
+      this.cachedDmProjection = { ...this.cachedDmProjection, operatingMode: mode };
+    }
+    if (this.cachedPlayerProjection) {
+      this.cachedPlayerProjection = { ...this.cachedPlayerProjection, operatingMode: mode };
+    }
+    this.notify();
+    const nonce = `nonce-mode-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    void this.submitAction({
+      actionId: `act-mode-${Date.now()}`,
+      clientNonce: nonce,
+      actorId: 'dm-1',
+      actorRole: 'dm_host',
+      actionType: 'SET_OPERATING_MODE',
+      snapshotRef: this.getCurrentSnapshot(),
+      payload: { operatingMode: mode },
+      timestampUtc: new Date().toISOString(),
+    });
   }
 
   public setActiveDirectorProfile(profileId: string): void {
-    throw new Error('Cannot set director profile: Python runtime disconnected.');
+    if (!this.connected) {
+      throw new Error('Cannot set director profile: Python runtime disconnected.');
+    }
+    if (this.cachedDmProjection) {
+      this.cachedDmProjection = { ...this.cachedDmProjection, activeDirectorProfileId: profileId };
+    }
+    this.notify();
+    const nonce = `nonce-prof-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    void this.submitAction({
+      actionId: `act-prof-${Date.now()}`,
+      clientNonce: nonce,
+      actorId: 'dm-1',
+      actorRole: 'dm_host',
+      actionType: 'SET_DIRECTOR_PROFILE',
+      snapshotRef: this.getCurrentSnapshot(),
+      payload: { profileId },
+      timestampUtc: new Date().toISOString(),
+    });
   }
 
   public reviewRecommendation(recId: string, action: 'ACCEPTED' | 'DISMISSED'): void {
-    throw new Error('Cannot review recommendation: Python runtime disconnected.');
+    if (!this.connected) {
+      throw new Error('Cannot review recommendation: Python runtime disconnected.');
+    }
+    if (this.cachedDmProjection) {
+      this.cachedDmProjection = {
+        ...this.cachedDmProjection,
+        recommendations: this.cachedDmProjection.recommendations.map((r) =>
+          r.id === recId ? { ...r, status: action } : r
+        ),
+      };
+    }
+    this.notify();
+    const nonce = `nonce-rec-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    void this.submitAction({
+      actionId: `act-rec-${Date.now()}`,
+      clientNonce: nonce,
+      actorId: 'dm-1',
+      actorRole: 'dm_host',
+      actionType: 'REVIEW_RECOMMENDATION',
+      snapshotRef: this.getCurrentSnapshot(),
+      payload: { recommendationId: recId, decision: action },
+      timestampUtc: new Date().toISOString(),
+    });
   }
 
   public addHomebrewCreature(npc: NonPlayerCharacter): void {

@@ -221,12 +221,14 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
 
     await runtimeService.submitActionEnvelope({
       actionId: `quick-act-${Date.now()}`,
-      actorId: activeChar?.id || 'char-kaelen',
+      actorId: activeChar?.id || 'char-lyra-01',
       actorRole: userRole,
       actionType: 'FREEFORM_ROLEPLAY',
       payload: {
         message: actionInput.trim(),
+        targetNpcId: selectedNpc ? selectedNpc.id : undefined,
         targetNpcName: selectedNpc ? selectedNpc.name : undefined,
+        invokeHarness: true,
       },
       snapshotRef: { ...currentSnapshot },
       timestampUtc: new Date().toISOString(),
