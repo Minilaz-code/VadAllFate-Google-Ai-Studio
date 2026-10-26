@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   Users,
@@ -10,10 +10,20 @@ import {
   Pause,
   ArrowRight,
   Info,
+  Network,
+  FileCheck2,
+  Eye,
+  CheckCircle2,
+  Plus,
 } from 'lucide-react';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type { Faction, WorldLocation, Quest, MasterWorldClock } from '../../types/world.ts';
 import type { DirectorProfile, DirectorRecommendation } from '../../types/director.ts';
+import {
+  v2BackendClient,
+  type V2GraphProjectionResponse,
+  type V2PlanRevision,
+} from '../../services/v2BackendClient.ts';
 
 interface DmPlanningViewProps {
   npcs: NonPlayerCharacter[];
@@ -43,12 +53,90 @@ export const DmPlanningView: React.FC<DmPlanningViewProps> = ({
   onTogglePauseClock,
 }) => {
   const [planningSection, setPlanningSection] = useState<
-    'locations' | 'npcs' | 'factions' | 'clock' | 'director'
+    'locations' | 'npcs' | 'factions' | 'clock' | 'director' | 'graph' | 'plans'
   >('locations');
 
   const [selectedLocationId, setSelectedLocationId] = useState(locations[0]?.id || '');
   const [selectedNpcId, setSelectedNpcId] = useState(npcs[0]?.id || '');
   const [selectedFactionId, setSelectedFactionId] = useState(factions[0]?.id || '');
+
+  // V2 Knowledge Graph & Plan Lifecycle state (KGP-03)
+  const [graphData, setGraphData] = useState<V2GraphProjectionResponse | null>(null);
+  const [graphSearch, setGraphSearch] = useState('');
+  const [previewPlayerGraph, setPreviewPlayerGraph] = useState(false);
+
+  const [plans, setPlans] = useState<V2PlanRevision[]>([]);
+  const [planTitle, setPlanTitle] = useState('Cathedral Bell Ambush Beat');
+  const [planKind, setPlanKind] = useState('encounter_beat');
+  const [planMarkdown, setPlanMarkdown] = useState(
+    'When [[Jorren Vale]] tolls the bell at [[Primara Cathedral]], the hidden sentinel strikes.'
+  );
+  const [planStatusBanner, setPlanStatusBanner] = useState<string | null>(null);
+
+  const dmAudience = {
+    actor_id: 'dm-1',
+    role: 'dm' as const,
+    campaign_id: 'aethelgard-vault-001',
+    save_id: 'save-main',
+    is_host: true,
+    preview_as_player_id: previewPlayerGraph ? 'char-lyra-01' : null,
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    v2BackendClient.queryGraph(dmAudience, graphSearch).then((res) => {
+      if (!cancelled) setGraphData(res);
+    });
+    v2BackendClient
+      .listPlans({ actor_id: 'dm-1', role: 'dm', campaign_id: 'aethelgard-vault-001' })
+      .then((loaded) => {
+        if (!cancelled) setPlans(loaded);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [previewPlayerGraph, graphSearch]);
+
+  const handleProposePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const created = await v2BackendClient.proposePlan(
+      { actor_id: 'dm-1', role: 'dm', campaign_id: 'aethelgard-vault-001' },
+      {
+        title: planTitle,
+        plan_kind: planKind,
+        source_markdown: planMarkdown,
+        structured_payload: { trigger: planTitle, dc: 14 },
+        status: 'proposed',
+      }
+    );
+    const updatedPlans = await v2BackendClient.listPlans({
+      actor_id: 'dm-1',
+      role: 'dm',
+      campaign_id: 'aethelgard-vault-001',
+    });
+    setPlans(updatedPlans);
+    setPlanStatusBanner(
+      `Proposed Plan "${created.title}" (r${created.revision}, pinned hash: ${created.source_markdown_hash.slice(0, 12)}...)`
+    );
+  };
+
+  const handleConfirmPlan = async (plan: V2PlanRevision) => {
+    const confirmed = await v2BackendClient.transitionPlan(
+      { actor_id: 'dm-1', role: 'dm', campaign_id: 'aethelgard-vault-001' },
+      plan.plan_id,
+      'confirmed',
+      plan.revision
+    );
+    const updatedPlans = await v2BackendClient.listPlans({
+      actor_id: 'dm-1',
+      role: 'dm',
+      campaign_id: 'aethelgard-vault-001',
+    });
+    setPlans(updatedPlans);
+    setPlanStatusBanner(
+      `Confirmed Plan "${confirmed.title}" (r${confirmed.revision}, commit: ${confirmed.confirmed_commit_id})`
+    );
+  };
 
   const activeLoc = locations.find((l) => l.id === selectedLocationId) || locations[0];
   const activeNpc = npcs.find((n) => n.id === selectedNpcId) || npcs[0];
@@ -78,6 +166,8 @@ export const DmPlanningView: React.FC<DmPlanningViewProps> = ({
             { id: 'factions', label: 'Factions & Reputation', icon: Shield },
             { id: 'clock', label: 'Master Clock & Calendar', icon: Calendar },
             { id: 'director', label: 'Storyteller Director Config', icon: Sliders },
+            { id: 'graph', label: 'Knowledge Explorer', icon: Network },
+            { id: 'plans', label: `Plan Lifecycle (${plans.length})`, icon: FileCheck2 },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -637,6 +727,223 @@ export const DmPlanningView: React.FC<DmPlanningViewProps> = ({
               </div>
             </div>
           )
+        )}
+
+        {/* SECTION 6: V2 KNOWLEDGE GRAPH EXPLORER */}
+        {planningSection === 'graph' && (
+          <div className="max-w-7xl mx-auto space-y-4">
+            <div className="p-4 bg-neutral-900 rounded-lg border border-neutral-800 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold font-cinzel text-amber-100">
+                  Epistemic Knowledge Graph Explorer
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  Read-only projection over canonical SQLite entities, SRD 5.1 rules, notes, DM plans, and homebrew.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Filter graph nodes (e.g. Jorren, Primara)..."
+                  value={graphSearch}
+                  onChange={(e) => setGraphSearch(e.target.value)}
+                  className="bg-neutral-950 border border-neutral-800 rounded px-3 py-1.5 text-neutral-100 w-64"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPreviewPlayerGraph(!previewPlayerGraph)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border font-semibold ${
+                    previewPlayerGraph
+                      ? 'bg-emerald-950 text-emerald-200 border-emerald-700'
+                      : 'bg-amber-950 text-amber-200 border-amber-700'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>
+                    {previewPlayerGraph
+                      ? 'Audience: Player-Safe Preview (char-lyra-01)'
+                      : 'Audience: Full DM Truth'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Visible Nodes */}
+              <div className="p-4 bg-neutral-900 rounded-lg border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-cinzel font-bold text-neutral-100 text-sm">
+                    Projected Nodes ({graphData?.nodes.length || 0})
+                  </h4>
+                  <span className="font-mono text-[10px] text-neutral-500">
+                    Hash: {graphData?.projection_hash.slice(0, 12)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {(graphData?.nodes || []).map((n) => (
+                    <div
+                      key={n.node_id}
+                      className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-100">{n.label}</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-700 text-cyan-300">
+                          {n.entity_type} • {n.truth_level}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-neutral-300">{n.summary}</p>
+                      <div className="text-[10px] font-mono text-neutral-500">{n.node_id}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Visible Relationships */}
+              <div className="p-4 bg-neutral-900 rounded-lg border border-neutral-800 space-y-3">
+                <h4 className="font-cinzel font-bold text-neutral-100 text-sm">
+                  Projected Relationships ({graphData?.edges.length || 0})
+                </h4>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {(graphData?.edges || []).map((edge) => (
+                    <div
+                      key={edge.edge_id}
+                      className="p-3 bg-neutral-950 rounded border border-neutral-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-amber-300 font-bold">
+                          {edge.relation_type}
+                        </span>
+                        <span className="text-[10px] font-mono text-neutral-400">
+                          {edge.visibility} • {edge.truth_level}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-neutral-300 font-mono break-all">
+                        {edge.source_uri} → {edge.target_uri}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 7: V2 DM PLAN LIFECYCLE (PROPOSE -> CONFIRM) */}
+        {planningSection === 'plans' && (
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <form
+              onSubmit={handleProposePlan}
+              className="p-5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-4"
+            >
+              <div className="border-b border-neutral-800 pb-3">
+                <h3 className="text-base font-bold font-cinzel text-amber-100">
+                  Propose DM Plan Revision
+                </h3>
+                <p className="text-[11px] text-neutral-400">
+                  Pins a SHA-256 Markdown snapshot so later draft edits never silently mutate a confirmed plan.
+                </p>
+              </div>
+
+              {planStatusBanner && (
+                <div className="p-2.5 rounded bg-emerald-950/70 border border-emerald-700/60 text-emerald-200 text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{planStatusBanner}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-neutral-400 block mb-1">
+                  Plan Title
+                </label>
+                <input
+                  type="text"
+                  value={planTitle}
+                  onChange={(e) => setPlanTitle(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-1.5 text-neutral-100"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-neutral-400 block mb-1">
+                  Plan Kind
+                </label>
+                <select
+                  value={planKind}
+                  onChange={(e) => setPlanKind(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-1.5 text-neutral-100"
+                >
+                  <option value="encounter_beat">encounter_beat</option>
+                  <option value="quest_branch">quest_branch</option>
+                  <option value="faction_move">faction_move</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-neutral-400 block mb-1">
+                  Source Markdown Snapshot (Supports [[Wikilinks]])
+                </label>
+                <textarea
+                  rows={4}
+                  value={planMarkdown}
+                  onChange={(e) => setPlanMarkdown(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded p-3 text-neutral-100 font-mono text-xs"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 px-4 py-2 rounded bg-amber-700 hover:bg-amber-600 text-white font-semibold"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Propose Plan Revision</span>
+              </button>
+            </form>
+
+            <div className="p-5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-3">
+              <h3 className="text-base font-bold font-cinzel text-amber-100">
+                Active & Proposed DM Plans ({plans.length})
+              </h3>
+              <div className="space-y-3">
+                {plans.map((p) => (
+                  <div
+                    key={`${p.plan_id}-r${p.revision}`}
+                    className="p-3.5 bg-neutral-950 rounded border border-neutral-800 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-neutral-100">
+                        {p.title} (r{p.revision})
+                      </span>
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase ${
+                          p.status === 'confirmed'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                            : 'bg-amber-950 text-amber-300 border border-amber-700'
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-300 font-mono">
+                      {p.source_markdown_snapshot}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
+                      <span>Pinned Hash: {p.source_markdown_hash.slice(0, 14)}...</span>
+                      {p.status === 'proposed' && (
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmPlan(p)}
+                          className="px-2.5 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-white font-sans font-semibold"
+                        >
+                          Confirm Plan
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

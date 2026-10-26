@@ -888,12 +888,77 @@ export class DemoCampaignClient implements CampaignClient {
  */
 export class PythonRuntimeGateway implements CampaignClient {
   private endpoint: string;
+  private connected: boolean = false;
+  private cachedSnapshot: DemoSnapshotRef = {
+    campaignId: 'DISCONNECTED',
+    commitSequence: 0,
+    stateHash: 'NONE',
+    worldMinute: 0,
+  };
+  private cachedStatus: RuntimeConnectionStatus | null = null;
+  private cachedDmProjection: DmFullCampaignProjection | null = null;
+  private cachedPlayerProjection: PlayerSafeCampaignProjection | null = null;
+  private listeners: Set<() => void> = new Set();
 
-  constructor(endpoint: string = 'http://localhost:8000/api/v1/runtime') {
-    this.endpoint = endpoint;
+  constructor(endpoint: string = 'http://127.0.0.1:8765/api/v2') {
+    this.endpoint = endpoint.replace(/\/$/, '');
+  }
+
+  public async connectToLiveBackend(): Promise<boolean> {
+    try {
+      const [statusResp, dmResp, playerResp] = await Promise.all([
+        fetch(`${this.endpoint}/status`),
+        fetch(`${this.endpoint}/projection?role=dm_host`),
+        fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01`),
+      ]);
+      if (!statusResp.ok || !dmResp.ok || !playerResp.ok) {
+        this.connected = false;
+        return false;
+      }
+      const statusData = await statusResp.json();
+      const dmData = await dmResp.json();
+      const playerData = await playerResp.json();
+
+      this.connected = true;
+      this.cachedSnapshot = {
+        campaignId: dmData.campaignId || 'aethelgard-vault-001',
+        commitSequence: statusData.commitSequence || 1,
+        stateHash: statusData.stateHash || 'LIVE',
+        worldMinute: statusData.worldMinute || 855,
+      };
+      this.cachedStatus = {
+        isConnectedToLivePython: true,
+        adapterMode: 'PYTHON_RUNTIME_GATEWAY',
+        endpoint: this.endpoint,
+        version: statusData.version || 'V2.0.0-PYTHON-AUTHORITATIVE',
+        commitSequence: this.cachedSnapshot.commitSequence,
+        statusLabel:
+          statusData.statusLabel ||
+          'PYTHON V2 AUTHORITATIVE RUNTIME CONNECTED (SQLite Single Commit Authority)',
+        intendedAuthority: 'CANONICAL_PYTHON_BACKEND',
+        isCurrentlyAuthoritative: true,
+        canAcceptAuthoritativeActions: true,
+      };
+      this.cachedDmProjection = dmData;
+      this.cachedPlayerProjection = playerData;
+      this.notify();
+      return true;
+    } catch {
+      this.connected = false;
+      return false;
+    }
+  }
+
+  private notify(): void {
+    for (const listener of this.listeners) {
+      listener();
+    }
   }
 
   public getCurrentSnapshot(): DemoSnapshotRef {
+    if (this.connected) {
+      return { ...this.cachedSnapshot };
+    }
     return {
       campaignId: 'DISCONNECTED',
       commitSequence: 0,
@@ -903,6 +968,9 @@ export class PythonRuntimeGateway implements CampaignClient {
   }
 
   public getConnectionStatus(): RuntimeConnectionStatus {
+    if (this.connected && this.cachedStatus) {
+      return { ...this.cachedStatus };
+    }
     return {
       isConnectedToLivePython: false,
       adapterMode: 'PYTHON_RUNTIME_GATEWAY',
@@ -917,22 +985,46 @@ export class PythonRuntimeGateway implements CampaignClient {
   }
 
   public getProjection(role: UserRole, characterId?: string): CampaignProjection {
-    throw new Error(
-      'Cannot retrieve campaign projection: Python R1 runtime gateway is disconnected. Demo fallback is disabled by architecture policy.'
-    );
+    if (!this.connected || !this.cachedDmProjection || !this.cachedPlayerProjection) {
+      throw new Error(
+        'Cannot retrieve campaign projection: Python R1 runtime gateway is disconnected. Demo fallback is disabled by architecture policy.'
+      );
+    }
+    if (role === 'player' || role === 'observer') {
+      return {
+        ...this.cachedPlayerProjection,
+        projectionRole: role,
+        activeCharacterId: characterId,
+      };
+    }
+    return this.cachedDmProjection;
   }
 
   public subscribe(callback: () => void): () => void {
-    return () => {};
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
   }
 
   public async submitAction(envelope: DemoActionEnvelope): Promise<{
     receipt: DemoCommitReceipt;
     event?: DemoCausalEvent;
   }> {
-    throw new Error(
-      'Action submission rejected: Python R1 runtime gateway is disconnected. Automatic fallback to local demonstration is disabled.'
-    );
+    if (!this.connected) {
+      throw new Error(
+        'Action submission rejected: Python R1 runtime gateway is disconnected. Automatic fallback to local demonstration is disabled.'
+      );
+    }
+    const resp = await fetch(`${this.endpoint}/actions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(envelope),
+    });
+    if (!resp.ok) {
+      throw new Error(`Python V2 runtime rejected action HTTP ${resp.status}`);
+    }
+    const result = await resp.json();
+    await this.connectToLiveBackend();
+    return result;
   }
 
   public async submitActionEnvelope(envelope: DemoActionEnvelope) {

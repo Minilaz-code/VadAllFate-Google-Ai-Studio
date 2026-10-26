@@ -5,12 +5,8 @@ import {
   VolumeX,
   Play,
   Square,
-  SkipForward,
-  Radio,
-  Sliders,
-  CheckCircle2,
-  Layers,
 } from 'lucide-react';
+import { v2BackendClient } from '../../services/v2BackendClient.ts';
 
 interface Props {
   activeSpeakerName?: string;
@@ -23,18 +19,39 @@ export const VadAllVoxBar: React.FC<Props> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState('vaelin-elder-scholar');
+  const [selectedVoice, setSelectedVoice] = useState('dm-narrator');
   const [playbackProgress, setPlaybackProgress] = useState(42);
+  const [ttsEngineLabel, setTtsEngineLabel] = useState('VadAllVox TTS');
 
   const voices = [
-    { id: 'vaelin-elder-scholar', name: 'Brother Vaelin (Elder Scholar • Gravelly)', engine: 'VadAllVox-Core' },
-    { id: 'sorsha-smuggler', name: 'Sorsha Grayveil (Sardonic Rogue • Velvet)', engine: 'VadAllVox-Neural' },
-    { id: 'narrator-solemn', name: 'Solemn Narrator (Dark Fantasy Baritone)', engine: 'VadAllVox-Core' },
-    { id: 'kaelen-ranger', name: 'Kaelen Swiftwind (Whisper Wind • Tenor)', engine: 'LocalTTS' },
+    { id: 'dm-narrator', name: 'Archivist Narrator (Chatterbox Nano • Baritone)', engine: 'Chatterbox-Nano' },
+    { id: 'npc-scholar', name: 'Jorren Vale / Highgate Scholar (Articulate)', engine: 'Chatterbox-Nano' },
+    { id: 'npc-gruff', name: 'Veteran Mercenary / Guard (Gravelly)', engine: 'Chatterbox-Nano' },
+    { id: 'npc-mystic', name: 'Planar Oracle / Seer (Harmonic)', engine: 'Chatterbox-Nano' },
+    { id: 'system-herald', name: 'Tactical Rules Herald (Neutral)', engine: 'LocalTTS' },
   ];
 
-  const handlePlayToggle = () => {
-    setIsPlaying(!isPlaying);
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    setIsPlaying(true);
+    setPlaybackProgress(75);
+    const res = await v2BackendClient.synthesizeSpeech(lastDialogueText, selectedVoice);
+    setTtsEngineLabel(`${res.backend_used} (${res.duration_sec}s)`);
+
+    if (!isMuted && typeof Audio !== 'undefined' && res.audio_data_url) {
+      try {
+        const audio = new Audio(res.audio_data_url);
+        audio.onended = () => setIsPlaying(false);
+        void audio.play().catch(() => {
+          // Headless/jsdom environment without audio output device
+        });
+      } catch {
+        // Headless test fallback
+      }
+    }
   };
 
   const handleStop = () => {
@@ -50,7 +67,7 @@ export const VadAllVoxBar: React.FC<Props> = ({
           <Mic className="w-3.5 h-3.5 text-amber-400" />
           <span className="font-semibold text-neutral-200">{activeSpeakerName}</span>
           <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-1 rounded border border-cyan-800">
-            VadAllVox TTS
+            {ttsEngineLabel}
           </span>
         </div>
 
@@ -116,7 +133,11 @@ export const VadAllVoxBar: React.FC<Props> = ({
           className="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-neutral-200 transition-colors"
           title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
         >
-          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5" />}
+          {isMuted ? (
+            <VolumeX className="w-3.5 h-3.5 text-red-400" />
+          ) : (
+            <Volume2 className="w-3.5 h-3.5" />
+          )}
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Sword,
@@ -16,13 +16,54 @@ import {
 } from 'lucide-react';
 import type { SourcePack } from '../../types/world.ts';
 import { runtimeService } from '../../runtime/adapter.ts';
+import { v2BackendClient, type V2HomebrewRecord } from '../../services/v2BackendClient.ts';
 
 interface HomebrewWorkshopProps {
   sourcePacks: SourcePack[];
 }
 
 export const HomebrewWorkshopView: React.FC<HomebrewWorkshopProps> = ({ sourcePacks }) => {
-  const [activeTab, setActiveTab] = useState<'creatures' | 'spells' | 'items' | 'rules' | 'packages'>('creatures');
+  const [activeTab, setActiveTab] = useState<
+    'creatures' | 'spells' | 'items' | 'rules' | 'packages' | 'lifecycle'
+  >('creatures');
+
+  // V2 Homebrew Lifecycle Registry state (KGP-03)
+  const [homebrewRecords, setHomebrewRecords] = useState<V2HomebrewRecord[]>([]);
+  const [hbBaseSrdUri, setHbBaseSrdUri] = useState('srd51:spell:119');
+
+  const dmAudience = {
+    actor_id: 'dm-1',
+    role: 'dm' as const,
+    campaign_id: 'aethelgard-vault-001',
+    save_id: 'save-main',
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    v2BackendClient.listHomebrew(dmAudience).then((items) => {
+      if (!cancelled) setHomebrewRecords(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleTransitionHomebrew = async (
+    hb: V2HomebrewRecord,
+    targetStatus: 'validated' | 'implemented' | 'deprecated'
+  ) => {
+    const updated = await v2BackendClient.transitionHomebrew(
+      dmAudience,
+      hb.homebrew_id,
+      targetStatus,
+      hb.version
+    );
+    const refreshed = await v2BackendClient.listHomebrew(dmAudience);
+    setHomebrewRecords(refreshed);
+    showSuccess(
+      `Homebrew "${updated.name}" v${updated.version} transitioned to ${updated.status.toUpperCase()} (scope: ${updated.scope_kind}:${updated.scope_id}).`
+    );
+  };
 
   // Creature builder state
   const [creatureName, setCreatureName] = useState('Abyssal Drowned Sentinel');
@@ -104,7 +145,7 @@ export const HomebrewWorkshopView: React.FC<HomebrewWorkshopProps> = ({ sourcePa
     showSuccess(`Homebrew creature "${creatureName}" saved to campaign registry.`);
   };
 
-  const handleSaveSpell = (e: React.FormEvent) => {
+  const handleSaveSpell = async (e: React.FormEvent) => {
     e.preventDefault();
     runtimeService.addHomebrewSpell({
       id: `hb-spell-${Date.now()}`,
@@ -120,7 +161,21 @@ export const HomebrewWorkshopView: React.FC<HomebrewWorkshopProps> = ({ sourcePa
       description: spellDescription,
       isHomebrew: true,
     });
-    showSuccess(`Homebrew spell "${spellName}" compiled into active spellbook.`);
+    await v2BackendClient.saveHomebrewDraft(dmAudience, {
+      category: 'spell',
+      name: spellName,
+      base_srd_uri: hbBaseSrdUri || null,
+      specification: {
+        level: spellLevel,
+        school: spellSchool,
+        casting_time: '1 action',
+        range: spellRange,
+        summary: spellDescription,
+      },
+    });
+    const refreshed = await v2BackendClient.listHomebrew(dmAudience);
+    setHomebrewRecords(refreshed);
+    showSuccess(`Homebrew spell "${spellName}" saved as versioned DRAFT in V2 Lifecycle Registry.`);
   };
 
   const handleSaveItem = (e: React.FormEvent) => {
@@ -184,6 +239,7 @@ export const HomebrewWorkshopView: React.FC<HomebrewWorkshopProps> = ({ sourcePa
             { id: 'creatures', label: 'Creatures & Monsters', icon: Sword },
             { id: 'spells', label: 'Spells & Cantrips', icon: Wand2 },
             { id: 'items', label: 'Equipment & Relics', icon: Shield },
+            { id: 'lifecycle', label: `Lifecycle Registry (${homebrewRecords.length})`, icon: Scale },
             { id: 'packages', label: 'Source Packs & Exports', icon: FileCheck },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -513,6 +569,103 @@ export const HomebrewWorkshopView: React.FC<HomebrewWorkshopProps> = ({ sourcePa
                         Counts: {pack.itemCount} items, {pack.spellCount} spells, {pack.monsterCount} monsters
                       </span>
                       <span className="text-amber-400/80">Hash: {pack.provenanceHash}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* V2 HOMEBREW LIFECYCLE REGISTRY (DRAFT -> VALIDATE -> IMPLEMENT) */}
+        {activeTab === 'lifecycle' && (
+          <div className="space-y-4">
+            <div className="p-5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-4">
+              <div className="border-b border-neutral-800 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold font-cinzel text-amber-100">
+                    Scoped Homebrew Lifecycle Registry (Draft → Validate → Implement)
+                  </h3>
+                  <p className="text-neutral-400 text-xs">
+                    Overrides are scoped strictly to the active campaign/save and never mutate read-only SRD 5.1 rows.
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-1 rounded bg-neutral-950 border border-neutral-800 text-cyan-300">
+                  SRD 5.1 Read-Only Guard Active
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {homebrewRecords.map((hb) => (
+                  <div
+                    key={`${hb.homebrew_id}-v${hb.version}`}
+                    className="p-4 rounded-lg bg-neutral-950 border border-neutral-800 space-y-2.5"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-neutral-100 text-sm">
+                          {hb.name} (v{hb.version})
+                        </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-700 text-neutral-300">
+                          {hb.category}
+                        </span>
+                        {hb.base_srd_uri && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-800 text-cyan-300">
+                            Overrides {hb.base_srd_uri}
+                          </span>
+                        )}
+                      </div>
+
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase ${
+                          hb.status === 'implemented'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                            : hb.status === 'validated'
+                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-700'
+                            : 'bg-amber-950 text-amber-300 border border-amber-700'
+                        }`}
+                      >
+                        {hb.status}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-neutral-300">
+                      {hb.specification.summary || JSON.stringify(hb.specification)}
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-900">
+                      <span className="text-[10px] font-mono text-neutral-500">
+                        Scope: {hb.scope_kind}:{hb.scope_id} • Spec Hash: {hb.spec_hash.slice(0, 12)}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {hb.status === 'draft' && (
+                          <button
+                            type="button"
+                            onClick={() => handleTransitionHomebrew(hb, 'validated')}
+                            className="px-3 py-1 rounded bg-cyan-800 hover:bg-cyan-700 text-white font-semibold text-xs"
+                          >
+                            Validate Specification
+                          </button>
+                        )}
+                        {hb.status === 'validated' && (
+                          <button
+                            type="button"
+                            onClick={() => handleTransitionHomebrew(hb, 'implemented')}
+                            className="px-3 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-white font-semibold text-xs"
+                          >
+                            Implement in Campaign
+                          </button>
+                        )}
+                        {hb.status === 'implemented' && (
+                          <button
+                            type="button"
+                            onClick={() => handleTransitionHomebrew(hb, 'deprecated')}
+                            className="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs"
+                          >
+                            Deprecate
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

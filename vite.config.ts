@@ -22,6 +22,10 @@ export default defineConfig(() => {
           target: process.env.VADALLFATE_PYTHON_API_URL || 'http://127.0.0.1:8765',
           changeOrigin: true,
         },
+        '/api/v2': {
+          target: process.env.VADALLFATE_PYTHON_API_URL || 'http://127.0.0.1:8765',
+          changeOrigin: true,
+        },
       },
     },
   };
