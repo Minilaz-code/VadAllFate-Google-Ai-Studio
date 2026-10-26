@@ -17,6 +17,12 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      proxy: {
+        '/api/srd51': {
+          target: process.env.VADALLFATE_PYTHON_API_URL || 'http://127.0.0.1:8765',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });

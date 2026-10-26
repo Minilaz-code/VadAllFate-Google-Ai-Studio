@@ -1002,4 +1002,12 @@ export const ARCHITECTURAL_STATUS_REGISTER: FeatureStatusItem[] = [
     contract: 'Local Ollama / Gemini / Anthropic provider adapter',
     notes: 'V2 operates standalone without requiring cloud tokens or paid model keys. Autonomous AI loops deferred.',
   },
+  {
+    id: 'reg-11',
+    module: 'SRD 5.1 Reference Engine',
+    featureName: 'Read-Only SRD 5.1 SQLite Rules Browser API',
+    status: 'IMPLEMENTED AND TESTED',
+    contract: 'React Rules Browser -> /api/srd51/* -> SRD51RulesReader (mode=ro, query_only=ON) -> vadallfate_srd51.sqlite (1,207 records)',
+    notes: 'Verified SHA-256 (919857e19f0cc6bf...), parameterized search across spells/monsters/conditions/rules/equipment, zero LLM calls, and zero database mutations.',
+  },
 ];

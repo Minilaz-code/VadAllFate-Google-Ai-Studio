@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Compass,
@@ -24,6 +24,7 @@ import {
   Radio,
   FileText,
   X,
+  Database,
 } from 'lucide-react';
 import type { CharacterSheet, RuleCitation } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
@@ -36,6 +37,12 @@ import { DiceRollerModal } from './DiceRollerModal.tsx';
 import { ActionSubmissionModal } from './ActionSubmissionModal.tsx';
 import { VadAllVoxBar } from './VadAllVoxBar.tsx';
 import { runtimeService } from '../../runtime/adapter.ts';
+import {
+  srd51ReferenceClient,
+  formatSRD51EntityDetails,
+  type SRD51EntityRecord,
+  type SRD51SourceMetadata,
+} from '../../services/srd51Reference.ts';
 
 interface TabletopViewProps {
   characters: CharacterSheet[];
@@ -90,10 +97,66 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
   const [showActionModal, setShowActionModal] = useState(false);
   const [actionInput, setActionInput] = useState('');
 
-  // Rules search
+  // Rules search (Live Python SRD 5.1 Read-Only API + separate Campaign House Rules overlay)
   const [rulesQuery, setRulesQuery] = useState('');
   const [rulesCategory, setRulesCategory] = useState('All');
   const [selectedRule, setSelectedRule] = useState<RuleCitation | null>(null);
+  const [srdItems, setSrdItems] = useState<SRD51EntityRecord[]>([]);
+  const [selectedSrdEntity, setSelectedSrdEntity] = useState<SRD51EntityRecord | null>(null);
+  const [srdStatus, setSrdStatus] = useState<SRD51SourceMetadata | null>(null);
+  const [srdLoading, setSrdLoading] = useState(false);
+  const [srdError, setSrdError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    srd51ReferenceClient
+      .getStatus(controller.signal)
+      .then((meta) => {
+        setSrdStatus(meta);
+        setSrdError(null);
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError') {
+          setSrdStatus(null);
+          setSrdError(err?.message || 'SRD 5.1 Python reference API is unavailable.');
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setSrdLoading(true);
+      srd51ReferenceClient
+        .search({
+          query: rulesQuery,
+          category: rulesCategory,
+          limit: 50,
+          signal: controller.signal,
+        })
+        .then((res) => {
+          setSrdItems(res.items);
+          setSrdError(null);
+          setSrdLoading(false);
+        })
+        .catch((err) => {
+          if (err?.name !== 'AbortError') {
+            setSrdItems([]);
+            setSrdError(err?.message || 'Failed to query SRD 5.1 reference API.');
+            setSrdLoading(false);
+          }
+        });
+    }, 120);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [rulesQuery, rulesCategory]);
+
+  const houseRulesList = runtimeService
+    .queryRules(rulesQuery, rulesCategory === 'Monsters' || rulesCategory === 'Equipment' ? 'All' : rulesCategory)
+    .filter((r) => r.source === 'House Rule');
 
   // Director Explanation Inspector modal/drawer
   const [inspectingRec, setInspectingRec] = useState<DirectorRecommendation | null>(null);
@@ -316,8 +379,16 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
 
               {leftTab === 'rules' && (
                 <div className="space-y-3">
-                  <div className="text-[10px] uppercase font-mono text-neutral-400 mb-1">
-                    SRD 5.1 & House Rules Query
+                  <div className="flex items-center justify-between text-[10px] uppercase font-mono text-neutral-400 mb-1">
+                    <span className="flex items-center gap-1 text-amber-300">
+                      <Database className="w-3 h-3 text-amber-400" />
+                      <span>SRD 5.1 & House Rules</span>
+                    </span>
+                    {srdStatus ? (
+                      <span className="text-emerald-400">{srdStatus.total_entities} RO</span>
+                    ) : (
+                      <span className="text-red-400">API Offline</span>
+                    )}
                   </div>
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-neutral-500" />
@@ -325,25 +396,80 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
                       type="text"
                       value={rulesQuery}
                       onChange={(e) => setRulesQuery(e.target.value)}
-                      placeholder="Search grapple, opportunity, cover..."
+                      placeholder="Search grapple, fireball, aboleth, cover..."
                       className="w-full bg-neutral-950 border border-neutral-800 rounded pl-8 pr-2 py-1.5 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    {rulesList.map((r) => (
+                  {/* Categories */}
+                  <div className="flex flex-wrap gap-1">
+                    {['All', 'Combat', 'Actions', 'Conditions', 'Movement', 'Magic', 'Monsters', 'Equipment'].map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setRulesCategory(cat)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                          rulesCategory === cat
+                            ? 'bg-amber-700 text-neutral-950 font-bold'
+                            : 'bg-neutral-950 text-neutral-400 hover:bg-neutral-800'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  {srdError && (
+                    <div className="p-2 rounded bg-red-950/40 border border-red-800/60 text-red-200 text-[10px] font-mono">
+                      {srdError}
+                    </div>
+                  )}
+
+                  {srdLoading && (
+                    <div className="text-[10px] font-mono text-neutral-400 py-1 text-center">
+                      Querying SRD 5.1 SQLite…
+                    </div>
+                  )}
+
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {srdItems.map((item) => (
                       <div
-                        key={r.ruleId}
-                        onClick={() => setSelectedRule(r)}
+                        key={item.entity_key}
+                        onClick={() => {
+                          setSelectedSrdEntity(item);
+                          setSelectedRule(null);
+                        }}
                         className={`p-2.5 rounded border transition-colors cursor-pointer ${
-                          selectedRule?.ruleId === r.ruleId
+                          selectedSrdEntity?.entity_key === item.entity_key
                             ? 'bg-amber-950/40 border-amber-600/70'
                             : 'bg-neutral-950/70 border-neutral-800 hover:border-neutral-700'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-neutral-200">{r.title}</span>
+                          <span className="font-semibold text-neutral-200 truncate">{item.name}</span>
                           <span className="text-[9px] font-mono px-1 rounded bg-neutral-900 text-amber-400 border border-neutral-800">
+                            {item.ruleset} • {item.entity_type}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400 line-clamp-2">{item.summary}</p>
+                      </div>
+                    ))}
+
+                    {houseRulesList.map((r) => (
+                      <div
+                        key={r.ruleId}
+                        onClick={() => {
+                          setSelectedRule(r);
+                          setSelectedSrdEntity(null);
+                        }}
+                        className={`p-2.5 rounded border transition-colors cursor-pointer ${
+                          selectedRule?.ruleId === r.ruleId
+                            ? 'bg-amber-950/40 border-amber-600/70'
+                            : 'bg-neutral-950/70 border-amber-900/40 hover:border-amber-700/60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-amber-200">{r.title}</span>
+                          <span className="text-[9px] font-mono px-1 rounded bg-amber-950 text-amber-300 border border-amber-800">
                             {r.source}
                           </span>
                         </div>
@@ -351,6 +477,20 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
                       </div>
                     ))}
                   </div>
+
+                  {selectedSrdEntity && (() => {
+                    const formatted = formatSRD51EntityDetails(selectedSrdEntity);
+                    return (
+                      <div className="p-3 rounded bg-neutral-950 border border-amber-800/40 text-neutral-200 mt-2 space-y-1.5">
+                        <div className="flex items-center justify-between font-bold text-amber-200">
+                          <span>{selectedSrdEntity.name}</span>
+                          <span className="text-[10px] font-mono text-amber-400">{selectedSrdEntity.entity_key}</span>
+                        </div>
+                        <p className="text-[10px] font-mono text-cyan-300">{formatted.subtitle}</p>
+                        <p className="text-[11px] text-neutral-300 leading-relaxed whitespace-pre-wrap">{formatted.bodyText}</p>
+                      </div>
+                    );
+                  })()}
 
                   {selectedRule && (
                     <div className="p-3 rounded bg-neutral-950 border border-amber-800/40 text-neutral-200 mt-2">

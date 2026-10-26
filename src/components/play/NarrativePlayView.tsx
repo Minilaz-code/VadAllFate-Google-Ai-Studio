@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Compass,
   Scroll,
@@ -34,6 +34,7 @@ import {
   Dice5,
   Target,
   Coffee,
+  Database,
 } from 'lucide-react';
 import type { CharacterSheet, RuleCitation } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
@@ -45,6 +46,12 @@ import { DiceRollerModal } from './DiceRollerModal.tsx';
 import { ActionSubmissionModal } from './ActionSubmissionModal.tsx';
 import { VadAllVoxBar } from './VadAllVoxBar.tsx';
 import { runtimeService } from '../../runtime/adapter.ts';
+import {
+  srd51ReferenceClient,
+  formatSRD51EntityDetails,
+  type SRD51EntityRecord,
+  type SRD51SourceMetadata,
+} from '../../services/srd51Reference.ts';
 
 export type SceneMode = 'roleplay' | 'exploration' | 'combat' | 'downtime';
 
@@ -102,10 +109,67 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
   const [actionInput, setActionInput] = useState('');
   const [selectedNpcId, setSelectedNpcId] = useState<string>('npc-brother-vaelin');
 
-  // Rules reference
+  // Rules reference (Live Python SRD 5.1 Read-Only API + separate Campaign House Rules overlay)
   const [rulesQuery, setRulesQuery] = useState('');
   const [rulesCategory, setRulesCategory] = useState('All');
   const [selectedRule, setSelectedRule] = useState<RuleCitation | null>(null);
+  const [srdItems, setSrdItems] = useState<SRD51EntityRecord[]>([]);
+  const [selectedSrdEntity, setSelectedSrdEntity] = useState<SRD51EntityRecord | null>(null);
+  const [srdStatus, setSrdStatus] = useState<SRD51SourceMetadata | null>(null);
+  const [srdLoading, setSrdLoading] = useState(false);
+  const [srdError, setSrdError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    srd51ReferenceClient
+      .getStatus(controller.signal)
+      .then((meta) => {
+        setSrdStatus(meta);
+        setSrdError(null);
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError') {
+          setSrdStatus(null);
+          setSrdError(err?.message || 'SRD 5.1 Python reference API is unavailable.');
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setSrdLoading(true);
+      srd51ReferenceClient
+        .search({
+          query: rulesQuery,
+          category: rulesCategory,
+          limit: 50,
+          signal: controller.signal,
+        })
+        .then((res) => {
+          setSrdItems(res.items);
+          setSrdError(null);
+          setSrdLoading(false);
+        })
+        .catch((err) => {
+          if (err?.name !== 'AbortError') {
+            setSrdItems([]);
+            setSrdError(err?.message || 'Failed to query SRD 5.1 reference API.');
+            setSrdLoading(false);
+          }
+        });
+    }, 120);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [rulesQuery, rulesCategory]);
+
+  // Separate Campaign House Rules overlay (never mixed into SRD SQLite records)
+  const houseRulesList = runtimeService
+    .queryRules(rulesQuery, rulesCategory === 'Monsters' || rulesCategory === 'Equipment' ? 'All' : rulesCategory)
+    .filter((r) => r.source === 'House Rule');
 
   const activeChar = characters.find((c) => c.id === selectedCharacterId) || characters[0];
   const selectedNpc = npcs.find((n) => n.id === selectedNpcId) || npcs[0];
@@ -730,10 +794,35 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
 
               {rightTab === 'rules' && (
                 <div className="space-y-3">
+                  {/* Source Provenance & Connection Banner */}
+                  <div className="p-2 rounded bg-neutral-950 border border-neutral-800 space-y-1 text-[10px] font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 font-bold text-amber-300">
+                        <Database className="w-3 h-3 text-amber-400" />
+                        <span>SRD 5.1 Read-Only SQLite</span>
+                      </span>
+                      {srdStatus ? (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[9px]">
+                          {srdStatus.total_entities} Entities • RO
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-800 text-[9px]">
+                          API Offline
+                        </span>
+                      )}
+                    </div>
+                    {srdStatus && (
+                      <div className="text-[9px] text-neutral-500 flex items-center justify-between">
+                        <span>{srdStatus.source.license_id}</span>
+                        <span>SHA: {srdStatus.sqlite_sha256.slice(0, 12)}…</span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Search 5e rules (e.g. grapple, cover, stealth)..."
+                      placeholder="Search SRD 5.1 (e.g. fireball, aboleth, grappled, cover)..."
                       value={rulesQuery}
                       onChange={(e) => setRulesQuery(e.target.value)}
                       className="w-full bg-neutral-950 border border-neutral-700 rounded px-2.5 py-1.5 text-[11px] text-neutral-200 placeholder-neutral-500"
@@ -742,7 +831,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
 
                   {/* Categories */}
                   <div className="flex flex-wrap gap-1">
-                    {['All', 'Combat', 'Actions', 'Conditions', 'Movement', 'Magic'].map((cat) => (
+                    {['All', 'Combat', 'Actions', 'Conditions', 'Movement', 'Magic', 'Monsters', 'Equipment'].map((cat) => (
                       <button
                         key={cat}
                         onClick={() => setRulesCategory(cat)}
@@ -757,22 +846,141 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
                     ))}
                   </div>
 
-                  {/* Rules list */}
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {rulesList.map((rule) => (
+                  {/* Error / Loading / Empty States */}
+                  {srdError && (
+                    <div className="p-2.5 rounded bg-red-950/40 border border-red-800/60 text-red-200 text-[10px] font-mono space-y-1">
+                      <div className="font-bold text-red-300 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>SRD 5.1 Reference API Unavailable</span>
+                      </div>
+                      <p className="text-neutral-300 leading-relaxed">{srdError}</p>
+                    </div>
+                  )}
+
+                  {srdLoading && (
+                    <div className="text-[10px] font-mono text-neutral-400 py-2 text-center">
+                      Querying read-only SRD 5.1 SQLite…
+                    </div>
+                  )}
+
+                  {/* SRD 5.1 Entities List */}
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {!srdLoading && !srdError && srdItems.length === 0 && (
+                      <div className="p-3 rounded bg-neutral-950 border border-neutral-800 text-[10px] text-neutral-500 text-center font-mono">
+                        No SRD 5.1 records matched "{rulesQuery}" in {rulesCategory}.
+                      </div>
+                    )}
+
+                    {srdItems.map((item) => (
                       <div
-                        key={rule.ruleId}
-                        onClick={() => setSelectedRule(rule)}
-                        className="p-2 bg-neutral-950 rounded border border-neutral-800 hover:border-neutral-700 cursor-pointer space-y-1"
+                        key={item.entity_key}
+                        onClick={() => {
+                          setSelectedSrdEntity(item);
+                          setSelectedRule(null);
+                        }}
+                        className={`p-2 bg-neutral-950 rounded border cursor-pointer space-y-1 transition-colors ${
+                          selectedSrdEntity?.entity_key === item.entity_key
+                            ? 'border-amber-600/80 bg-amber-950/20'
+                            : 'border-neutral-800 hover:border-neutral-700'
+                        }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-neutral-200 text-xs">{rule.title}</span>
-                          <span className="text-[9px] font-mono text-amber-400">{rule.source}</span>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-neutral-200 text-xs truncate">{item.name}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[9px] font-mono px-1 rounded bg-neutral-900 text-cyan-300 border border-neutral-800">
+                              {item.entity_type}
+                            </span>
+                            <span className="text-[9px] font-mono text-amber-400">{item.ruleset}</span>
+                          </div>
                         </div>
-                        <p className="text-[10px] text-neutral-400 line-clamp-2">{rule.citationText}</p>
+                        <p className="text-[10px] text-neutral-400 line-clamp-2">{item.summary}</p>
                       </div>
                     ))}
+
+                    {/* Separate Campaign House Rules Overlay */}
+                    {houseRulesList.length > 0 && (
+                      <div className="pt-2 border-t border-neutral-800 space-y-1.5">
+                        <span className="text-[9px] font-mono uppercase text-amber-400/80 block">
+                          Campaign House Rules Overlay (Precedence Level 2)
+                        </span>
+                        {houseRulesList.map((rule) => (
+                          <div
+                            key={rule.ruleId}
+                            onClick={() => {
+                              setSelectedRule(rule);
+                              setSelectedSrdEntity(null);
+                            }}
+                            className={`p-2 bg-neutral-950 rounded border cursor-pointer space-y-1 ${
+                              selectedRule?.ruleId === rule.ruleId
+                                ? 'border-amber-500 bg-amber-950/30'
+                                : 'border-amber-900/40 hover:border-amber-700/60'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-amber-200 text-xs">{rule.title}</span>
+                              <span className="text-[9px] font-mono px-1 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                                {rule.source}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-neutral-400 line-clamp-2">{rule.citationText}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Selected SRD 5.1 Entity Detail Inspector */}
+                  {selectedSrdEntity && (() => {
+                    const formatted = formatSRD51EntityDetails(selectedSrdEntity);
+                    return (
+                      <div className="p-3 rounded bg-neutral-950 border border-amber-700/60 text-neutral-200 space-y-2 max-h-80 overflow-y-auto">
+                        <div className="flex items-start justify-between gap-2 border-b border-neutral-800 pb-2">
+                          <div>
+                            <h4 className="font-bold text-amber-200 text-xs font-cinzel">{selectedSrdEntity.name}</h4>
+                            <p className="text-[10px] font-mono text-cyan-300">{formatted.subtitle}</p>
+                          </div>
+                          <button
+                            onClick={() => setSelectedSrdEntity(null)}
+                            className="text-neutral-500 hover:text-neutral-200"
+                            title="Close detail view"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {formatted.statsSummary.length > 0 && (
+                          <div className="p-2 rounded bg-neutral-900/80 border border-neutral-800 space-y-0.5 text-[10px] font-mono text-neutral-300">
+                            {formatted.statsSummary.map((line, idx) => (
+                              <div key={idx}>{line}</div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="text-[11px] text-neutral-300 leading-relaxed whitespace-pre-wrap">
+                          {formatted.bodyText}
+                        </div>
+
+                        <div className="pt-2 border-t border-neutral-900 flex flex-wrap items-center justify-between gap-1 text-[9px] font-mono text-neutral-500">
+                          <span>Key: {selectedSrdEntity.entity_key}</span>
+                          <span>Table: {selectedSrdEntity.source_table}</span>
+                          <span className="px-1 rounded bg-neutral-900 text-amber-400/90 border border-neutral-800">
+                            Status: {selectedSrdEntity.verification_status} (Reference Only)
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Selected House Rule Detail Inspector */}
+                  {selectedRule && (
+                    <div className="p-3 rounded bg-neutral-950 border border-amber-700/60 text-neutral-200 space-y-1.5">
+                      <div className="flex items-center justify-between border-b border-neutral-800 pb-1.5">
+                        <span className="font-bold text-amber-200 text-xs">{selectedRule.title}</span>
+                        <span className="text-[9px] font-mono text-amber-400">{selectedRule.source}</span>
+                      </div>
+                      <p className="text-[11px] text-neutral-300 leading-relaxed">{selectedRule.citationText}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
