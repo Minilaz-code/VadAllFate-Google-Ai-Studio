@@ -258,9 +258,45 @@ function extractWikilinkUris(markdown: string): string[] {
 
 export class V2BackendClient {
   private baseUrl: string;
+  public allowOfflineFallback: boolean;
 
-  constructor(baseUrl: string = resolveV2ApiBaseUrl()) {
+  constructor(
+    baseUrl: string = resolveV2ApiBaseUrl(),
+    options?: { allowOfflineFallback?: boolean } | boolean
+  ) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
+    if (typeof options === 'boolean') {
+      this.allowOfflineFallback = options;
+    } else {
+      this.allowOfflineFallback = options?.allowOfflineFallback ?? false;
+    }
+  }
+
+  private async handleNonOk(resp: Response, operation: string): Promise<never> {
+    let detail = '';
+    try {
+      const err = await resp.json();
+      detail = err?.detail || err?.message || JSON.stringify(err);
+    } catch {
+      detail = await resp.text().catch(() => '');
+    }
+    throw new Error(`HTTP ${resp.status} ${operation} failed: ${detail || resp.statusText}`);
+  }
+
+  private handleCatch(err: any, operation: string): void {
+    if (
+      err?.message?.startsWith('HTTP') ||
+      err?.message?.toLowerCase().includes('unauthoriz') ||
+      err?.message?.toLowerCase().includes('forbidden') ||
+      !this.allowOfflineFallback
+    ) {
+      if (err instanceof Error && !err.message.includes('fetch failed') && !err.message.includes('ECONNREFUSED')) {
+        throw err;
+      }
+      throw new Error(
+        `Python V2 runtime disconnected. Refusing to return demo data as authoritative for ${operation}: ${err?.message || 'Network error'}`
+      );
+    }
   }
 
   public async queryGraph(
@@ -277,8 +313,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return { ...data, source: 'python_sqlite' };
       }
-    } catch {
-      // Fall through to deterministic audience-filtered local projection
+      await this.handleNonOk(resp, 'queryGraph');
+    } catch (err) {
+      this.handleCatch(err, 'queryGraph');
     }
 
     const isDmEffective =
@@ -391,8 +428,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.notes || [];
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'listNotes');
+    } catch (err) {
+      this.handleCatch(err, 'listNotes');
     }
     const isDm =
       (audience.role === 'dm' || audience.role === 'dm_host') && !audience.preview_as_player_id;
@@ -429,8 +467,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.note;
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'saveNote');
+    } catch (err) {
+      this.handleCatch(err, 'saveNote');
     }
 
     const noteId = input.note_id || `note-${Date.now()}`;
@@ -480,8 +519,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.note;
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'changeNoteVisibility');
+    } catch (err) {
+      this.handleCatch(err, 'changeNoteVisibility');
     }
     const target = fallbackNotes.find((n) => n.note_id === noteId);
     if (!target) {
@@ -501,8 +541,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.plans || [];
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'listPlans');
+    } catch (err) {
+      this.handleCatch(err, 'listPlans');
     }
     const isDm =
       (audience.role === 'dm' || audience.role === 'dm_host') && !audience.preview_as_player_id;
@@ -533,8 +574,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.plan;
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'proposePlan');
+    } catch (err) {
+      this.handleCatch(err, 'proposePlan');
     }
     const planId = input.plan_id || `plan-${Date.now()}`;
     const prevRevs = fallbackPlans.filter((p) => p.plan_id === planId);
@@ -581,8 +623,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.plan;
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'transitionPlan');
+    } catch (err) {
+      this.handleCatch(err, 'transitionPlan');
     }
     const target = fallbackPlans.find(
       (p) => p.plan_id === planId && (revision == null || p.revision === revision)
@@ -611,8 +654,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.homebrew || [];
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'listHomebrew');
+    } catch (err) {
+      this.handleCatch(err, 'listHomebrew');
     }
     const isDm =
       (audience.role === 'dm' || audience.role === 'dm_host') && !audience.preview_as_player_id;
@@ -644,8 +688,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.homebrew;
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'saveHomebrewDraft');
+    } catch (err) {
+      this.handleCatch(err, 'saveHomebrewDraft');
     }
     const hbId = input.homebrew_id || `hb-${Date.now()}`;
     const prev = fallbackHomebrew.filter((h) => h.homebrew_id === hbId);
@@ -702,8 +747,9 @@ export class V2BackendClient {
         const data = await resp.json();
         return data.homebrew;
       }
-    } catch {
-      // Fallback
+      await this.handleNonOk(resp, 'transitionHomebrew');
+    } catch (err) {
+      this.handleCatch(err, 'transitionHomebrew');
     }
     const target = fallbackHomebrew.find(
       (h) => h.homebrew_id === homebrewId && (version == null || h.version === version)
@@ -747,8 +793,9 @@ export class V2BackendClient {
       if (resp.ok) {
         return await resp.json();
       }
-    } catch {
-      // Offline deterministic fallback minimal WAV header
+      await this.handleNonOk(resp, 'synthesizeSpeech');
+    } catch (err) {
+      this.handleCatch(err, 'synthesizeSpeech');
     }
     const minimalWavBase64 =
       'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';

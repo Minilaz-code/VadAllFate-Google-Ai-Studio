@@ -2,11 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { V2BackendClient } from './v2BackendClient.ts';
 
-describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
-  const client = new V2BackendClient('http://127.0.0.1:9/api/v2');
+describe('V2BackendClient (KGP-03, HAR-01, Milestone 5 & Milestone 10 Hardening)', () => {
+  // Test offline client with explicit allowOfflineFallback enabled
+  const offlineClient = new V2BackendClient('http://127.0.0.1:9/api/v2', { allowOfflineFallback: true });
 
   it('enforces epistemic filtering between DM full graph and Player-Safe preview graph', async () => {
-    const dmGraph = await client.queryGraph({
+    const dmGraph = await offlineClient.queryGraph({
       actor_id: 'dm-1',
       role: 'dm',
       campaign_id: 'aethelgard-vault-001',
@@ -15,7 +16,7 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
     assert.equal(dmDump.includes('Avernus Planar Conduit'), true);
     assert.equal(dmDump.includes('SECRETLY_LEADS_TO'), true);
 
-    const playerPreviewGraph = await client.queryGraph({
+    const playerPreviewGraph = await offlineClient.queryGraph({
       actor_id: 'dm-1',
       role: 'dm',
       is_host: true,
@@ -40,7 +41,7 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
       campaign_id: 'aethelgard-vault-001',
     };
 
-    const note = await client.saveNote(p1, {
+    const note = await offlineClient.saveNote(p1, {
       note_id: 'note-test-acl-1',
       title: 'Private Suspect Note',
       markdown_body: 'I saw [[Jorren Vale]] near [[Primara Cathedral]] with [[Fireball]] scrolls.',
@@ -50,12 +51,12 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
     assert.equal(note.linked_entity_uris.includes('srd51:spell:119'), true);
 
     // Player 2 cannot see Player 1's private_player note
-    const p2NotesBefore = await client.listNotes(p2);
+    const p2NotesBefore = await offlineClient.listNotes(p2);
     assert.equal(p2NotesBefore.some((n) => n.note_id === 'note-test-acl-1'), false);
 
     // Player 1 shares note with party -> Player 2 can now see it
-    await client.changeNoteVisibility(p1, 'note-test-acl-1', 'party_shared');
-    const p2NotesAfter = await client.listNotes(p2);
+    await offlineClient.changeNoteVisibility(p1, 'note-test-acl-1', 'party_shared');
+    const p2NotesAfter = await offlineClient.listNotes(p2);
     assert.equal(p2NotesAfter.some((n) => n.note_id === 'note-test-acl-1'), true);
   });
 
@@ -71,7 +72,7 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
       campaign_id: 'aethelgard-vault-001',
     };
 
-    const proposed = await client.proposePlan(dm, {
+    const proposed = await offlineClient.proposePlan(dm, {
       plan_id: 'plan-test-1',
       title: 'Pier 4 Trap',
       plan_kind: 'encounter_beat',
@@ -80,11 +81,11 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
     });
     assert.equal(proposed.status, 'proposed');
 
-    const confirmed = await client.transitionPlan(dm, 'plan-test-1', 'confirmed', proposed.revision);
+    const confirmed = await offlineClient.transitionPlan(dm, 'plan-test-1', 'confirmed', proposed.revision);
     assert.equal(confirmed.status, 'confirmed');
     assert.equal(Boolean(confirmed.confirmed_commit_id), true);
 
-    const playerPlans = await client.listPlans(player);
+    const playerPlans = await offlineClient.listPlans(player);
     assert.equal(playerPlans.length, 0);
   });
 
@@ -100,7 +101,7 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
       campaign_id: 'aethelgard-vault-001',
     };
 
-    const draft = await client.saveHomebrewDraft(dm, {
+    const draft = await offlineClient.saveHomebrewDraft(dm, {
       homebrew_id: 'hb-test-spell-1',
       category: 'spell',
       name: 'Frostbolt of Highgate',
@@ -114,13 +115,13 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
     assert.equal(draft.status, 'draft');
 
     // Player does not see unimplemented draft
-    const playerHbBefore = await client.listHomebrew(player);
+    const playerHbBefore = await offlineClient.listHomebrew(player);
     assert.equal(playerHbBefore.some((h) => h.homebrew_id === 'hb-test-spell-1'), false);
 
-    const validated = await client.transitionHomebrew(dm, 'hb-test-spell-1', 'validated', draft.version);
+    const validated = await offlineClient.transitionHomebrew(dm, 'hb-test-spell-1', 'validated', draft.version);
     assert.equal(validated.status, 'validated');
 
-    const implemented = await client.transitionHomebrew(
+    const implemented = await offlineClient.transitionHomebrew(
       dm,
       'hb-test-spell-1',
       'implemented',
@@ -128,13 +129,58 @@ describe('V2BackendClient (KGP-03, HAR-01, Milestone 5)', () => {
     );
     assert.equal(implemented.status, 'implemented');
 
-    const playerHbAfter = await client.listHomebrew(player);
+    const playerHbAfter = await offlineClient.listHomebrew(player);
     assert.equal(playerHbAfter.some((h) => h.homebrew_id === 'hb-test-spell-1'), true);
   });
 
   it('synthesizes playable WAV audio via Native TTS adapter', async () => {
-    const res = await client.synthesizeSpeech('The bells of Primara toll.', 'dm-narrator');
+    const res = await offlineClient.synthesizeSpeech('The bells of Primara toll.', 'dm-narrator');
     assert.equal(res.mime_type, 'audio/wav');
     assert.equal(res.audio_data_url.startsWith('data:audio/wav;base64,'), true);
+  });
+
+  it('negative hardening: production client refuses to return demo data when disconnected', async () => {
+    const prodDisconnectedClient = new V2BackendClient('http://127.0.0.1:9/api/v2', { allowOfflineFallback: false });
+    const aud = { actor_id: 'char-lyra-01', role: 'player' as const };
+
+    await assert.rejects(
+      async () => {
+        await prodDisconnectedClient.queryGraph(aud);
+      },
+      (err: any) => {
+        assert.match(err.message, /Python V2 runtime disconnected\. Refusing to return demo data as authoritative/);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      async () => {
+        await prodDisconnectedClient.listNotes(aud);
+      },
+      (err: any) => {
+        assert.match(err.message, /Python V2 runtime disconnected/);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      async () => {
+        await prodDisconnectedClient.listPlans(aud);
+      },
+      (err: any) => {
+        assert.match(err.message, /Python V2 runtime disconnected/);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      async () => {
+        await prodDisconnectedClient.listHomebrew(aud);
+      },
+      (err: any) => {
+        assert.match(err.message, /Python V2 runtime disconnected/);
+        return true;
+      }
+    );
   });
 });
