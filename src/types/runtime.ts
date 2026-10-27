@@ -336,6 +336,12 @@ export interface DemoCausalEvent {
     reason: string;
   };
   timestampUtc: string;
+  actionType?: string;
+  playerMessage?: string | null;
+  npcReply?: string | null;
+  narration?: string | null;
+  targetNpcName?: string | null;
+  targetNpcId?: string | null;
 }
 
 // Aliases preserved for backwards-compatibility within UI components

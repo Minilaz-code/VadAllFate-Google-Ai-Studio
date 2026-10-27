@@ -130,9 +130,10 @@ export async function loginWithInvite(inviteCode: string): Promise<V2SessionToke
 export function consumeHostKeyFromUrlFragment(): string | null {
   if (typeof window === 'undefined' || !window.location?.hash) return null;
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const key = params.get(FRAGMENT_PARAM);
+  const matchedParam = [FRAGMENT_PARAM, 'key', 'host_key'].find((k) => params.has(k));
+  const key = matchedParam ? params.get(matchedParam) : null;
   if (!key) return null;
-  params.delete(FRAGMENT_PARAM);
+  if (matchedParam) params.delete(matchedParam);
   const rest = params.toString();
   window.history.replaceState(null, '', window.location.pathname + window.location.search + (rest ? `#${rest}` : ''));
   return key;

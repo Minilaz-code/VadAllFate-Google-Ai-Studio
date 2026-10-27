@@ -485,6 +485,43 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
+          {/* Runtime Mode & Connection Indicator */}
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-xs shadow-inner">
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isUsingDemoClient
+                    ? 'bg-amber-400'
+                    : runtimeStatusText?.includes('CONNECTED')
+                    ? 'bg-emerald-400 animate-pulse'
+                    : runtimeStatusText?.includes('AUTH')
+                    ? 'bg-amber-400'
+                    : 'bg-red-400'
+                }`}
+              />
+              <span
+                className="font-mono text-[11px] font-semibold text-neutral-200"
+                title={`Runtime Status: ${runtimeStatusText || (isUsingDemoClient ? 'DEMO MODE' : 'LIVE RUNTIME')}`}
+              >
+                {runtimeStatusText || (isUsingDemoClient ? 'DEMO' : 'LIVE')}
+              </span>
+            </div>
+
+            {onToggleClientMode && (
+              <button
+                onClick={() => onToggleClientMode(!isUsingDemoClient)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase border transition-all ${
+                  isUsingDemoClient
+                    ? 'bg-amber-950/70 text-amber-300 border-amber-600/60 hover:bg-amber-900/90'
+                    : 'bg-emerald-950/70 text-emerald-300 border-emerald-600/60 hover:bg-emerald-900/90'
+                }`}
+                title={isUsingDemoClient ? 'Switch to Authoritative Live Python V2 Runtime' : 'Switch to In-Memory Demo Mode'}
+              >
+                {isUsingDemoClient ? 'Use Live V2' : 'Use Demo'}
+              </button>
+            )}
+          </div>
+
           {/* Architecture Register Button */}
           <button
             onClick={onOpenAudit}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Compass,
   Scroll,
@@ -109,7 +109,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
 
   // Input & dialogue
   const [actionInput, setActionInput] = useState('');
-  const [selectedNpcId, setSelectedNpcId] = useState<string>('npc-brother-vaelin');
+  const [selectedNpcId, setSelectedNpcId] = useState<string>('npc-jorren-vale');
 
   // Rules reference (Live Python SRD 5.1 Read-Only API + separate Campaign House Rules overlay)
   const [rulesQuery, setRulesQuery] = useState('');
@@ -176,44 +176,24 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
   const activeChar = characters.find((c) => c.id === selectedCharacterId) || characters[0];
   const selectedNpc = npcs.find((n) => n.id === selectedNpcId) || npcs[0];
 
-  // Narrative Story Stream entries
-  const narrativeFeed = [
-    {
-      id: 'n1',
-      type: 'scene_setting',
-      speaker: 'Dungeon Master',
-      timestamp: '14:20 DR',
-      content:
-        'The taproom of the Yawning Portal is thick with pipeweed smoke and the scent of roasted mutton. In the center of the tavern floor, the massive forty-foot stone ring of the dry well yawns open into the cold dark of Undermountain. A dozen torches sputter along the damp timber rafters.',
-    },
-    {
-      id: 'n2',
-      type: 'dialogue',
-      speaker: 'Brother Vaelin',
-      speakerRole: 'NPC (Priest of Tymora)',
-      timestamp: '14:22 DR',
-      content:
-        '"May Lady Luck steady your blade, Kaelen. The rumors in Castle Ward speak of cultists gathering in the Sunken Crypts below the sewers. If their ritual completes before the crescent moon, half of the lower ward may succumb to their necrotic blight."',
-    },
-    {
-      id: 'n3',
-      type: 'player_action',
-      speaker: activeChar ? activeChar.name : 'Kaelen',
-      speakerRole: 'Player Action',
-      timestamp: '14:24 DR',
-      content:
-        'Leans over the carved oak table, studying the rough parchment map sketched by Brother Vaelin. "We will enter through the sewer outflow behind the Trades Ward before dusk."',
-    },
-    {
-      id: 'n4',
-      type: 'rules_check',
-      speaker: 'Rules Resolution (Demonstration)',
-      speakerRole: 'Deterministic SRD',
-      timestamp: '14:25 DR',
-      content:
-        'Kaelen performed an Insight check (DC 13): rolled 15 (d20: 13 + modifier: +2) -> SUCCESS. Vaelin is visibly shaken and speaks with desperate sincerity.',
-    },
-  ];
+  const feedEndRef = useRef<HTMLDivElement>(null);
+
+  // Derive chronological story events from authoritative events prop
+  const chronologicalEvents = useMemo(() => {
+    if (!events || events.length === 0) return [];
+    return [...events].sort((a, b) => {
+      if (a.commitSequence !== b.commitSequence) {
+        return a.commitSequence - b.commitSequence;
+      }
+      return new Date(a.timestampUtc).getTime() - new Date(b.timestampUtc).getTime();
+    });
+  }, [events]);
+
+  useEffect(() => {
+    if (feedEndRef.current) {
+      feedEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chronologicalEvents.length]);
 
   const handleQuickSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,10 +230,10 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-cinzel font-bold text-amber-100 text-sm tracking-wide">
-                  Act I · The Yawning Portal Taproom
+                  Act I · Highgate Harbor & Primara Cathedral
                 </h2>
                 <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-neutral-950 text-amber-400 border border-amber-800/40">
-                  Castle Ward · Waterdeep
+                  Aethelgard Vault · Highgate District
                 </span>
               </div>
             </div>
@@ -657,7 +637,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
             <div className="bg-emerald-950/30 border-b border-emerald-900/40 px-4 py-2 flex items-center justify-between text-xs font-mono shrink-0">
               <div className="flex items-center gap-2 text-emerald-200">
                 <Eye className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold">Exploration Mode: The Yawning Portal Dry Well</span>
+                <span className="font-bold">Exploration Mode: Cathedral Nave & Crypt Vaults</span>
               </div>
               <span className="text-[10px] text-neutral-400">
                 Perception & Investigation DC references active
@@ -669,7 +649,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
             <div className="bg-cyan-950/30 border-b border-cyan-900/40 px-4 py-2 flex items-center justify-between text-xs font-mono shrink-0">
               <div className="flex items-center gap-2 text-cyan-200">
                 <Coffee className="w-4 h-4 text-cyan-400" />
-                <span className="font-bold">Downtime & Tavern Rest: Castle Ward</span>
+                <span className="font-bold">Downtime & Harbor Rest: Highgate Quarter</span>
               </div>
               <span className="text-[10px] text-neutral-400">
                 Short rest (1 hour) or Long rest (8 hours) rolls available
@@ -694,40 +674,133 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
                   <span className="text-neutral-400">Initiative: 12 · HP 16/16 · AC 12</span>
                 </div>
                 <div className="p-2 bg-neutral-950 rounded border border-neutral-800">
-                  <span className="text-emerald-400 block font-bold">4. Brother Vaelin</span>
+                  <span className="text-emerald-400 block font-bold">4. Scholar Jorren Vale</span>
                   <span className="text-neutral-400">Initiative: 8 · HP 18/18 · AC 13</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Narrative Story Stream */}
+          {/* Narrative Story Stream - Authoritative Live Stream */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {narrativeFeed.map((item) => (
-              <div
-                key={item.id}
-                className={`p-3.5 rounded-lg border text-xs leading-relaxed ${
-                  item.type === 'scene_setting'
-                    ? 'bg-neutral-900/90 border-amber-900/30 text-neutral-200'
-                    : item.type === 'dialogue'
-                    ? 'bg-amber-950/20 border-amber-700/40 text-amber-100'
-                    : item.type === 'rules_check'
-                    ? 'bg-neutral-900 border-cyan-800/40 text-cyan-200 font-mono text-[11px]'
-                    : 'bg-neutral-900/60 border-neutral-800 text-neutral-300'
-                }`}
-              >
-                <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-neutral-800/60 text-[10px] font-mono">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-amber-300">{item.speaker}</span>
-                    {item.speakerRole && (
-                      <span className="text-neutral-400">({item.speakerRole})</span>
+            {chronologicalEvents.length === 0 ? (
+              <div className="p-4 rounded-lg bg-neutral-900/80 border border-amber-900/30 text-xs leading-relaxed space-y-2">
+                <div className="flex items-center gap-2 text-amber-300 font-bold font-mono text-[11px] pb-1 border-b border-neutral-800">
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>Scene Setting · Primara Cathedral</span>
+                  <span className="text-neutral-500 ml-auto font-normal font-sans text-[10px]">Session Ready</span>
+                </div>
+                <p className="text-neutral-300">
+                  The mist of Highgate Harbor curls against the weathered limestone buttresses of Primara Cathedral. Cold salt winds rattle the lantern ironwork along the quayside. Scholar Jorren Vale stands beneath the arched portico, checking the wax seals on an ancient series of parchment scrolls.
+                </p>
+                <div className="p-2 rounded bg-neutral-950/60 border border-neutral-800/80 text-[11px] text-neutral-400">
+                  Enter dialogue or an action below to converse with Scholar Vale or inspect the surroundings. All player inputs, AI Co-DM narration, and rule adjudications appear here in chronological order.
+                </div>
+              </div>
+            ) : (
+              chronologicalEvents.map((evt) => {
+                const hasStructuredDialogue = evt.playerMessage || evt.npcReply || evt.narration;
+                if (hasStructuredDialogue) {
+                  return (
+                    <div key={evt.eventId} className="space-y-2">
+                      {evt.playerMessage && (
+                        <div className="p-3.5 rounded-lg border text-xs leading-relaxed bg-neutral-900/70 border-neutral-800 text-neutral-200">
+                          <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-neutral-800/60 text-[10px] font-mono">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-amber-300">{evt.actorName || 'Player'}</span>
+                              <span className="text-neutral-400">(Player Action)</span>
+                            </div>
+                            <span className="text-neutral-500">
+                              {evt.timestampUtc ? new Date(evt.timestampUtc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Seq ${evt.commitSequence}`}
+                            </span>
+                          </div>
+                          <p className="text-neutral-100 font-medium">{evt.playerMessage}</p>
+                        </div>
+                      )}
+
+                      {evt.npcReply && (
+                        <div className="p-3.5 rounded-lg border text-xs leading-relaxed bg-amber-950/25 border-amber-700/50 text-amber-100 ml-3">
+                          <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-amber-800/40 text-[10px] font-mono">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-amber-400">{evt.targetNpcName || 'Scholar Jorren Vale'}</span>
+                              <span className="text-amber-500/80">(NPC Dialogue)</span>
+                            </div>
+                            <span className="text-neutral-500">
+                              {evt.timestampUtc ? new Date(evt.timestampUtc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Seq ${evt.commitSequence}`}
+                            </span>
+                          </div>
+                          <p className="text-amber-100">{evt.npcReply}</p>
+                        </div>
+                      )}
+
+                      {evt.narration && (
+                        <div className="p-3.5 rounded-lg border text-xs leading-relaxed bg-neutral-900/90 border-amber-900/40 text-neutral-200 italic ml-2">
+                          <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-neutral-800/60 text-[10px] font-mono not-italic">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-amber-300">Dungeon Master</span>
+                              <span className="text-neutral-400">(Narration)</span>
+                            </div>
+                            <span className="text-neutral-500">
+                              {evt.timestampUtc ? new Date(evt.timestampUtc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Seq ${evt.commitSequence}`}
+                            </span>
+                          </div>
+                          <p className="text-neutral-200">{evt.narration}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                const isCombat = evt.category === 'COMBAT';
+                const isRules = evt.category === 'RULES_QUERY';
+                const isWorld = evt.category === 'WORLD';
+                const isDialogue = evt.category === 'DIALOGUE';
+
+                return (
+                  <div
+                    key={evt.eventId}
+                    className={`p-3.5 rounded-lg border text-xs leading-relaxed ${
+                      isCombat
+                        ? 'bg-red-950/20 border-red-900/40 text-red-100'
+                        : isRules
+                        ? 'bg-cyan-950/20 border-cyan-800/40 text-cyan-200 font-mono text-[11px]'
+                        : isWorld
+                        ? 'bg-neutral-900/90 border-amber-900/30 text-neutral-200'
+                        : isDialogue
+                        ? 'bg-amber-950/20 border-amber-700/40 text-amber-100'
+                        : 'bg-neutral-900/60 border-neutral-800 text-neutral-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-neutral-800/60 text-[10px] font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-amber-300">{evt.actorName || 'System'}</span>
+                        <span className="text-neutral-400">({evt.category})</span>
+                        {evt.isDmOnly && (
+                          <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-800 text-[9px]">
+                            DM Only
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-neutral-500">
+                        {evt.timestampUtc ? new Date(evt.timestampUtc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Seq ${evt.commitSequence}`}
+                      </span>
+                    </div>
+
+                    <p className="text-neutral-200">{evt.summary}</p>
+
+                    {evt.diceRoll && (
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 font-mono text-[10px] text-cyan-300">
+                        <Dice5 className="w-3 h-3 text-cyan-400" />
+                        <span>{evt.diceRoll.reason || 'Roll'}: {evt.diceRoll.formula} = {evt.diceRoll.total}</span>
+                        {evt.diceRoll.isCritical && <span className="text-emerald-400 font-bold ml-1">CRIT!</span>}
+                        {evt.diceRoll.isFumble && <span className="text-red-400 font-bold ml-1">FUMBLE!</span>}
+                      </div>
                     )}
                   </div>
-                  <span className="text-neutral-500">{item.timestamp}</span>
-                </div>
-                <p className="text-neutral-200">{item.content}</p>
-              </div>
-            ))}
+                );
+              })
+            )}
+            <div ref={feedEndRef} />
           </div>
 
           {/* Quick Action Pills & Skills */}
@@ -769,7 +842,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
               type="text"
               value={actionInput}
               onChange={(e) => setActionInput(e.target.value)}
-              placeholder={`What does ${activeChar?.name || 'Kaelen'} do? (e.g. "I ask Brother Vaelin about the symbols carved on the vault key")`}
+              placeholder={`What does ${activeChar?.name || 'Lyra'} do? (e.g. "I ask Scholar Jorren Vale about the seal on the harbor gate")`}
               className="flex-1 bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-amber-500"
             />
             <button
