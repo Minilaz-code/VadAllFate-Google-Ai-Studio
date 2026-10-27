@@ -270,16 +270,16 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span className="font-mono font-semibold text-neutral-100">{worldClock.calendar.timeString}</span>
-            <span className="text-neutral-400 font-medium">({worldClock.calendar.timeOfDay})</span>
+            <span className="font-mono font-semibold text-neutral-100">{worldClock?.calendar?.timeString || '14:15'}</span>
+            <span className="text-neutral-400 font-medium">({worldClock?.calendar?.timeOfDay || 'Afternoon'})</span>
             <span className="text-neutral-600">•</span>
-            <span className="text-neutral-300 hidden lg:inline">{worldClock.calendar.monthName} {worldClock.calendar.dayOfMonth}</span>
+            <span className="text-neutral-300 hidden lg:inline">{worldClock?.calendar?.monthName || 'Tarsakh'} {worldClock?.calendar?.dayOfMonth || 14}</span>
             <span className="text-neutral-600 hidden lg:inline">•</span>
             <div className="flex items-center gap-1 text-[11px] text-amber-300/80">
               <CloudFog className="w-3.5 h-3.5 text-neutral-400" />
-              <span className="hidden xl:inline">{worldClock.weather.condition}</span>
+              <span className="hidden xl:inline">{worldClock?.weather?.condition || 'Clear'}</span>
             </div>
-            {worldClock.isPaused && (
+            {worldClock?.isPaused && (
               <span className="text-[10px] uppercase font-mono px-1 rounded bg-red-950 text-red-300 border border-red-800">
                 Paused
               </span>
@@ -330,12 +330,12 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={onTogglePauseClock}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold ${
-                    worldClock.isPaused
+                    worldClock?.isPaused
                       ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                       : 'bg-amber-950 text-amber-300 border border-amber-700'
                   }`}
                 >
-                  {worldClock.isPaused ? (
+                  {worldClock?.isPaused ? (
                     <>
                       <Play className="w-3.5 h-3.5" />
                       <span>Resume Clock</span>

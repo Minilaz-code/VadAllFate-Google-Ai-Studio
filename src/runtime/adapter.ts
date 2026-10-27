@@ -11,6 +11,7 @@
  * - Server-side role projection boundaries are explicitly distinguished.
  */
 
+import { getV2Token, hasV2Session, loginWithHostKey, v2SessionHeaders } from '../services/v2Session.ts';
 import type {
   DemoActionEnvelope,
   DemoCommitReceipt,
@@ -889,7 +890,6 @@ export class DemoCampaignClient implements CampaignClient {
 export class PythonRuntimeGateway implements CampaignClient {
   private endpoint: string;
   private connected: boolean = false;
-  private sessionToken: string | null = null;
   private cachedSnapshot: DemoSnapshotRef = {
     campaignId: 'DISCONNECTED',
     commitSequence: 0,
@@ -906,48 +906,41 @@ export class PythonRuntimeGateway implements CampaignClient {
   }
 
   public getSessionToken(): string | null {
-    return this.sessionToken;
+    return getV2Token('dm') ?? getV2Token('player') ?? null;
   }
 
-  public async authenticateSession(
-    actorId: string = 'dm-1',
-    role: UserRole = 'dm_host',
-    isHost: boolean = true,
-    assignedCharacterId?: string
-  ): Promise<string | null> {
+  public lastAuthError: string | null = null;
+
+  /**
+   * Authenticate with a Host bootstrap key (obtained from the Windows launcher) or reuse an
+   * existing tab session. The client cannot choose a role: the backend issues what the key allows.
+   */
+  public async authenticateSession(bootstrapKey?: string): Promise<string | null> {
     try {
-      const resp = await fetch(`${this.endpoint}/auth/session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actorId,
-          role,
-          isHost,
-          assignedCharacterId,
-        }),
-      });
-      if (!resp || !resp.ok) return null;
-      const data = await resp.json();
-      if (data && typeof data.sessionToken === 'string') {
-        this.sessionToken = data.sessionToken;
-        return this.sessionToken;
+      if (bootstrapKey) {
+        await loginWithHostKey(bootstrapKey);
       }
-      return null;
-    } catch {
+      this.lastAuthError = hasV2Session() ? null : 'No session. Enter the Host key shown by the launcher.';
+      return this.getSessionToken();
+    } catch (e: any) {
+      this.lastAuthError = e?.message || 'Authentication failed';
       return null;
     }
   }
 
   public async connectToLiveBackend(): Promise<boolean> {
     try {
-      const headers: Record<string, string> = {};
-      if (this.sessionToken) {
-        headers['X-VadAllFate-Session-Token'] = this.sessionToken;
+      if (!hasV2Session()) {
+        this.connected = false;
+        this.lastAuthError = this.lastAuthError || 'Authentication required: no Host-issued session.';
+        return false;
       }
       const [statusResp, dmResp, playerResp] = await Promise.all([
-        fetch(`${this.endpoint}/status`, { headers }),
-        fetch(`${this.endpoint}/projection?role=dm_host`, { headers }),
-        fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01`),
+        fetch(`${this.endpoint}/status`),
+        fetch(`${this.endpoint}/projection?role=dm_host`, { headers: v2SessionHeaders('dm') }),
+        fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01`, {
+          headers: v2SessionHeaders('player'),
+        }),
       ]);
       if (!statusResp.ok || !dmResp.ok || !playerResp.ok) {
         this.connected = false;
@@ -956,10 +949,6 @@ export class PythonRuntimeGateway implements CampaignClient {
       const statusData = await statusResp.json();
       const dmData = await dmResp.json();
       const playerData = await playerResp.json();
-
-      if (!this.sessionToken) {
-        await this.authenticateSession('dm-1', 'dm_host', true);
-      }
 
       this.connected = true;
       this.cachedSnapshot = {
@@ -1056,10 +1045,10 @@ export class PythonRuntimeGateway implements CampaignClient {
         'Action submission rejected: Python R1 runtime gateway is disconnected. Automatic fallback to local demonstration is disabled.'
       );
     }
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (this.sessionToken) {
-      headers['X-VadAllFate-Session-Token'] = this.sessionToken;
-    }
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...v2SessionHeaders(envelope.actorRole),
+    };
     const resp = await fetch(`${this.endpoint}/actions`, {
       method: 'POST',
       headers,

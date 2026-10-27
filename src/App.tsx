@@ -28,6 +28,7 @@ import { PlayerJournalView } from './components/player/PlayerJournalView.tsx';
 import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import { ShieldAlert } from 'lucide-react';
+import { consumeHostKeyFromUrlFragment, hasV2Session } from './services/v2Session.ts';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<ApplicationTab>('play');
@@ -38,6 +39,23 @@ export default function App() {
   });
 
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [hostKeyInput, setHostKeyInput] = useState('');
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
+
+  // Windows launcher hand-off: `#vf_host_key=...` is exchanged once for Host-issued sessions
+  // (the fragment is never sent to a server) and removed from the address bar.
+  useEffect(() => {
+    const key = consumeHostKeyFromUrlFragment();
+    if (key) {
+      void (async () => {
+        const token = await clientManager.getPythonGateway().authenticateSession(key);
+        setAuthMessage(token ? null : clientManager.getPythonGateway().lastAuthError);
+        await clientManager.connectPythonGateway();
+      })();
+    } else if (hasV2Session() && clientManager.isUsingDemo()) {
+      void clientManager.connectPythonGateway();
+    }
+  }, []);
   const [isUsingDemo, setIsUsingDemo] = useState(clientManager.isUsingDemo());
   const [, setTick] = useState(0);
 
@@ -199,6 +217,35 @@ export default function App() {
               <div className="text-neutral-500 pt-1 border-t border-neutral-900 text-[10px]">
                 * Automatic fallback from production failure to demo commits is disabled by architectural policy.
               </div>
+            </div>
+
+            <div className="p-3 rounded bg-neutral-950 border border-neutral-800 space-y-2 text-[11px]">
+              <div className="text-amber-300 font-bold">Host authentication required</div>
+              <p className="text-neutral-400">
+                Paste the Host key shown in the launcher window. The role is decided by the backend, never by this page.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={hostKeyInput}
+                  onChange={(e) => setHostKeyInput(e.target.value)}
+                  placeholder="Host bootstrap key"
+                  aria-label="Host bootstrap key"
+                  className="flex-1 px-2 py-1 rounded bg-neutral-900 border border-neutral-700 text-neutral-200"
+                />
+                <button
+                  onClick={async () => {
+                    const tok = await clientManager.getPythonGateway().authenticateSession(hostKeyInput.trim());
+                    setAuthMessage(tok ? null : clientManager.getPythonGateway().lastAuthError);
+                    setHostKeyInput('');
+                    await clientManager.connectPythonGateway();
+                  }}
+                  className="px-3 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold"
+                >
+                  Authenticate
+                </button>
+              </div>
+              {authMessage && <div className="text-red-400">{authMessage}</div>}
             </div>
 
             <div className="flex items-center justify-between pt-2 gap-2">

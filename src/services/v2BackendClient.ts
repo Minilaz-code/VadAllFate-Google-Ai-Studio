@@ -1,3 +1,4 @@
+import { v2SessionHeaders } from './v2Session.ts';
 /**
  * V2 Authoritative Backend Client (KGP-03, HAR-01, Milestone 5)
  *
@@ -271,7 +272,7 @@ export class V2BackendClient {
       params.set('q', searchQuery.trim());
     }
     try {
-      const resp = await fetch(`${this.baseUrl}/graph?${params.toString()}`);
+      const resp = await fetch(`${this.baseUrl}/graph?${params.toString()}`, { headers: v2SessionHeaders(audience.role) });
       if (resp.ok) {
         const data = await resp.json();
         return { ...data, source: 'python_sqlite' };
@@ -385,7 +386,7 @@ export class V2BackendClient {
   public async listNotes(audience: V2AudienceParams): Promise<V2MarkdownNote[]> {
     const params = buildAudienceQuery(audience);
     try {
-      const resp = await fetch(`${this.baseUrl}/notes?${params.toString()}`);
+      const resp = await fetch(`${this.baseUrl}/notes?${params.toString()}`, { headers: v2SessionHeaders(audience.role) });
       if (resp.ok) {
         const data = await resp.json();
         return data.notes || [];
@@ -418,7 +419,7 @@ export class V2BackendClient {
     try {
       const resp = await fetch(`${this.baseUrl}/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders(audience.role) },
         body: JSON.stringify({
           audience,
           ...input,
@@ -468,7 +469,7 @@ export class V2BackendClient {
     try {
       const resp = await fetch(`${this.baseUrl}/notes/visibility`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders(audience.role) },
         body: JSON.stringify({
           audience,
           note_id: noteId,
@@ -495,7 +496,7 @@ export class V2BackendClient {
   public async listPlans(audience: V2AudienceParams): Promise<V2PlanRevision[]> {
     const params = buildAudienceQuery(audience);
     try {
-      const resp = await fetch(`${this.baseUrl}/plans?${params.toString()}`);
+      const resp = await fetch(`${this.baseUrl}/plans?${params.toString()}`, { headers: v2SessionHeaders(audience.role) });
       if (resp.ok) {
         const data = await resp.json();
         return data.plans || [];
@@ -522,7 +523,7 @@ export class V2BackendClient {
     try {
       const resp = await fetch(`${this.baseUrl}/plans`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders(audience.role) },
         body: JSON.stringify({
           audience,
           ...input,
@@ -568,7 +569,7 @@ export class V2BackendClient {
     try {
       const resp = await fetch(`${this.baseUrl}/plans/transition`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders(audience.role) },
         body: JSON.stringify({
           audience,
           plan_id: planId,
@@ -605,7 +606,7 @@ export class V2BackendClient {
   public async listHomebrew(audience: V2AudienceParams): Promise<V2HomebrewRecord[]> {
     const params = buildAudienceQuery(audience);
     try {
-      const resp = await fetch(`${this.baseUrl}/homebrew?${params.toString()}`);
+      const resp = await fetch(`${this.baseUrl}/homebrew?${params.toString()}`, { headers: v2SessionHeaders(audience.role) });
       if (resp.ok) {
         const data = await resp.json();
         return data.homebrew || [];
@@ -633,7 +634,7 @@ export class V2BackendClient {
     try {
       const resp = await fetch(`${this.baseUrl}/homebrew`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders(audience.role) },
         body: JSON.stringify({
           audience,
           ...input,
@@ -689,7 +690,7 @@ export class V2BackendClient {
     try {
       const resp = await fetch(`${this.baseUrl}/homebrew/transition`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders(audience.role) },
         body: JSON.stringify({
           audience,
           homebrew_id: homebrewId,
@@ -735,7 +736,7 @@ export class V2BackendClient {
     try {
       const resp = await fetch(`${this.baseUrl}/tts/synthesize`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders() },
         body: JSON.stringify({
           text,
           preset_id: presetId,
