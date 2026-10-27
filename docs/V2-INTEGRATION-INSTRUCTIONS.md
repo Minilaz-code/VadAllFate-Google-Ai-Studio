@@ -71,3 +71,13 @@ Product goal: the same VadAllFate engine must support any properly licensed, com
 - **Export correctness:** the current HomebrewWorkshopView local JSON export uses a random placeholder value under sha256; it is NOT a verified SHA-256 checksum or installable campaign pack. Label it demo/legacy until a real SHA-256 content hash and Python validation/provenance pipeline exist. Never claim an export is securely validated just because it has a hash-shaped field.
 - **Frontend implementation status (2026-10-27):** existing Knowledge Explorer, notes, plan and homebrew UI are foundations; no verified production Obsidian/CSV round-trip importer, Pack Manager, arbitrary campaign installer or executable extension host. Basic JSON export is not a validated portable pack.
 - Coordinate with backend gates CPP-00 through CPP-06; until backend DTOs and validation APIs exist, use clearly labelled design previews only, not demo writes presented as canonical.
+
+## Player-reported live UX defects and frontend rebuild delivery
+
+**Required acceptance brief:** [Player Experience, VTT and UI Rebuild Brief](V2-PLAYER-EXPERIENCE-VTT-AND-UI-REBUILD-BRIEF.md) (2026-10-27). Treat its real-user observations as open bugs even where narrower Milestone 10 backend or headless tests passed.
+
+**Do not postpone play-blocking correctness issues:** launching in Demo Mode, failed live authentication, player input appearing only in the event ledger rather than in the dialogue pane, and unclear production error/status handling are P0. These should be repaired alongside backend Milestone 10B/CPP-03 contracts.
+
+**Planned main frontend emphasis once core APIs are stable:** accessible character sheets and journals, real combat HP/spell-slot tracker, Blue Alley image-first map import and non-destructive grid calibration with larger resizable canvas, and cohesive charcoal/slate + copper/bronze + teal UI redesign. Full character/notes/code components are not proof of discoverable features; imported artwork MUST NOT be silently clipped when aligning to grid.
+
+**Track UX-00 through UX-05** as independent user-acceptance gates. CPP-04 remains the campaign Pack Manager and depends on CPP-03 approved backend admission. Do not wait for every living-world simulator to be completed before delivering frontend usability, nor merge demo data into live authoritative UI.
