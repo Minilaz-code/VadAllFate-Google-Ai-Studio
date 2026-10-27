@@ -55,3 +55,18 @@ Do not implement backend-facing DTOs or SQL schemas from guesses. First complete
 - **Harness:** single queued inference orchestration, no additional agents/models for separate workspaces. Models can propose drafts, not confirm or implement.
 
 The details are implementation-gated pending existing SQLite schema and R1 gateway audit; do not claim frontend controls or tests exist solely due to this instruction.
+
+## Portable Campaign Pack / Obsidian / CSV Frontend Instruction (CPP)
+
+**Normative contract:** [V2 Portable Campaign Packs, External AI Authoring and Obsidian Interoperability](https://github.com/Minilaz-code/VadAllFate/blob/v2/srd51-rules-browser/docs/V2-PORTABLE-CAMPAIGN-PACKS-AND-OBSIDIAN-INTEROP.md).
+
+Product goal: the same VadAllFate engine must support any properly licensed, compatible D&D campaign or original homebrew world, assembled by a player, creator or external AI. Do not hard-code Aethelgard or Waterdeep as required content and do not assume an Obsidian installation.
+
+- Build a native **Pack Manager** inside DM Planning / Homebrew Workshop, consuming a validated Python import API rather than parsing/canonizing campaign data independently.
+- Support selecting Markdown vaults, Obsidian-compatible JSON Canvas, typed nodes.csv and edges.csv, and approved versioned campaign/world/homebrew packs. Show author/source/licence, ruleset edition, dependency, visibility, scope, record counts and preview status.
+- Show clear staging, conflict resolution, ambiguous-link review and explicit user approval of Draft / Proposed / Confirmed plans and Draft / Validated / Implemented homebrew. A Markdown wikilink is not a canonical relationship; moving a Canvas card is not an in-world action.
+- Offer role-safe Markdown, CSV and Canvas export after the backend returns an authorised projection; never send full DM graphs to the browser for client-side filtering.
+- On invalid schema, failed authentication, unsupported version, disconnected Python, missing licence or untrusted executable mod, fail closed and describe the blocker. No silently activated campaigns, rule overrides or modified Saves.
+- External AI authoring: present a downloadable/versioned brief, canonical sample pack schemas and an import validation report. Do not embed dependence on Gemini or any other AI provider.
+- **Frontend implementation status (2026-10-27):** existing Knowledge Explorer, notes, plan and homebrew UI are foundations; no verified production Obsidian/CSV round-trip importer, Pack Manager, arbitrary campaign installer or executable extension host. Basic JSON export is not a validated portable pack.
+- Coordinate with backend gates CPP-00 through CPP-06; until backend DTOs and validation APIs exist, use clearly labelled design previews only, not demo writes presented as canonical.
