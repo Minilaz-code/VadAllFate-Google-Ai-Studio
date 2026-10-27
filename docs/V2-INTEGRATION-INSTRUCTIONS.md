@@ -1,7 +1,7 @@
 # VadAllFate Google AI Studio Frontend — V2 Integration Instructions
 
 **Status:** Architectural instructions; UI/transport implementation is not claimed.  
-**Canonical architecture:** https://github.com/Minilaz-code/VadAllFate/blob/main/docs/V2-ARCHITECTURE-INSTRUCTIONS-HARNESS-KNOWLEDGE-GRAPH.md
+**Canonical architecture:** https://github.com/Minilaz-code/VadAllFate/blob/v2/srd51-rules-browser/docs/V2-ARCHITECTURE-INSTRUCTIONS-HARNESS-KNOWLEDGE-GRAPH.md
 
 These frontend instructions consume the master contract. They do **not** create a competing architecture or permit local AI Studio mock state to act as authoritative Python game state.
 
@@ -45,7 +45,7 @@ Do not implement backend-facing DTOs or SQL schemas from guesses. First complete
 
 ## Authored Notes, Confirmed Plans and Implemented Homebrew
 
-**Normative cross-reference:** [V2 authored notes/plans/homebrew architecture](https://github.com/Minilaz-code/VadAllFate/blob/main/docs/V2-AUTHORED-NOTES-PLANS-HOMEBREW-LIFECYCLES.md). Do not independently invent frontend authority.
+**Normative cross-reference:** [V2 authored notes/plans/homebrew architecture](https://github.com/Minilaz-code/VadAllFate/blob/v2/srd51-rules-browser/docs/V2-AUTHORED-NOTES-PLANS-HOMEBREW-LIFECYCLES.md). Do not independently invent frontend authority.
 
 - **Player Journal:** create/edit versioned `.md` notes; private-by-default, explicitly party-shared or DM-shared. A player's suspicion or rumour remains authored text, never automatically game canon.
 - **DM Planning:** Draft Markdown -> Submit Proposal (frozen source revision, durable SQLite `proposed`) -> Confirm (authorised SQLite `confirmed` future intention). A confirmed plan may guide scenes but is **not an occurred save-state event**. Present approved revisions, diffs, cancellation/supersession and campaign/session scope.
@@ -68,5 +68,6 @@ Product goal: the same VadAllFate engine must support any properly licensed, com
 - Offer role-safe Markdown, CSV and Canvas export after the backend returns an authorised projection; never send full DM graphs to the browser for client-side filtering.
 - On invalid schema, failed authentication, unsupported version, disconnected Python, missing licence or untrusted executable mod, fail closed and describe the blocker. No silently activated campaigns, rule overrides or modified Saves.
 - External AI authoring: present a downloadable/versioned brief, canonical sample pack schemas and an import validation report. Do not embed dependence on Gemini or any other AI provider.
+- **Export correctness:** the current HomebrewWorkshopView local JSON export uses a random placeholder value under sha256; it is NOT a verified SHA-256 checksum or installable campaign pack. Label it demo/legacy until a real SHA-256 content hash and Python validation/provenance pipeline exist. Never claim an export is securely validated just because it has a hash-shaped field.
 - **Frontend implementation status (2026-10-27):** existing Knowledge Explorer, notes, plan and homebrew UI are foundations; no verified production Obsidian/CSV round-trip importer, Pack Manager, arbitrary campaign installer or executable extension host. Basic JSON export is not a validated portable pack.
 - Coordinate with backend gates CPP-00 through CPP-06; until backend DTOs and validation APIs exist, use clearly labelled design previews only, not demo writes presented as canonical.
