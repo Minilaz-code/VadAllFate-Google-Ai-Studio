@@ -190,5 +190,27 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
     - All 133 frontend tests pass (`133/133`).
   - Priority 3: Frontend Delivery Programme.
     - Established comprehensive specification and delivery backlog in `docs/V2-FRONTEND-DELIVERY-PROGRAMME.md` covering UX-02 (Character Sheet & Combat Tracker), UX-03 (Zero-Crop VTT & Blue Alley Calibration), UX-04 (Design System Redesign), and UX-05 (CPP-04 Pack Manager).
-- **Next Development Milestone (Milestone 11B):**
-  - **UX-02 Usable Character Sheet & Interactive Combat Tracker:** Live HP, spell slots, and condition adjustments under Single Commit Authority.
+- **Completed in Milestone 11B (Integrity Closure, Playable Combat & Character Sheets):**
+  - **Phase 1: Installation & Ingestion Integrity Closure (CPP-03):**
+    - Durable transaction ledger (`v2_pack_installation_transactions`) tracking stages `STAGED` -> `COMMITTED` -> `COMPLETED` / `FAILED`.
+    - Pinned proposal enforcement (`archive_sha256`, `pack_id`, `target_campaign_id`).
+    - Exact approved conflict verification (`expected_conflicts` required for `MODIFIED_PROPERTIES`, `CONFLICT_NOTE_MODIFIED`, `CONFLICT_EDGE_MODIFIED`; unapproved conflicts raise `UNAPPROVED_CONFLICT_DETECTED`).
+    - Post-crash reconciliation protocol (`CampaignPackInstaller.reconcile_installations`): pre-commit `STAGED` crashes rolled back cleanly; post-commit `COMMITTED` crashes completed idempotently to `INSTALLED` via `_apply_pack_content_to_store` without duplicate R1 admission.
+    - Fail-closed player export: notes unindexed or with non-matching actor ownership are strictly excluded; unverified licenses default to `NOASSERTION`.
+    - 6 new fault-injection and crash-recovery tests in `tests/test_v2_pack_installation.py` (17/17 passed); 380/380 total backend tests passing.
+  - **Phase 2: Frontend Usability, Character Sheet & Interactive Combat Tracker (UX-02):**
+    - Full combat action handling in client runtime adapter (`ATTACK_ACTION`, `CAST_SPELL`, `USE_ITEM`, `REST_ACTION`, `DM_OVERRIDE_STATE`, `START_ENCOUNTER`, `ROLL_INITIATIVE`, `NEXT_TURN`, `END_ENCOUNTER`).
+    - `CombatTracker.tsx` component with round counter, turn indicator, initiative-ordered combatant cards, interactive HP bars (-5, -1, +1, +5), Temp HP badges, AC shields, condition badges and dropdown adder, spell slot counters, and action modals (Attack, Cast Spell, Use Item).
+    - `CharacterSheetModal.tsx` integrated with Temp HP badge and active condition pills; accessible with one click directly from scene banner, party list, and combat tracker.
+    - Notes workspace under left sidebar "Notes" tab: lists notes via `v2BackendClient.listNotes`, supports title, visibility selector (`private_player`, `party_shared`, `shared_with_dm`, `dm_private`), and Markdown editing with wikilinks.
+  - **Phase 3: Live Mode Indicators & Dynamic Scene Context (UX-00 / UX-01):**
+    - Global Header connection indicator with 5 unambiguous states (`CONNECTING`, `CONNECTED`, `AUTH REQUIRED`, `DISCONNECTED`, `EXPLICIT DEMO`).
+    - Dynamic scene context derived from active campaign and `locations` projection (`dynamicSceneTitle`, `dynamicDistrict`, `dynamicSummary`), eliminating hardcoded Aethelgard/Highgate strings.
+    - Action submission feedback with pending spinner, success checkmarks, and error banners.
+    - Verified live end-to-end browser loop with Chrome CDP: main view, character sheet modal, notes workspace, combat tracker, and live dialogue feed captured in artifacts directory.
+    - All 133 frontend unit tests passing; clean production build with 0 errors.
+  - **Phase 4: Milestone 12 Blue Alley VTT Overhaul Architectural Specification:**
+    - Root cause analysis and mathematical two-point calibration specification documented in `docs/BLUE-ALLEY-VTT-ARCHITECTURE.md`.
+    - Separates Natural Image Plane, Grid Overlay Plane, World Spatial Plane, and Viewport Plane for zero-crop rendering.
+- **Next Development Milestone (Milestone 12):**
+  - **UX-03 Zero-Crop VTT Overhaul & Two-Point Grid Calibration:** Blue Alley high-resolution tactical map, sub-pixel grid calibration, and multi-room spatial discovery.

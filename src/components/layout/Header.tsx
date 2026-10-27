@@ -81,6 +81,7 @@ interface HeaderProps {
   onTogglePauseClock: () => void;
   onOpenAudit: () => void;
   runtimeStatusText?: string;
+  connectionState?: 'CONNECTING' | 'CONNECTED' | 'AUTH REQUIRED' | 'DISCONNECTED' | 'EXPLICIT DEMO';
   isUsingDemoClient?: boolean;
   onToggleClientMode?: (useDemo: boolean) => void;
   onExitPreview: () => void;
@@ -99,6 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
   onTogglePauseClock,
   onOpenAudit,
   runtimeStatusText,
+  connectionState,
   isUsingDemoClient = true,
   onToggleClientMode,
   onExitPreview,
@@ -490,20 +492,22 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-1.5">
               <div
                 className={`w-2 h-2 rounded-full ${
-                  isUsingDemoClient
-                    ? 'bg-amber-400'
-                    : runtimeStatusText?.includes('CONNECTED')
+                  connectionState === 'CONNECTED'
                     ? 'bg-emerald-400 animate-pulse'
-                    : runtimeStatusText?.includes('AUTH')
+                    : connectionState === 'CONNECTING'
+                    ? 'bg-cyan-400 animate-ping'
+                    : connectionState === 'AUTH REQUIRED'
                     ? 'bg-amber-400'
+                    : connectionState === 'EXPLICIT DEMO'
+                    ? 'bg-purple-400'
                     : 'bg-red-400'
                 }`}
               />
               <span
                 className="font-mono text-[11px] font-semibold text-neutral-200"
-                title={`Runtime Status: ${runtimeStatusText || (isUsingDemoClient ? 'DEMO MODE' : 'LIVE RUNTIME')}`}
+                title={`Runtime Status: ${connectionState || runtimeStatusText || (isUsingDemoClient ? 'EXPLICIT DEMO' : 'LIVE RUNTIME')}`}
               >
-                {runtimeStatusText || (isUsingDemoClient ? 'DEMO' : 'LIVE')}
+                {connectionState || (isUsingDemoClient ? 'EXPLICIT DEMO' : 'LIVE')}
               </span>
             </div>
 

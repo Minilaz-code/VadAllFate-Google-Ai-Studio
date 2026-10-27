@@ -35,6 +35,7 @@ import {
   Target,
   Coffee,
   Database,
+  Award,
 } from 'lucide-react';
 import type { CharacterSheet, RuleCitation } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
@@ -45,6 +46,8 @@ import { CharacterSheetModal } from './CharacterSheetModal.tsx';
 import { DiceRollerModal } from './DiceRollerModal.tsx';
 import { ActionSubmissionModal } from './ActionSubmissionModal.tsx';
 import { VadAllVoxBar } from './VadAllVoxBar.tsx';
+import { CombatTracker } from './CombatTracker.tsx';
+import { v2BackendClient, type V2MarkdownNote } from '../../services/v2BackendClient.ts';
 import { runtimeService } from '../../runtime/adapter.ts';
 import {
   srd51ReferenceClient,
@@ -69,6 +72,9 @@ interface NarrativePlayViewProps {
   spotlightMetrics: PlayerSpotlightMetric[];
   combatState?: CombatTurnState;
   selectedCharacterId?: string;
+  campaignName?: string;
+  locations?: any[];
+  activeLocationId?: string;
   onSelectOperatingMode: (mode: OperatingMode) => void;
   onSelectDirectorProfile: (profileId: string) => void;
   onNavigateToBattlemap?: () => void;
@@ -88,6 +94,9 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
   spotlightMetrics,
   combatState,
   selectedCharacterId = 'char-kaelen',
+  campaignName,
+  locations,
+  activeLocationId,
   onSelectOperatingMode,
   onSelectDirectorProfile,
   onNavigateToBattlemap,
@@ -98,7 +107,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
   // Panel state
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
-  const [leftTab, setLeftTab] = useState<'party' | 'npcs' | 'quests'>('party');
+  const [leftTab, setLeftTab] = useState<'party' | 'npcs' | 'quests' | 'notes'>('party');
   const [rightTab, setRightTab] = useState<'director' | 'rules' | 'timeline'>('director');
 
   // Modals
@@ -110,6 +119,16 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
   // Input & dialogue
   const [actionInput, setActionInput] = useState('');
   const [selectedNpcId, setSelectedNpcId] = useState<string>('npc-jorren-vale');
+  const [actionStatus, setActionStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Integrated Notes Workspace State
+  const [notesList, setNotesList] = useState<V2MarkdownNote[]>([]);
+  const [selectedNote, setSelectedNote] = useState<V2MarkdownNote | null>(null);
+  const [noteEditTitle, setNoteEditTitle] = useState('');
+  const [noteEditBody, setNoteEditBody] = useState('');
+  const [noteEditVisibility, setNoteEditVisibility] = useState<'private_player' | 'party_shared' | 'shared_with_dm' | 'dm_private'>('private_player');
+  const [noteSaveStatus, setNoteSaveStatus] = useState<string | null>(null);
 
   // Rules reference (Live Python SRD 5.1 Read-Only API + separate Campaign House Rules overlay)
   const [rulesQuery, setRulesQuery] = useState('');
@@ -173,6 +192,28 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
     .queryRules(rulesQuery, rulesCategory === 'Monsters' || rulesCategory === 'Equipment' ? 'All' : rulesCategory)
     .filter((r) => r.source === 'House Rule');
 
+
+  // Load notes for active character and campaign
+  useEffect(() => {
+    let active = true;
+    const aud = {
+      actor_id: selectedCharacterId || 'char-lyra-01',
+      role: (userRole === 'dm' || userRole === 'dm_host') ? ('dm' as const) : ('player' as const),
+      campaign_id: currentSnapshot?.campaignId || 'aethelgard-vault-001',
+      save_id: 'save-main',
+    };
+    v2BackendClient.listNotes(aud).then((res) => {
+      if (!active) return;
+      setNotesList(res);
+      if (res.length > 0 && !selectedNote) {
+        setSelectedNote(res[0]);
+        setNoteEditTitle(res[0].title);
+        setNoteEditBody(res[0].markdown_body);
+        setNoteEditVisibility(res[0].visibility);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [selectedCharacterId, userRole, currentSnapshot?.campaignId]);
   const activeChar = characters.find((c) => c.id === selectedCharacterId) || characters[0];
   const selectedNpc = npcs.find((n) => n.id === selectedNpcId) || npcs[0];
 
@@ -197,26 +238,66 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
 
   const handleQuickSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!actionInput.trim()) return;
+    if (!actionInput.trim() || actionStatus === 'submitting') return;
 
-    await runtimeService.submitActionEnvelope({
-      actionId: `quick-act-${Date.now()}`,
-      actorId: activeChar?.id || 'char-lyra-01',
-      actorRole: userRole,
-      actionType: 'FREEFORM_ROLEPLAY',
-      payload: {
-        message: actionInput.trim(),
-        targetNpcId: selectedNpc ? selectedNpc.id : undefined,
-        targetNpcName: selectedNpc ? selectedNpc.name : undefined,
-        invokeHarness: true,
-      },
-      snapshotRef: { ...currentSnapshot },
-      timestampUtc: new Date().toISOString(),
-      clientNonce: `nonce-${Math.random().toString(36).substring(2, 7)}`,
-    });
-
-    setActionInput('');
+    setActionStatus('submitting');
+    setActionError(null);
+    try {
+      await runtimeService.submitActionEnvelope({
+        actionId: `quick-act-${Date.now()}`,
+        actorId: activeChar?.id || 'char-lyra-01',
+        actorRole: userRole,
+        actionType: 'FREEFORM_ROLEPLAY',
+        payload: {
+          message: actionInput.trim(),
+          targetNpcId: selectedNpc ? selectedNpc.id : undefined,
+          targetNpcName: selectedNpc ? selectedNpc.name : undefined,
+          invokeHarness: true,
+        },
+        snapshotRef: { ...currentSnapshot },
+        timestampUtc: new Date().toISOString(),
+        clientNonce: `nonce-${Math.random().toString(36).substring(2, 7)}`,
+      });
+      setActionInput('');
+      setActionStatus('success');
+      setTimeout(() => setActionStatus('idle'), 2500);
+    } catch (err: any) {
+      setActionStatus('error');
+      setActionError(err?.message || 'Failed to submit action.');
+    }
   };
+
+  const handleSaveNoteAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNoteSaveStatus('Saving note...');
+    try {
+      const aud = {
+        actor_id: selectedCharacterId || 'char-lyra-01',
+        role: (userRole === 'dm' || userRole === 'dm_host') ? ('dm' as const) : ('player' as const),
+        campaign_id: currentSnapshot?.campaignId || 'aethelgard-vault-001',
+        save_id: 'save-main',
+      };
+      await v2BackendClient.saveNote(aud, {
+        note_id: selectedNote?.note_id || `note-${Date.now()}`,
+        title: noteEditTitle || 'Untitled Note',
+        markdown_body: noteEditBody,
+        visibility: noteEditVisibility,
+        tags: ['journal'],
+      });
+      const refreshed = await v2BackendClient.listNotes(aud);
+      setNotesList(refreshed);
+      setNoteSaveStatus('Saved!');
+      setTimeout(() => setNoteSaveStatus(null), 2000);
+    } catch (err: any) {
+      setNoteSaveStatus(`Error: ${err?.message || 'Failed to save note'}`);
+    }
+  };
+
+  // Dynamic scene context derivation
+  const activeLoc = locations?.find((l) => l.id === activeLocationId) || locations?.[0];
+  const dynamicSceneTitle = activeLoc ? activeLoc.name : (campaignName || 'Active Scene');
+  const dynamicDistrict = (activeLoc as any)?.district || (activeLoc as any)?.region || campaignName || 'Highgate Quarter';
+  const dynamicSummary = activeLoc?.publicSummary || (activeLoc as any)?.description || 'The scene awaits your command.';
 
   const rulesList = runtimeService.queryRules(rulesQuery, rulesCategory);
 
@@ -230,16 +311,29 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-cinzel font-bold text-amber-100 text-sm tracking-wide">
-                  Act I · Highgate Harbor & Primara Cathedral
+                  {campaignName ? `${campaignName} · ` : ''}{dynamicSceneTitle}
                 </h2>
                 <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-neutral-950 text-amber-400 border border-amber-800/40">
-                  Aethelgard Vault · Highgate District
+                  {dynamicDistrict}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="h-4 w-px bg-neutral-800 hidden md:block" />
+
+          {/* Active Character Quick Sheet Access */}
+          {activeChar && (
+            <button
+              onClick={() => setSheetChar(activeChar)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-neutral-950 hover:bg-neutral-800 text-amber-200 border border-neutral-800 hover:border-amber-600/50 text-xs font-mono transition-colors"
+              title={`Open Character Sheet for ${activeChar.name}`}
+            >
+              <Award className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-semibold">{activeChar.name}</span>
+              <span className="text-[10px] text-neutral-400">Sheet</span>
+            </button>
+          )}
 
           {/* Scene Mode Selector */}
           <div className="flex items-center bg-neutral-950 p-0.5 rounded border border-neutral-800 text-xs">
@@ -442,6 +536,17 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
                 <Scroll className="w-3.5 h-3.5" />
                 <span>Quests</span>
               </button>
+              <button
+                onClick={() => setLeftTab('notes')}
+                className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 font-medium transition-colors border-b-2 ${
+                  leftTab === 'notes'
+                    ? 'border-amber-500 text-amber-200 bg-neutral-900'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Notes</span>
+              </button>
             </div>
 
             {/* Content Area */}
@@ -614,6 +719,101 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
                   ))}
                 </div>
               )}
+
+              {leftTab === 'notes' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase text-neutral-400 block">
+                      Journal & Notes ({notesList.length})
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelectedNote(null);
+                        setNoteEditTitle('New Field Note');
+                        setNoteEditBody('Observations and [[Wikilinks]]...');
+                        setNoteEditVisibility('private_player');
+                      }}
+                      className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-amber-300 text-[10px] font-mono transition-colors"
+                    >
+                      + New
+                    </button>
+                  </div>
+
+                  {/* Notes Selection List */}
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {notesList.map((n) => (
+                      <div
+                        key={n.note_id}
+                        onClick={() => {
+                          setSelectedNote(n);
+                          setNoteEditTitle(n.title);
+                          setNoteEditBody(n.markdown_body);
+                          setNoteEditVisibility(n.visibility);
+                        }}
+                        className={`p-2 rounded border cursor-pointer transition-colors ${
+                          selectedNote?.note_id === n.note_id
+                            ? 'bg-amber-950/40 border-amber-600/70 text-amber-100'
+                            : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700 text-neutral-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold truncate text-[11px]">{n.title}</span>
+                          <span className="text-[9px] font-mono uppercase px-1 rounded bg-neutral-900 text-neutral-400">
+                            {n.visibility.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Note Editor */}
+                  <form onSubmit={handleSaveNoteAction} className="pt-2 border-t border-neutral-800 space-y-2">
+                    <input
+                      type="text"
+                      value={noteEditTitle}
+                      onChange={(e) => setNoteEditTitle(e.target.value)}
+                      placeholder="Note Title"
+                      className="w-full px-2 py-1 rounded bg-neutral-950 border border-neutral-800 text-xs text-neutral-100 font-semibold focus:border-amber-600 outline-none"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-neutral-500 font-mono">Scope:</span>
+                      <select
+                        value={noteEditVisibility}
+                        onChange={(e) => setNoteEditVisibility(e.target.value as any)}
+                        className="flex-1 px-1.5 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-[10px] font-mono text-neutral-300 focus:border-amber-600 outline-none"
+                      >
+                        <option value="private_player">Private (Player Only)</option>
+                        <option value="party_shared">Party Shared</option>
+                        <option value="shared_with_dm">Shared With DM</option>
+                        {(userRole === 'dm' || userRole === 'dm_host') && (
+                          <option value="dm_private">DM Secret Note</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <textarea
+                      rows={5}
+                      value={noteEditBody}
+                      onChange={(e) => setNoteEditBody(e.target.value)}
+                      placeholder="Markdown notes with [[Wikilinks]]..."
+                      className="w-full p-2 rounded bg-neutral-950 border border-neutral-800 text-[11px] font-mono text-neutral-200 focus:border-amber-600 outline-none resize-none"
+                    />
+
+                    <div className="flex items-center justify-between pt-1">
+                      {noteSaveStatus && (
+                        <span className="text-[10px] font-mono text-amber-400">{noteSaveStatus}</span>
+                      )}
+                      <button
+                        type="submit"
+                        className="ml-auto px-3 py-1 rounded bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold text-xs transition-colors"
+                      >
+                        Save Note
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           </aside>
         )}
@@ -637,7 +837,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
             <div className="bg-emerald-950/30 border-b border-emerald-900/40 px-4 py-2 flex items-center justify-between text-xs font-mono shrink-0">
               <div className="flex items-center gap-2 text-emerald-200">
                 <Eye className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold">Exploration Mode: Cathedral Nave & Crypt Vaults</span>
+                <span className="font-bold">Exploration Mode: {dynamicSceneTitle}</span>
               </div>
               <span className="text-[10px] text-neutral-400">
                 Perception & Investigation DC references active
@@ -649,7 +849,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
             <div className="bg-cyan-950/30 border-b border-cyan-900/40 px-4 py-2 flex items-center justify-between text-xs font-mono shrink-0">
               <div className="flex items-center gap-2 text-cyan-200">
                 <Coffee className="w-4 h-4 text-cyan-400" />
-                <span className="font-bold">Downtime & Harbor Rest: Highgate Quarter</span>
+                <span className="font-bold">Downtime & Rest: {dynamicDistrict}</span>
               </div>
               <span className="text-[10px] text-neutral-400">
                 Short rest (1 hour) or Long rest (8 hours) rolls available
@@ -657,27 +857,36 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
             </div>
           )}
 
-          {/* Combat Initiative Tracker Table (Display-Only in Combat Mode) */}
-          {sceneMode === 'combat' && (
-            <div className="p-3 bg-neutral-900 border-b border-neutral-800 shrink-0">
-              <div className="grid grid-cols-4 gap-2 text-[11px] font-mono">
-                <div className="p-2 bg-neutral-950 rounded border border-neutral-800">
-                  <span className="text-amber-400 block font-bold">1. Kaelen (Rogue)</span>
-                  <span className="text-neutral-400">Initiative: 19 · HP 24/24 · AC 15</span>
-                </div>
-                <div className="p-2 bg-neutral-950 rounded border border-neutral-800">
-                  <span className="text-neutral-200 block font-bold">2. Lyra Moonshadow</span>
-                  <span className="text-neutral-400">Initiative: 16 · HP 28/28 · AC 14</span>
-                </div>
-                <div className="p-2 bg-neutral-950 rounded border border-neutral-800">
-                  <span className="text-red-400 block font-bold">3. Shadow Initiate</span>
-                  <span className="text-neutral-400">Initiative: 12 · HP 16/16 · AC 12</span>
-                </div>
-                <div className="p-2 bg-neutral-950 rounded border border-neutral-800">
-                  <span className="text-emerald-400 block font-bold">4. Scholar Jorren Vale</span>
-                  <span className="text-neutral-400">Initiative: 8 · HP 18/18 · AC 13</span>
-                </div>
-              </div>
+          {/* Authoritative Interactive Combat Tracker */}
+          {(sceneMode === 'combat' || combatState?.isActive) && (
+            <div className="shrink-0">
+              <CombatTracker
+                combatState={
+                  combatState || {
+                    isActive: true,
+                    round: 1,
+                    activeTurnIndex: 0,
+                    combatants: characters.map((c, i) => ({
+                      entityId: c.id,
+                      name: c.name,
+                      entityType: 'character',
+                      roll: 15,
+                      initiativeBonus: c.initiativeBonus || 0,
+                      initiative: 15 + (c.initiativeBonus || 0),
+                      isVisibleToPlayers: true,
+                    })),
+                  }
+                }
+                characters={characters}
+                npcs={npcs}
+                userRole={userRole}
+                activeCharacterId={selectedCharacterId}
+                currentSnapshot={currentSnapshot}
+                onOpenCharacterSheet={(c) => setSheetChar(c)}
+                onSubmitAction={async (envelope) => {
+                  return runtimeService.submitActionEnvelope(envelope);
+                }}
+              />
             </div>
           )}
 
@@ -687,11 +896,11 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
               <div className="p-4 rounded-lg bg-neutral-900/80 border border-amber-900/30 text-xs leading-relaxed space-y-2">
                 <div className="flex items-center gap-2 text-amber-300 font-bold font-mono text-[11px] pb-1 border-b border-neutral-800">
                   <Compass className="w-3.5 h-3.5" />
-                  <span>Scene Setting · Primara Cathedral</span>
+                  <span>Scene Setting · {dynamicSceneTitle}</span>
                   <span className="text-neutral-500 ml-auto font-normal font-sans text-[10px]">Session Ready</span>
                 </div>
                 <p className="text-neutral-300">
-                  The mist of Highgate Harbor curls against the weathered limestone buttresses of Primara Cathedral. Cold salt winds rattle the lantern ironwork along the quayside. Scholar Jorren Vale stands beneath the arched portico, checking the wax seals on an ancient series of parchment scrolls.
+                  {dynamicSummary}
                 </p>
                 <div className="p-2 rounded bg-neutral-950/60 border border-neutral-800/80 text-[11px] text-neutral-400">
                   Enter dialogue or an action below to converse with Scholar Vale or inspect the surroundings. All player inputs, AI Co-DM narration, and rule adjudications appear here in chronological order.
@@ -837,22 +1046,46 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
           </div>
 
           {/* Narrative Prompt Console */}
-          <form onSubmit={handleQuickSubmit} className="p-3 bg-neutral-900 border-t border-neutral-800 shrink-0 flex gap-2">
-            <input
-              type="text"
-              value={actionInput}
-              onChange={(e) => setActionInput(e.target.value)}
-              placeholder={`What does ${activeChar?.name || 'Lyra'} do? (e.g. "I ask Scholar Jorren Vale about the seal on the harbor gate")`}
-              className="flex-1 bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-amber-500"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold rounded-md text-xs flex items-center gap-1.5 transition-colors"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Act</span>
-            </button>
-          </form>
+          <div className="bg-neutral-900 border-t border-neutral-800 shrink-0">
+            {actionError && (
+              <div className="px-3 py-1.5 bg-red-950/80 border-b border-red-800 text-red-200 text-xs flex items-center justify-between">
+                <span>{actionError}</span>
+                <button onClick={() => setActionError(null)} className="text-red-400 hover:text-white">×</button>
+              </div>
+            )}
+            <form onSubmit={handleQuickSubmit} className="p-3 flex gap-2">
+              <input
+                type="text"
+                value={actionInput}
+                onChange={(e) => setActionInput(e.target.value)}
+                placeholder={`What does ${activeChar?.name || 'Lyra'} do? (e.g. "I ask Scholar Jorren Vale about the seal on the harbor gate")`}
+                disabled={actionStatus === 'submitting'}
+                className="flex-1 bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-amber-500 disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={actionStatus === 'submitting'}
+                className="px-4 py-2 bg-amber-700 hover:bg-amber-600 text-neutral-950 font-bold rounded-md text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                {actionStatus === 'submitting' ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-neutral-950 border-t-amber-300 rounded-full animate-spin" />
+                    <span>Sending…</span>
+                  </>
+                ) : actionStatus === 'success' ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Sent!</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Act</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
         </main>
 
         {/* Right Toggle */}

@@ -104,8 +104,15 @@ export const CharacterSheetModal: React.FC<Props> = ({ character, onClose, onRol
                 <div className="p-3 bg-neutral-950/80 rounded border border-neutral-800 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] text-neutral-400 uppercase font-mono">Hit Points</span>
-                    <div className="text-lg font-bold text-emerald-400 font-mono">
-                      {character.currentHp} / {character.maxHp}
+                    <div className="flex items-center gap-2">
+                      <div className="text-lg font-bold text-emerald-400 font-mono">
+                        {character.currentHp} / {character.maxHp}
+                      </div>
+                      {(character.tempHp || 0) > 0 && (
+                        <span className="text-[10px] font-mono px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+                          +{character.tempHp} Temp
+                        </span>
+                      )}
                     </div>
                   </div>
                   <Heart className="w-6 h-6 text-emerald-500/40" />
@@ -134,6 +141,23 @@ export const CharacterSheetModal: React.FC<Props> = ({ character, onClose, onRol
                   <Footprints className="w-6 h-6 text-neutral-600" />
                 </div>
               </div>
+
+              {/* Active Conditions */}
+              {character.conditions && character.conditions.length > 0 && (
+                <div className="p-2.5 rounded bg-red-950/30 border border-red-900/50 flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase text-red-400 font-bold">Conditions:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {character.conditions.map((cond) => (
+                      <span
+                        key={cond}
+                        className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-950 text-red-200 border border-red-800"
+                      >
+                        {cond}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 6 Ability Scores */}
               <div>

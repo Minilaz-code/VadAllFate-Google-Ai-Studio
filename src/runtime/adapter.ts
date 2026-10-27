@@ -593,15 +593,27 @@ export class DemoCampaignClient implements CampaignClient {
         reason: `${attackName} vs ${targetName}`,
       };
 
-      if (damage && !isFumble && targetNpc) {
-        const newHp = Math.max(0, targetNpc.statBlock ? targetNpc.statBlock.hitPoints - damage : 0);
-        proposedPatches.push({
-          entityType: 'npc',
-          entityId: targetId,
-          path: 'statBlock.hitPoints',
-          op: 'replace',
-          value: newHp,
-        });
+      if (damage && !isFumble) {
+        if (targetNpc) {
+          const prev = targetNpc.statBlock ? targetNpc.statBlock.hitPoints : 20;
+          const newHp = Math.max(0, prev - damage);
+          proposedPatches.push({
+            entityType: 'npc',
+            entityId: targetId,
+            path: 'statBlock.hitPoints',
+            op: 'replace',
+            value: newHp,
+          });
+        } else if (targetChar) {
+          const newHp = Math.max(0, targetChar.currentHp - damage);
+          proposedPatches.push({
+            entityType: 'character',
+            entityId: targetId,
+            path: 'currentHp',
+            op: 'replace',
+            value: newHp,
+          });
+        }
       }
 
       eventSummary = `${actorDisplayName} launched ${attackName} against ${targetName}: To-Hit Total ${totalToHit} (${
@@ -650,7 +662,156 @@ export class DemoCampaignClient implements CampaignClient {
       });
       eventSummary = `Master World Clock advanced by ${minutes} minutes (Time is now ${newClock.calendar.timeString}, ${newClock.calendar.timeOfDay}).`;
       eventCategory = 'WORLD';
-    } else if (envelope.actionType === 'REST_SHORT' || envelope.actionType === 'REST_LONG') {
+    } else if (envelope.actionType === 'CAST_SPELL') {
+      const { casterId, targetId, spellName, slotLevel, damage, healing } = envelope.payload;
+      const char = this.state.characters.find((c) => c.id === (casterId || envelope.actorId));
+      const targetNpc = this.state.npcs.find((n) => n.id === targetId);
+      const targetChar = this.state.characters.find((c) => c.id === targetId);
+      actorDisplayName = char?.name || casterId || envelope.actorId;
+      const targetName = targetNpc?.name || targetChar?.name || 'Target';
+
+      if (slotLevel && slotLevel > 0 && char && char.spellSlots && char.spellSlots[slotLevel]) {
+        const slot = char.spellSlots[slotLevel];
+        proposedPatches.push({
+          entityType: 'character',
+          entityId: char.id,
+          path: `spellSlots.${slotLevel}.used`,
+          op: 'replace',
+          value: Math.min(slot.max, slot.used + 1),
+        });
+      }
+
+      if (damage && damage > 0) {
+        if (targetNpc && targetNpc.statBlock) {
+          const newHp = Math.max(0, targetNpc.statBlock.hitPoints - damage);
+          proposedPatches.push({
+            entityType: 'npc',
+            entityId: targetId,
+            path: 'statBlock.hitPoints',
+            op: 'replace',
+            value: newHp,
+          });
+        } else if (targetChar) {
+          const newHp = Math.max(0, targetChar.currentHp - damage);
+          proposedPatches.push({
+            entityType: 'character',
+            entityId: targetId,
+            path: 'currentHp',
+            op: 'replace',
+            value: newHp,
+          });
+        }
+      } else if (healing && healing > 0 && targetChar) {
+        const newHp = Math.min(targetChar.maxHp, targetChar.currentHp + healing);
+        proposedPatches.push({
+          entityType: 'character',
+          entityId: targetId,
+          path: 'currentHp',
+          op: 'replace',
+          value: newHp,
+        });
+      }
+
+      eventSummary = `${actorDisplayName} cast ${spellName} on ${targetName}${damage ? ` dealing ${damage} damage` : healing ? ` restoring ${healing} HP` : ''}.`;
+      eventCategory = 'MAGIC';
+    } else if (envelope.actionType === 'USE_ITEM') {
+      const { actorId, targetId, itemName, healing } = envelope.payload;
+      const char = this.state.characters.find((c) => c.id === (actorId || envelope.actorId));
+      const targetChar = this.state.characters.find((c) => c.id === (targetId || actorId || envelope.actorId));
+      actorDisplayName = char?.name || envelope.actorId;
+      const targetName = targetChar?.name || 'Self';
+
+      if (healing && healing > 0 && targetChar) {
+        const newHp = Math.min(targetChar.maxHp, targetChar.currentHp + healing);
+        proposedPatches.push({
+          entityType: 'character',
+          entityId: targetChar.id,
+          path: 'currentHp',
+          op: 'replace',
+          value: newHp,
+        });
+      }
+
+      eventSummary = `${actorDisplayName} used ${itemName} on ${targetName}${healing ? ` (Restored ${healing} HP)` : ''}.`;
+      eventCategory = 'COMBAT';
+    } else if (envelope.actionType === 'DM_OVERRIDE_STATE') {
+      const { entityId, entityType, path, value, summary } = envelope.payload;
+      actorDisplayName = 'Dungeon Master';
+      proposedPatches.push({
+        entityType: entityType || 'character',
+        entityId,
+        path: path || 'currentHp',
+        op: 'replace',
+        value,
+      });
+      eventSummary = summary || `DM adjusted ${entityId} ${path} to ${value}.`;
+      eventCategory = 'DM_NOTE';
+    } else if (envelope.actionType === 'START_ENCOUNTER' || envelope.actionType === 'ROLL_INITIATIVE') {
+      const combatants: any[] = [];
+      for (const c of this.state.characters) {
+        const d20 = Math.floor(Math.random() * 20) + 1;
+        const total = d20 + (c.initiativeBonus || 0);
+        combatants.push({
+          entityId: c.id,
+          name: c.name,
+          entityType: 'character',
+          roll: d20,
+          initiativeBonus: c.initiativeBonus || 0,
+          initiative: total,
+          isVisibleToPlayers: true,
+        });
+      }
+      for (const n of this.state.npcs) {
+        if (n.token?.isVisibleToPlayers) {
+          const d20 = Math.floor(Math.random() * 20) + 1;
+          const bonus = n.statBlock?.dexterity ? Math.floor((n.statBlock.dexterity - 10) / 2) : 1;
+          combatants.push({
+            entityId: n.id,
+            name: n.name,
+            entityType: 'npc',
+            roll: d20,
+            initiativeBonus: bonus,
+            initiative: d20 + bonus,
+            isVisibleToPlayers: true,
+          });
+        }
+      }
+      combatants.sort((a, b) => b.initiative - a.initiative);
+      this.state.combatState = {
+        isActive: true,
+        round: 1,
+        activeTurnIndex: 0,
+        combatants,
+      };
+      eventSummary = `Initiative rolled! Combat encounter started with ${combatants.length} combatants. Current turn: ${combatants[0]?.name}.`;
+      eventCategory = 'COMBAT';
+    } else if (envelope.actionType === 'NEXT_TURN') {
+      if (this.state.combatState && this.state.combatState.isActive) {
+        let nextIdx = this.state.combatState.activeTurnIndex + 1;
+        let nextRound = this.state.combatState.round;
+        if (nextIdx >= this.state.combatState.combatants.length) {
+          nextIdx = 0;
+          nextRound += 1;
+        }
+        this.state.combatState = {
+          ...this.state.combatState,
+          round: nextRound,
+          activeTurnIndex: nextIdx,
+        };
+        const activeName = this.state.combatState.combatants[nextIdx]?.name || 'Combatant';
+        eventSummary = `Encounter advanced to Round ${nextRound}, Turn: ${activeName}.`;
+        eventCategory = 'COMBAT';
+      }
+    } else if (envelope.actionType === 'END_ENCOUNTER') {
+      if (this.state.combatState) {
+        this.state.combatState = {
+          ...this.state.combatState,
+          isActive: false,
+        };
+      }
+      eventSummary = 'Combat encounter ended. Scene returned to freeform play.';
+      eventCategory = 'COMBAT';
+    } else if (envelope.actionType === 'REST_SHORT' || envelope.actionType === 'REST_LONG' || (envelope.actionType as string) === 'REST_ACTION') {
       const isLong = envelope.actionType === 'REST_LONG';
       const minutes = isLong ? 480 : 60;
       const newClock = advanceWorldClock(this.state.worldClock, minutes);
@@ -671,6 +832,17 @@ export class DemoCampaignClient implements CampaignClient {
             op: 'replace',
             value: c.maxHp,
           });
+          if (c.spellSlots) {
+            for (const lvl of Object.keys(c.spellSlots)) {
+              proposedPatches.push({
+                entityType: 'character',
+                entityId: c.id,
+                path: `spellSlots.${lvl}.used`,
+                op: 'replace',
+                value: 0,
+              });
+            }
+          }
         }
       }
 
@@ -723,6 +895,15 @@ export class DemoCampaignClient implements CampaignClient {
             if (patch.path === 'token.x') clone.token.x = patch.value;
             else if (patch.path === 'token.y') clone.token.y = patch.value;
             else if (patch.path === 'currentHp') clone.currentHp = patch.value;
+            else if (patch.path === 'tempHp') clone.tempHp = patch.value;
+            else if (patch.path === 'armorClass') clone.armorClass = patch.value;
+            else if (patch.path === 'conditions') clone.conditions = patch.value;
+            else if (patch.path.startsWith('spellSlots.')) {
+              const parts = patch.path.split('.');
+              if (parts.length === 3 && clone.spellSlots && clone.spellSlots[parts[1]]) {
+                clone.spellSlots[parts[1]][parts[2]] = patch.value;
+              }
+            }
             return clone;
           }
           return c;
@@ -735,6 +916,8 @@ export class DemoCampaignClient implements CampaignClient {
             else if (patch.path === 'token.y') clone.token.y = patch.value;
             else if (patch.path === 'statBlock.hitPoints' && clone.statBlock) {
               clone.statBlock.hitPoints = patch.value;
+            } else if (patch.path === 'conditions') {
+              clone.conditions = patch.value;
             }
             return clone;
           }

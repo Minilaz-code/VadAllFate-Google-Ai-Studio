@@ -41,20 +41,45 @@ export default function App() {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [hostKeyInput, setHostKeyInput] = useState('');
   const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [connectionState, setConnectionState] = useState<'CONNECTING' | 'CONNECTED' | 'AUTH REQUIRED' | 'DISCONNECTED' | 'EXPLICIT DEMO'>('CONNECTING');
 
-  // Windows launcher hand-off: `#vf_host_key=...` is exchanged once for Host-issued sessions
-  // (the fragment is never sent to a server) and removed from the address bar.
+  // Starts in attempted live mode by default
   useEffect(() => {
-    const key = consumeHostKeyFromUrlFragment();
-    if (key) {
-      void (async () => {
+    let active = true;
+    const initConnection = async () => {
+      const key = consumeHostKeyFromUrlFragment();
+      if (key) {
+        setConnectionState('CONNECTING');
         const token = await clientManager.getPythonGateway().authenticateSession(key);
         setAuthMessage(token ? null : clientManager.getPythonGateway().lastAuthError);
-        await clientManager.connectPythonGateway();
-      })();
-    } else if (hasV2Session() && clientManager.isUsingDemo()) {
-      void clientManager.connectPythonGateway();
-    }
+        const ok = await clientManager.connectPythonGateway();
+        if (active) {
+          if (ok) {
+            setConnectionState('CONNECTED');
+          } else {
+            setConnectionState(hasV2Session() ? 'DISCONNECTED' : 'AUTH REQUIRED');
+          }
+        }
+      } else if (hasV2Session()) {
+        setConnectionState('CONNECTING');
+        const ok = await clientManager.connectPythonGateway();
+        if (active) {
+          setConnectionState(ok ? 'CONNECTED' : 'DISCONNECTED');
+        }
+      } else {
+        setConnectionState('CONNECTING');
+        const ok = await clientManager.connectPythonGateway();
+        if (active) {
+          if (ok) {
+            setConnectionState('CONNECTED');
+          } else {
+            setConnectionState(hasV2Session() ? 'DISCONNECTED' : 'AUTH REQUIRED');
+          }
+        }
+      }
+    };
+    void initConnection();
+    return () => { active = false; };
   }, []);
   const [isUsingDemo, setIsUsingDemo] = useState(clientManager.isUsingDemo());
   const [, setTick] = useState(0);
@@ -177,13 +202,18 @@ export default function App() {
         }}
         onOpenAudit={() => setIsAuditModalOpen(true)}
         runtimeStatusText={connectionStatus.statusLabel}
+        connectionState={connectionState}
         isUsingDemoClient={isUsingDemo}
         onToggleClientMode={(useDemo) => {
           if (useDemo) {
             clientManager.switchClient(true);
+            setConnectionState('EXPLICIT DEMO');
           } else {
             clientManager.switchClient(false);
-            void clientManager.connectPythonGateway();
+            setConnectionState('CONNECTING');
+            void clientManager.connectPythonGateway().then((ok) => {
+              setConnectionState(ok ? 'CONNECTED' : (hasV2Session() ? 'DISCONNECTED' : 'AUTH REQUIRED'));
+            });
           }
         }}
         onExitPreview={handleExitPreview}
