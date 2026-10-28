@@ -146,6 +146,22 @@ export interface CombatTurnState {
   combatants: CombatantTurnEntry[];
 }
 
+export type DicePolicy = 'ALLOW_MIXED_HONOUR_SYSTEM' | 'REQUIRE_DM_CONFIRMATION' | 'SERVER_DIGITAL_ONLY';
+export type DiceMode = 'SERVER_DIGITAL' | 'PLAYER_PHYSICAL' | 'DM_PHYSICAL' | 'DM_ADJUDICATED_OVERRIDE';
+
+export interface PendingAdjudication {
+  adjudicationId: string;
+  adjudicationType?: string;
+  actorId: string;
+  actorRole: string;
+  actionType: string;
+  stagedAtUtc: string;
+  payload: any;
+  summary: string;
+  status: 'PENDING_HUMAN_DM_APPROVAL' | 'COMMITTED' | 'REJECTED';
+  proposedPatches?: any[];
+}
+
 export interface BaseCampaignProjection {
   campaignId: string;
   name: string;
@@ -154,6 +170,9 @@ export interface BaseCampaignProjection {
   characters: CharacterSheet[];
   sourcePacks: SourcePack[];
   combatState?: CombatTurnState;
+  dicePolicy?: DicePolicy;
+  characterDicePreferences?: Record<string, DiceMode>;
+  pendingAdjudications?: PendingAdjudication[];
   isServerVerifiedProjection: boolean; // false in demo mode
   projectionGeneratedAtUtc: string;
 }

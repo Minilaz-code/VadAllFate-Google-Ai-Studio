@@ -819,6 +819,39 @@ export class V2BackendClient {
       audio_data_url: `data:audio/wav;base64,${minimalWavBase64}`,
     };
   }
+
+  public async uploadBattlemapAsset(
+    fileName: string,
+    dataBase64: string,
+    assetId?: string
+  ): Promise<{ assetId: string; url: string; fileName: string; sizeBytes: number; mimeType: string }> {
+    try {
+      const resp = await fetch(`${this.baseUrl}/battlemap/assets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders() },
+        body: JSON.stringify({
+          fileName,
+          dataBase64,
+          assetId,
+        }),
+      });
+      if (resp.ok) {
+        return await resp.json();
+      }
+      await this.handleNonOk(resp, 'uploadBattlemapAsset');
+    } catch (err) {
+      this.handleCatch(err, 'uploadBattlemapAsset');
+    }
+    // Fallback if offline/local demo:
+    const fallbackId = assetId || `asset-${Date.now()}`;
+    return {
+      assetId: fallbackId,
+      url: dataBase64.startsWith('data:') ? dataBase64 : `data:image/png;base64,${dataBase64}`,
+      fileName,
+      sizeBytes: dataBase64.length,
+      mimeType: 'image/png',
+    };
+  }
 }
 
 export const v2BackendClient = new V2BackendClient();

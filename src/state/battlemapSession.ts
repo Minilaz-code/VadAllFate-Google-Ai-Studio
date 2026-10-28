@@ -538,6 +538,70 @@ export class BattlemapSessionManager {
     }
   }
 
+  /**
+   * Clears privileged DM-only geometry, cached undo/redo stacks, and confidential metadata
+   * when transitioning to a Player or Observer identity or entering Player Preview mode.
+   */
+  public clearPrivilegedCache(): void {
+    // 1. Clear all undo/redo history stacks
+    this.undoStacks = {};
+    this.redoStacks = {};
+
+    // 2. Sanitize privileged geometry from all cached session maps
+    for (const map of this.maps) {
+      if (map.backgroundArtwork) {
+        delete (map.backgroundArtwork as any).dmOverlayUrl;
+        delete (map.backgroundArtwork as any).secretMapUrl;
+        delete (map.backgroundArtwork as any).dmNotes;
+        if ((map.backgroundArtwork as any).playerArtworkUrl) {
+          map.backgroundArtwork.url = (map.backgroundArtwork as any).playerArtworkUrl;
+        }
+      }
+
+      if (map.geometry) {
+        // Strip secret doors unless open
+        if (map.geometry.doors) {
+          map.geometry.doors = map.geometry.doors
+            .filter((d: any) => !d.isSecret || d.state === 'open')
+            .map((d: any) => {
+              const copy = { ...d };
+              delete copy.dmNotes;
+              delete copy.secretDc;
+              delete copy.lockpickDc;
+              delete copy.keyId;
+              return copy;
+            });
+        }
+
+        // Strip secret windows unless open/broken
+        if (map.geometry.windows) {
+          map.geometry.windows = map.geometry.windows
+            .filter((w: any) => !w.isSecret || w.state === 'broken' || w.state === 'open')
+            .map((w: any) => {
+              const copy = { ...w };
+              delete copy.dmNotes;
+              delete copy.secretDc;
+              return copy;
+            });
+        }
+
+        // Strip DM-only, secret, or hazard terrain zones
+        if (map.geometry.terrain) {
+          map.geometry.terrain = map.geometry.terrain.filter(
+            (t: any) => t.isVisibleToPlayers !== false && !t.isHazard && !t.isSecret && !t.isDmOnly
+          );
+        }
+      }
+
+      // Filter hidden/DM-only tokens
+      if (map.tokens) {
+        map.tokens = map.tokens.filter((tok: any) => !tok.isHidden && !tok.isDmOnly);
+      }
+    }
+
+    this.notify();
+  }
+
   public resetToDefaults(): void {
     // Revoke all tracked blobs safely
     this.blobUrlRefCounts.forEach((_, url) => {

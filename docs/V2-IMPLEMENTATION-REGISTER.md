@@ -260,3 +260,46 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 - **Next Development Milestone (Milestone 13):**
   - **UX-04 Tabletop Cockpit & Modern Charcoal/Bronze Design System Integration:** Implement user-selected layout proposal (Proposal A, B, C, or D) unifying Narrative Feed, Calibrated Battlemap, and Interactive Combat Tracker.
 
+---
+
+## 18. Milestone 12B — Final Trust, Physical Dice and Gameplay Persistence Gates
+
+**Audit & Execution Date:** 2026-10-28  
+**Backend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Frontend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Core Deliverables & Architectural Conformance:**
+
+- **1. Deterministic Dice Security, Physical Dice and Rules Correctness (1A–1E):**
+  - **Server Digital Entropy (1A):** Replaced client-nonce derived digital dice with unmineable HMAC-SHA256 server entropy `hmac_sha256(server_secret, f"{campaign_id}:{seq}:{action_id}:{salt}")`. Client-forged `d20`, `attackBonus`, `totalToHit`, and `damage` values are stripped and ignored in digital mode. Actions generate deterministic `SERVER_GENERATED` receipts carrying cryptographic `entropyProof`.
+  - **First-Class Physical Dice Support (1B):** Implemented `PLAYER_PHYSICAL` and `DM_PHYSICAL` modes across `ATTACK_ACTION`, `SKILL_CHECK`, `SAVING_THROW`, and `CAST_SPELL`. Accepts raw rolled face arrays (`rawRolls: [14]`, `damageRolls: [5, 4]`), strictly bounds-checks each die (1..20 for d20, 1..die_sides for damage), and tags results as `PLAYER_REPORTED_UNVERIFIED` (or `DM_REPORTED`). Out-of-bounds faces (e.g. 25 on d20, 7 on d6) and forged totals are rejected with `REJECTED_VALIDATION_FAILURE`.
+  - **Session Trust Policies (1C):**
+    - `ALLOW_MIXED_HONOUR_SYSTEM` (default): Physical dice claims commit immediately to authoritative state with `PLAYER_REPORTED_UNVERIFIED`.
+    - `REQUIRE_DM_CONFIRMATION`: Player physical rolls are staged into `pendingAdjudications` with status `PENDING_HUMAN_DM_APPROVAL` and `adjudicationType: "PHYSICAL_DICE_CONFIRMATION"`. No HP or resources are deducted until an authenticated DM reviews and dispatches `APPROVE_ADJUDICATION`.
+    - `SERVER_DIGITAL_ONLY`: Physical dice submissions by players are rejected fail-closed with `REJECTED_POLICY_VIOLATION`.
+    - Implemented `SET_DICE_POLICY` (DM-only) and `SET_CHARACTER_DICE_PREFERENCE` actions.
+  - **Authoritative Weapon Damage Resolution (1D):** Resolution against SRD 5.1 equipment definitions via `SRD51RulesReader` query with deterministic fallback table. Correctly resolves Greatsword 2d6 (requires exactly 2 dice, or 4 dice on critical hit; flat modifier added once), Shortsword 1d6, Dagger 1d4, Greataxe 1d12, Quarterstaff 1d8. Advantage/disadvantage resolves max/min on reported raw faces. Standard 5e critical hit rule enforced: dice count doubled, flat bonus never multiplied twice.
+  - **Human Review Safeguard (1E):** Staged physical dice adjudications present raw rolled faces, formula, and pending outcome to the DM with full Approve/Reject actions.
+
+- **2. Spatial Secrecy and Projection Isolation (2):**
+  - Player/observer projection strictly strips secret doors (unless open), secret windows (unless broken), hidden tokens, and hazard/secret terrain zones (`isHazard`, `isSecret`, `isDmOnly`).
+  - Strips all confidential DM fields: `dmNotes`, `secretDc`, `lockpickDc`, `keyId`.
+  - In `backgroundArtwork`: strips `dmOverlayUrl`, `secretMapUrl`, `dmNotes`; substitutes `playerArtworkUrl` as `url` if present.
+  - Role-switch cache clearance: `BattlemapSessionManager.clearPrivilegedCache()` flushes undo/redo stacks and purges privileged geometry when switching to Player or Observer roles or entering Player Preview mode.
+
+- **3. Genuine VTT Restart Persistence (3):**
+  - Implemented server asset storage HTTP endpoints: `POST /api/v2/battlemap/assets` and `GET /api/v2/battlemap/assets/{asset_id}`.
+  - Decodes base64 map artwork and stores persistent binary files to `data/battlemap_assets/{asset_id}.*` on disk.
+  - Battlemap imports in `BattlemapView.tsx` upload local artwork to the server, assigning durable URLs `/api/v2/battlemap/assets/{assetId}` rather than transient `blob:` URLs. Imported maps survive application reload and backend process restart without data loss.
+
+- **4. Spatial Integration Readiness (4):**
+  - Versioned coordinate adapter for `MOVE_TOKEN` supporting both `coordinateSystem: "grid_cell"` (clamped to active map grid boundaries) and `coordinateSystem: "percentage"` (0..100 floating-point precision).
+  - Updates both character/NPC entity tokens and active battlemap geometry tokens.
+
+- **5. Layout Governance & Non-Disruptive UI Integration (5):**
+  - Preserved Proposals A, B, C, D in `docs/V2-UI-LAYOUT-PROPOSALS.md` without disruptive visual redesign before explicit user approval.
+  - Embedded non-intrusive physical dice controls directly into `CombatTracker.tsx` and `ActionSubmissionModal.tsx`: Virtual Digital Dice vs Real Physical Dice toggle, raw d20 and weapon damage dice inputs, table dice policy badge/dropdown, and pending adjudications review queue.
+
+- **6. Verification Evidence:**
+  - **Backend Tests:** 390 collected tests across 47 test modules (`uv run pytest`), 100% passing.
+  - **Frontend Tests:** 141 unit, integration & spatial secrecy tests across 21 test suites (`node --test`), 100% passing.
+  - **Frontend Build:** Vite production build cleanly verified in 650ms.

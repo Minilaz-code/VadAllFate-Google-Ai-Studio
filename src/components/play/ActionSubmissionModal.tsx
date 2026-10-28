@@ -41,6 +41,9 @@ export const ActionSubmissionModal: React.FC<Props> = ({
   const [skillName, setSkillName] = useState('Perception');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<CommitReceipt | null>(null);
+  const [diceMode, setDiceMode] = useState<'SERVER_DIGITAL' | 'PLAYER_PHYSICAL'>('SERVER_DIGITAL');
+  const [physicalD20, setPhysicalD20] = useState<number>(15);
+  const [physicalDamage, setPhysicalDamage] = useState<number>(6);
 
   if (!isOpen) return null;
 
@@ -60,26 +63,29 @@ export const ActionSubmissionModal: React.FC<Props> = ({
     };
 
     if (actionType === 'ATTACK_ACTION') {
-      const rollD20 = Math.floor(Math.random() * 20) + 1;
-      const bonus = 3;
       actionEnvelope.payload = {
         attackerId: actorId,
         targetId,
         attackName: 'Longbow Snipe',
-        roll: rollD20,
-        isCritical: rollD20 === 20,
-        isFumble: rollD20 === 1,
-        totalToHit: rollD20 + bonus,
-        damage: Math.floor(Math.random() * 8) + 1 + 3,
+        weaponName: 'Longbow',
+        diceMode,
+        ...(diceMode === 'PLAYER_PHYSICAL'
+          ? {
+              rawRolls: [physicalD20],
+              damageRolls: [physicalDamage],
+            }
+          : {}),
       };
     } else if (actionType === 'SKILL_CHECK') {
-      const rollD20 = Math.floor(Math.random() * 20) + 1;
       actionEnvelope.payload = {
         skillName,
-        roll: rollD20,
-        modifier: 2,
-        total: rollD20 + 2,
         reason: 'Searching for hidden door grooves',
+        diceMode,
+        ...(diceMode === 'PLAYER_PHYSICAL'
+          ? {
+              rawRoll: physicalD20,
+            }
+          : {}),
       };
     } else if (actionType === 'REST_SHORT') {
       actionEnvelope.payload = { minutes: 60 };
@@ -219,6 +225,71 @@ export const ActionSubmissionModal: React.FC<Props> = ({
               </div>
             )}
           </div>
+
+          {(actionType === 'ATTACK_ACTION' || actionType === 'SKILL_CHECK') && (
+            <div className="space-y-2 p-3 bg-neutral-950 border border-neutral-800 rounded">
+              <label className="text-[11px] uppercase font-mono text-neutral-400 block">
+                Dice Roll Resolution Mode
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDiceMode('SERVER_DIGITAL')}
+                  className={`px-3 py-1.5 rounded font-mono text-xs border transition-colors ${
+                    diceMode === 'SERVER_DIGITAL'
+                      ? 'bg-amber-600/20 border-amber-500 text-amber-200 font-bold'
+                      : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  Virtual Server Dice (HMAC)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDiceMode('PLAYER_PHYSICAL')}
+                  className={`px-3 py-1.5 rounded font-mono text-xs border transition-colors ${
+                    diceMode === 'PLAYER_PHYSICAL'
+                      ? 'bg-amber-600/20 border-amber-500 text-amber-200 font-bold'
+                      : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  Real Physical Dice (Honour)
+                </button>
+              </div>
+
+              {diceMode === 'PLAYER_PHYSICAL' && (
+                <div className="pt-2 grid grid-cols-2 gap-3 border-t border-neutral-800/80">
+                  <div>
+                    <label className="text-[10px] text-neutral-400 font-mono block mb-1">
+                      Reported d20 Face (1..20):
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={physicalD20}
+                      onChange={(e) => setPhysicalD20(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                      className="w-full bg-neutral-900 border border-neutral-700 rounded px-2.5 py-1 text-amber-200 font-bold font-mono text-center outline-none"
+                    />
+                  </div>
+                  {actionType === 'ATTACK_ACTION' && (
+                    <div>
+                      <label className="text-[10px] text-neutral-400 font-mono block mb-1">
+                        Damage Die Face (1..8):
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={physicalDamage}
+                        onChange={(e) => setPhysicalDamage(Math.max(1, Math.min(8, parseInt(e.target.value) || 1)))}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded px-2.5 py-1 text-amber-200 font-bold font-mono text-center outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {actionType === 'FREEFORM_ROLEPLAY' && (
             <div>

@@ -28,6 +28,8 @@ import type {
   DemoActionEnvelope,
   PlayerSafeNpc,
   SnapshotRef,
+  DicePolicy,
+  PendingAdjudication,
 } from '../../types/runtime.ts';
 
 interface CombatTrackerProps {
@@ -37,6 +39,8 @@ interface CombatTrackerProps {
   userRole: UserRole;
   activeCharacterId?: string;
   currentSnapshot: SnapshotRef;
+  dicePolicy?: DicePolicy;
+  pendingAdjudications?: PendingAdjudication[];
   onOpenCharacterSheet: (char: CharacterSheet) => void;
   onSubmitAction: (envelope: DemoActionEnvelope) => Promise<any>;
 }
@@ -65,6 +69,8 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   userRole,
   activeCharacterId = 'char-lyra-01',
   currentSnapshot,
+  dicePolicy,
+  pendingAdjudications,
   onOpenCharacterSheet,
   onSubmitAction,
 }) => {
@@ -79,6 +85,13 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   const [selectedSpellLevel, setSelectedSpellLevel] = useState<number>(1);
   const [customValue, setCustomValue] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Milestone 12B: Physical vs Server Digital Dice states
+  const [diceMode, setDiceMode] = useState<'SERVER_DIGITAL' | 'PLAYER_PHYSICAL'>('SERVER_DIGITAL');
+  const [rollAdvState, setRollAdvState] = useState<'normal' | 'advantage' | 'disadvantage'>('normal');
+  const [physicalD20, setPhysicalD20] = useState<number>(14);
+  const [physicalD20Adv, setPhysicalD20Adv] = useState<number>(16);
+  const [physicalDamageDice, setPhysicalDamageDice] = useState<number[]>([4]);
 
   const activeTurnCombatant = combatState.combatants[combatState.activeTurnIndex];
 
@@ -222,8 +235,12 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
     const target = getCombatantEntity(targetId);
     if (!attacker || !target) return;
 
-    // Milestone 11B-QA: Dice rolls, hit calculations, and damage are resolved authoritatively in Python.
-    // Client sends action intent only; no Math.random() rolls or fabricated outcomes.
+    // Milestone 12B: Python is authoritative over calculations and outcome validation.
+    // In physical mode, raw rolled numbers are accepted and bounds-checked.
+    // In digital mode, server entropy generates unmineable dice rolls.
+    const effectiveDiceMode = isDm ? (diceMode === 'PLAYER_PHYSICAL' ? 'DM_PHYSICAL' : 'SERVER_DIGITAL') : diceMode;
+    const rawRolls = rollAdvState === 'normal' ? [physicalD20] : [physicalD20, physicalD20Adv];
+
     await onSubmitAction({
       actionId: `act-atk-${Date.now()}`,
       clientNonce: `nonce-atk-${Date.now()}`,
@@ -236,6 +253,15 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
         targetId: target.data.id,
         attackName: selectedWeapon || 'Longsword',
         weaponName: selectedWeapon || 'Longsword',
+        diceMode: effectiveDiceMode,
+        advantage: rollAdvState === 'advantage',
+        disadvantage: rollAdvState === 'disadvantage',
+        ...(effectiveDiceMode !== 'SERVER_DIGITAL'
+          ? {
+              rawRolls,
+              damageRolls: physicalDamageDice,
+            }
+          : {}),
       },
       timestampUtc: new Date().toISOString(),
     });
@@ -290,6 +316,48 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
               {activeTurnCombatant?.name || 'Awaiting initiative'}
             </span>
           </div>
+
+          {/* Table Dice Policy Indicator */}
+          <div className="flex items-center gap-1.5 bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1">
+            <Dice5 className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-neutral-400 font-mono text-[10px] uppercase">Policy:</span>
+            {isDm ? (
+              <select
+                value={dicePolicy || 'ALLOW_MIXED_HONOUR_SYSTEM'}
+                onChange={(e) => {
+                  onSubmitAction({
+                    actionId: `act-set-policy-${Date.now()}`,
+                    clientNonce: `nonce-policy-${Date.now()}`,
+                    actorId: isDm ? 'dm-1' : activeCharacterId,
+                    actorRole: userRole,
+                    actionType: 'SET_DICE_POLICY',
+                    snapshotRef: { ...currentSnapshot },
+                    payload: { dicePolicy: e.target.value },
+                    timestampUtc: new Date().toISOString(),
+                  });
+                }}
+                className="bg-transparent text-amber-300 font-bold font-mono text-[11px] outline-none cursor-pointer border-b border-amber-600/40"
+              >
+                <option value="ALLOW_MIXED_HONOUR_SYSTEM" className="bg-neutral-900 text-neutral-200">
+                  Mixed Honour System
+                </option>
+                <option value="REQUIRE_DM_CONFIRMATION" className="bg-neutral-900 text-neutral-200">
+                  Require DM Confirmation
+                </option>
+                <option value="SERVER_DIGITAL_ONLY" className="bg-neutral-900 text-neutral-200">
+                  Server Digital Only
+                </option>
+              </select>
+            ) : (
+              <span className="font-bold text-amber-300 font-mono text-[11px]">
+                {dicePolicy === 'REQUIRE_DM_CONFIRMATION'
+                  ? 'Require DM Approval'
+                  : dicePolicy === 'SERVER_DIGITAL_ONLY'
+                  ? 'Server Digital Only'
+                  : 'Mixed Honour System'}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -337,6 +405,89 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
           )}
         </div>
       </div>
+
+      {/* 1b. Pending Physical Dice & Co-DM Adjudications Queue */}
+      {pendingAdjudications && pendingAdjudications.length > 0 && (
+        <div className="p-3 bg-amber-950/30 border border-amber-700/50 rounded-lg space-y-2">
+          <div className="flex items-center justify-between text-xs font-mono font-bold text-amber-300">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              Pending Adjudications ({pendingAdjudications.length})
+            </span>
+            <span className="text-[10px] text-amber-500 uppercase">
+              {isDm ? 'Awaiting DM Confirmation' : 'Awaiting DM Review'}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {pendingAdjudications.map((adj) => (
+              <div
+                key={adj.adjudicationId}
+                className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-neutral-950/80 border border-amber-800/40 rounded text-xs font-mono"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-amber-900/60 text-amber-200 text-[10px] font-bold">
+                      {adj.adjudicationType === 'PHYSICAL_DICE_CONFIRMATION'
+                        ? 'PHYSICAL DICE CLAIM'
+                        : adj.actionType}
+                    </span>
+                    <span className="text-neutral-300 font-bold">{adj.actorId}</span>
+                    {adj.payload?.weaponName && (
+                      <span className="text-neutral-400">using {adj.payload.weaponName}</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-neutral-400">
+                    {adj.summary ||
+                      (adj.payload?.rawRolls
+                        ? `Reported d20: [${adj.payload.rawRolls.join(', ')}], Damage: [${adj.payload?.damageRolls?.join(', ') || 'N/A'}]`
+                        : 'Action awaiting resolution')}
+                  </p>
+                </div>
+
+                {isDm && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() =>
+                        onSubmitAction({
+                          actionId: `act-dm-appr-${Date.now()}`,
+                          clientNonce: `nonce-appr-${Date.now()}`,
+                          actorId: 'dm-1',
+                          actorRole: userRole,
+                          actionType: 'APPROVE_ADJUDICATION',
+                          snapshotRef: { ...currentSnapshot },
+                          payload: { adjudicationId: adj.adjudicationId },
+                          timestampUtc: new Date().toISOString(),
+                        })
+                      }
+                      className="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px] transition-colors"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() =>
+                        onSubmitAction({
+                          actionId: `act-dm-rej-${Date.now()}`,
+                          clientNonce: `nonce-rej-${Date.now()}`,
+                          actorId: 'dm-1',
+                          actorRole: userRole,
+                          actionType: 'REJECT_ADJUDICATION',
+                          snapshotRef: { ...currentSnapshot },
+                          payload: { adjudicationId: adj.adjudicationId },
+                          timestampUtc: new Date().toISOString(),
+                        })
+                      }
+                      className="px-2.5 py-1 rounded bg-red-900/80 hover:bg-red-800 text-red-200 font-bold text-[11px] transition-colors"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 2. Combatant Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -610,18 +761,166 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
               </div>
 
               {actionModalKind === 'attack' && (
-                <div>
-                  <label className="text-[10px] uppercase text-neutral-400 block mb-1">
-                    Weapon / Attack Name:
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedWeapon}
-                    onChange={(e) => setSelectedWeapon(e.target.value)}
-                    placeholder="Longsword / Shortbow / Dagger"
-                    className="w-full px-2.5 py-1.5 rounded bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs focus:border-amber-600 outline-none"
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="text-[10px] uppercase text-neutral-400 block mb-1">
+                      Weapon / Attack Name:
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedWeapon}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedWeapon(val);
+                        if (val.toLowerCase().includes('greatsword') || val.toLowerCase().includes('maul')) {
+                          setPhysicalDamageDice([3, 3]);
+                        } else {
+                          setPhysicalDamageDice([4]);
+                        }
+                      }}
+                      placeholder="Longsword / Shortbow / Dagger / Greatsword"
+                      className="w-full px-2.5 py-1.5 rounded bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs focus:border-amber-600 outline-none"
+                    />
+                  </div>
+
+                  {/* Dice Source Mode Toggle */}
+                  <div>
+                    <label className="text-[10px] uppercase text-neutral-400 block mb-1">
+                      Dice Roll Source:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDiceMode('SERVER_DIGITAL')}
+                        className={`px-3 py-1.5 rounded text-xs font-mono font-bold border transition-colors ${
+                          diceMode === 'SERVER_DIGITAL'
+                            ? 'bg-amber-600/20 border-amber-500 text-amber-200'
+                            : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        Virtual Server Dice
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDiceMode('PLAYER_PHYSICAL')}
+                        className={`px-3 py-1.5 rounded text-xs font-mono font-bold border transition-colors ${
+                          diceMode === 'PLAYER_PHYSICAL'
+                            ? 'bg-amber-600/20 border-amber-500 text-amber-200'
+                            : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        Real Physical Dice
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Advantage / Disadvantage toggle */}
+                  <div>
+                    <label className="text-[10px] uppercase text-neutral-400 block mb-1">
+                      Roll Modifier:
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['normal', 'advantage', 'disadvantage'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setRollAdvState(mode)}
+                          className={`px-2 py-1 rounded text-[11px] font-mono capitalize border transition-colors ${
+                            rollAdvState === mode
+                              ? 'bg-amber-600/20 border-amber-500 text-amber-200 font-bold'
+                              : 'bg-neutral-950 border-neutral-800 text-neutral-400'
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Physical Dice Inputs */}
+                  {diceMode === 'PLAYER_PHYSICAL' && (
+                    <div className="p-3 bg-neutral-950/70 border border-amber-900/40 rounded space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-amber-300 font-bold">
+                        <span>Reported Physical Faces (1..Sides):</span>
+                        <span className="text-[10px] text-neutral-400">Honour System</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-neutral-400 block mb-0.5">
+                            d20 Attack Face:
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={20}
+                            value={physicalD20}
+                            onChange={(e) => setPhysicalD20(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                            className="w-full px-2 py-1 rounded bg-neutral-900 border border-neutral-700 text-amber-200 font-bold text-center"
+                          />
+                        </div>
+                        {rollAdvState !== 'normal' && (
+                          <div>
+                            <label className="text-[10px] text-neutral-400 block mb-0.5">
+                              d20 Second Face ({rollAdvState}):
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={20}
+                              value={physicalD20Adv}
+                              onChange={(e) => setPhysicalD20Adv(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                              className="w-full px-2 py-1 rounded bg-neutral-900 border border-neutral-700 text-amber-200 font-bold text-center"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-neutral-400">
+                            Damage Dice Faces ({physicalDamageDice.length} die/dice):
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setPhysicalDamageDice([...physicalDamageDice, 4])}
+                            className="text-[10px] text-amber-400 hover:text-amber-300 underline"
+                          >
+                            + Add Die
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {physicalDamageDice.map((val, dIdx) => (
+                            <div key={dIdx} className="flex items-center gap-1">
+                              <span className="text-[10px] text-neutral-500">#{dIdx + 1}:</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={12}
+                                value={val}
+                                onChange={(e) => {
+                                  const updated = [...physicalDamageDice];
+                                  updated[dIdx] = Math.max(1, parseInt(e.target.value) || 1);
+                                  setPhysicalDamageDice(updated);
+                                }}
+                                className="w-14 px-2 py-1 rounded bg-neutral-900 border border-neutral-700 text-amber-200 font-bold text-center"
+                              />
+                              {physicalDamageDice.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPhysicalDamageDice(physicalDamageDice.filter((_, i) => i !== dIdx))}
+                                  className="text-neutral-500 hover:text-red-400 text-xs px-1"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {actionModalKind === 'cast_spell' && (

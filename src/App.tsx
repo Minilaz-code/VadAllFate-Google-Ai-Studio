@@ -134,12 +134,16 @@ export default function App() {
   // Handlers for switching identity preset
   const handleSelectIdentity = (newIdentity: UserIdentityContext) => {
     setIdentity(newIdentity);
+    if (newIdentity.role === 'player' || newIdentity.role === 'observer') {
+      battlemapSessionManager.clearPrivilegedCache();
+    }
     // Sanitize active tab to prevent invalid DM workspace access
     setCurrentTab((prevTab) => sanitizeTabForIdentity(prevTab, newIdentity));
   };
 
   // Handlers for entering/exiting Player Preview mode
   const handleEnterPreview = (characterId: string) => {
+    battlemapSessionManager.clearPrivilegedCache();
     setIdentity((prev) => {
       const updated: UserIdentityContext = {
         ...prev,
@@ -344,6 +348,8 @@ export default function App() {
                 }
                 combatState={projection.combatState}
                 selectedCharacterId={effectiveCharId}
+                dicePolicy={projection.dicePolicy}
+                pendingAdjudications={projection.pendingAdjudications}
                 onSelectOperatingMode={(mode) => {
                   if (canAccessDmWorkspaces(identity)) {
                     activeClient.setOperatingMode(mode);
@@ -375,7 +381,13 @@ export default function App() {
                     actorId: entityId,
                     actorRole: effectiveRole,
                     actionType: 'MOVE_TOKEN',
-                    payload: { entityId, targetX, targetY, entityType },
+                    payload: {
+                      entityId,
+                      targetX,
+                      targetY,
+                      entityType,
+                      coordinateSystem: 'grid_cell',
+                    },
                     snapshotRef: activeClient.getCurrentSnapshot(),
                     timestampUtc: new Date().toISOString(),
                     clientNonce: `nonce-${Date.now()}`,

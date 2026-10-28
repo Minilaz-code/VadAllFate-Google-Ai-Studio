@@ -40,7 +40,7 @@ import {
 import type { CharacterSheet, RuleCitation } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type { Quest } from '../../types/world.ts';
-import type { CausalEvent, SnapshotRef, UserRole, OperatingMode, PlayerSafeNpc, PlayerSafeQuest, CombatTurnState, DemoActionType } from '../../types/runtime.ts';
+import type { CausalEvent, SnapshotRef, UserRole, OperatingMode, PlayerSafeNpc, PlayerSafeQuest, CombatTurnState, DemoActionType, DicePolicy, PendingAdjudication } from '../../types/runtime.ts';
 import type { DirectorProfile, DirectorRecommendation, PlayerSpotlightMetric } from '../../types/director.ts';
 import { CharacterSheetModal } from './CharacterSheetModal.tsx';
 import { DiceRollerModal } from './DiceRollerModal.tsx';
@@ -75,6 +75,8 @@ interface NarrativePlayViewProps {
   campaignName?: string;
   locations?: any[];
   activeLocationId?: string;
+  dicePolicy?: DicePolicy;
+  pendingAdjudications?: PendingAdjudication[];
   onSelectOperatingMode: (mode: OperatingMode) => void;
   onSelectDirectorProfile: (profileId: string) => void;
   onNavigateToBattlemap?: () => void;
@@ -97,6 +99,8 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
   campaignName,
   locations,
   activeLocationId,
+  dicePolicy,
+  pendingAdjudications,
   onSelectOperatingMode,
   onSelectDirectorProfile,
   onNavigateToBattlemap,
@@ -882,6 +886,8 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
                 userRole={userRole}
                 activeCharacterId={selectedCharacterId}
                 currentSnapshot={currentSnapshot}
+                dicePolicy={dicePolicy}
+                pendingAdjudications={pendingAdjudications}
                 onOpenCharacterSheet={(c) => setSheetChar(c)}
                 onSubmitAction={async (envelope) => {
                   return runtimeService.submitActionEnvelope(envelope);

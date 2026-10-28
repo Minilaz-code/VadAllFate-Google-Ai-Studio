@@ -71,6 +71,7 @@ import { BattlemapCanvas } from './BattlemapCanvas.tsx';
 import { DiceRollerModal } from '../play/DiceRollerModal.tsx';
 import { ActionSubmissionModal } from '../play/ActionSubmissionModal.tsx';
 import { decodeImageInBrowser, calculateFitScale } from '../../utils/imageDecoder.ts';
+import { v2BackendClient } from '../../services/v2BackendClient.ts';
 
 interface BattlemapViewProps {
   characters: CharacterSheet[];
@@ -448,6 +449,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
 
     try {
       let decoded;
+      let durableAssetUrl = '';
       if (importTab === 'local') {
         if (!localFile) {
           setImportError('Please select a local PNG, JPG, or WebP image file.');
@@ -455,6 +457,22 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
           return;
         }
         decoded = await decodeImageInBrowser(localFile);
+        // Persist asset to authoritative backend storage so map survives restart
+        try {
+          const reader = new FileReader();
+          const b64Promise = new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+          });
+          reader.readAsDataURL(localFile);
+          const b64Data = await b64Promise;
+          const uploadRes = await v2BackendClient.uploadBattlemapAsset(localFile.name, b64Data);
+          if (uploadRes && uploadRes.url) {
+            durableAssetUrl = uploadRes.url;
+          }
+        } catch (uploadErr) {
+          console.warn('Failed to upload battlemap asset to server, falling back to local blob:', uploadErr);
+        }
       } else {
         if (!importUrl.trim()) {
           setImportError('Please provide a valid image URL.');
@@ -480,14 +498,14 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
           originY: 0,
         },
         backgroundArtwork: {
-          url: decoded.url,
+          url: durableAssetUrl || decoded.url,
           name: importName.trim(),
           scale: 1.0,
           offsetX: 0,
           offsetY: 0,
           opacity: 0.85,
           aspectRatio: decoded.aspectRatio,
-          isLocalBlob: decoded.isLocalBlob,
+          isLocalBlob: durableAssetUrl ? false : decoded.isLocalBlob,
           naturalWidth: decoded.naturalWidth,
           naturalHeight: decoded.naturalHeight,
         },
