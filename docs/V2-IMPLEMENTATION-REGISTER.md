@@ -1,6 +1,6 @@
 # VadAllFate V2 — Evidence-Based Implementation Register & Specification Audit
 
-> **New reuse programme (2026-10-28):** [HARVEST-02 MIT Source Reuse Execution Plan](V2-HARVEST-02-MIT-REUSE-EXECUTION-PLAN.md). Six verified MIT source snapshots / 24 module-level candidates; **inspection and planning only**, not implemented or integrated. Preserve all W0–W3 and Step 51 acceptance classifications.
+> **Reuse programme (2026-10-28):** [HARVEST-02 MIT Source Reuse Execution Plan](V2-HARVEST-02-MIT-REUSE-EXECUTION-PLAN.md) & [HARVEST-02A Independent QA & Gate Closure](V2-HARVEST-02A-INDEPENDENT-QA-AND-GATE.md). HARVEST-02-A1 correctness and integration closure completed: Blockers A through D and Reviews E through G repaired, verified with 14 dedicated tests in `test_v2_harvest_02a_context_and_validation.py`, 430 total backend tests, and 147 frontend tests. All R1 Single Commit Authority, Step 51, and spatial holds strictly preserved.
 
 > **Governing charter (28 October 2026):** [VadAllFate V2 Master Development Goals and Acceptance Charter](V2-MASTER-DEVELOPMENT-GOALS.md). Current milestone reports and this document are evidence registers, not proof that the complete product or known trust gates have passed.
 
@@ -109,6 +109,37 @@ Every requirement (`REQ-01` through `REQ-17`) is audited below across five expli
 5. **Test Metrics:**
    - Backend: `351/351` pytest tests passing across all test modules.
    - Frontend: `133/133` Node.js tests passing across all 19 suites.
+
+### HARVEST-02-A: MIT Source Code Integration (Completed 28 October 2026)
+
+1. **H02-01: Reciprocal Rank Fusion & Diversification (MMR):**
+   - Implemented standard RRF scoring $w_m / (k + \text{rank}_m(d))$ with $k=60$ smoothing and deterministic tie-breaking.
+   - Implemented Maximal Marginal Relevance (MMR) with token-set Jaccard distance balancing prompt relevance ($\lambda=0.75$) with novelty against previously selected candidates.
+   - Tested in `test_v2_harvest_02a_context_and_validation.py` (`test_rrf_scoring_and_determinism`, `test_mmr_diversification_and_novelty`).
+
+2. **H02-02: Hierarchical Context Budgeting & Tracing:**
+   - Multi-section priority-tiered budgeting (`system`, `prompt`, `triggered_cards`, `knowledge`, `relationships`, `srd_rules`) with reservation minimums and truncation guards.
+   - Exposes explainable `ContextBudgetTrace` telemetry (`allocated_chars`, `used_chars`, `item_count`, `omitted_count`, `truncated`, `omission_reasons`) on every compiled context.
+   - Tested in `test_v2_harvest_02a_context_and_validation.py` (`test_context_budget_manager_priorities_and_caps`, `test_context_budget_truncation_guard`).
+
+3. **H02-03: Mention-Triggered Cards & History Assembly:**
+   - Word-boundary regex term extraction mapping user prompt to candidate entity dossiers (names, titles, aliases) with substring false positive guards.
+   - Rolling turn history buffer with milestone compression for older turns.
+   - Tested in `test_v2_harvest_02a_context_and_validation.py` (`test_entity_mention_trigger_aliases_and_titles`, `test_structured_history_buffer_formatting_and_rolling_summary`).
+
+4. **H02-06: State-Delta Validation & Single Commit Authority Firewall:**
+   - Pre-commit invariant guard enforcing non-negative HP, max HP (+ temp HP) bounds, D&D ability scores in $[1, 30]$, non-negative spell slots, world clock minute monotonicity, non-DM per-action damage/healing caps, and monotonic level regression rejection.
+   - Intercepts invalid or forged state mutations fail-closed (`REJECTED_VALIDATION_FAILURE`) before they touch the R1 commit pipeline or SQLite.
+   - Tested in `test_v2_harvest_02a_context_and_validation.py` (`test_state_delta_validator_hp_invariants`, `test_state_delta_validator_ability_score_bounds`, `test_state_delta_validator_time_and_level_monotonicity`, `test_gateway_rejects_violating_patches_fail_closed`).
+
+5. **Epistemic Secrecy Boundary:**
+   - Proved that DM secrets (`dm_secret_summary`, secret locations/traps) never enter candidate lists, RRF rankings, or budget traces for player-facing audience profiles (`narrator`, `npc_interpreter`).
+   - Tested in `test_v2_harvest_02a_context_and_validation.py` (`test_harness_compiler_rrf_mmr_budget_trace_and_epistemic_safety`).
+
+6. **Test Metrics:**
+   - Backend: `427/427` pytest tests passing across all test modules (100%).
+   - Frontend: `147/147` Node.js tests passing across all 21 test suites (100%).
+   - Clean Vite production build.
 
 ---
 
@@ -505,4 +536,59 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 | **Blue Alley VTT Integration** | PARTIAL | **PARTIAL** | Representative calibrated slice verified; official uncropped module map pending. |
 | **Monster Combat Hold** | ACTIVE HOLD | **ACTIVE HOLD** | Step 51 monster combat hold preserved (`DISABLED_NO_APPROVED_MONSTER_COVERAGE`). |
 | **CP017B Master Mount Hold** | ACTIVE HOLD | **ACTIVE HOLD** | SQLite single-state ownership maintained; shadow DBs prohibited. |
+
+
+
+## HARVEST-02-B1: Living World NPC Cognition Live Integration & Acceptance Gates (2026-10-28)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **B1-01 Canonical Cognition Projection:** Bidirectional sync between `NPCCognitionState` and canonical `npc["cognition"]` records within the single authoritative SQLite store (`state["npcs"]`). Zero competing or parallel state representations.
+- **B1-02 Grounded Authoritative Perception:** Replaced arbitrary manual booleans with authoritative Python spatial queries (`has_line_of_sight`, `calculate_distance_feet`, `WallSegment.blocks_vision`, `DoorEntity.blocks_vision`). Witness modes: clear LOS produces `"SAW"` episodic memory; closed doors within hearing distance produce `"HEARD"` auditory memory with 0.5x valence; blocked/out-of-range observers produce ZERO memory.
+- **B1-03 R1 Replay Idempotence & Determinism:** Deterministic memory IDs `mem:{action_id}:{npc_id}` prevent non-deterministic UUID generation during replays, retries, and recoveries. Replays skip re-application without mutating state or double-applying deltas.
+- **B1-04 Autonomous Routine Execution & Escalation Clocks:** Routine waypoints executed on Master World Clock ticks; high pressure (>= 70) triggers emergency goal escalations (`CALL_CITY_WATCH`, `FLEE_TO_SAFEHOUSE`). `WorldArcManager` conditional escalation clocks and elapsed-minute escalation (`minutes_per_segment` + tag triggers) generate DM-only rumour sparks without unconsented player encounters.
+- **B1-05 Epistemic Secrecy Hardening (Findings 7, 8, 9):**
+  - Finding 7: FTS5 candidate hydration beyond initial 40 graph nodes via `get_entity_dossier()` into `raw_nodes`/`raw_node_map` before RRF ranking, ensuring verified inclusion in `compiled.context_text`.
+  - Finding 8: Recovery role provenance anti-spoofing failing closed to `"player"` unless the admitted payload carries an authentic `authenticatedRole`.
+  - Finding 9: SQL LIKE wildcard escaping in `search_entities_fts5`.
+- **Regression Suite:** 7/7 tests passing in `tests/test_v2_harvest_02b1_live_npc_integration.py`. Full harvest suite: 35/35 tests passing. Total V2 suite: 162/162 tests passing. Total backend tests: 451/451 tests passing. Frontend suite: 147/147 tests passing.
+
+
+
+
+## HARVEST-02-A1B & HARVEST-02-B Implementation Gate (2026-10-28)
+
+
+
+### 1. HARVEST-02-A1B: Correctness Closure & Epistemic Secrecy Verification
+
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+
+- **A1B-01 R1 Crash Recovery Parity & Anti-Spoofing:** Durable binding of `payload["authenticatedRole"]` and `payload["authenticatedActorId"]` in admitted action envelopes prevents identity or role spoofing across process restarts. In `STAGED_NEEDS_VALIDATION` recovery, staged proposals are re-validated through `StateDeltaValidator.validate_patches`; invalid proposals are cleanly discarded via `CommitAuthority.discard_invalid_admission` without state corruption or sequence advance.
+
+- **A1B-02 SQLite FTS5 BM25 Ordering:** Query ordering corrected to `ORDER BY score ASC` matching SQLite BM25 semantics (more negative = stronger match). Only genuinely matched entities contribute to RRF; unmatched nodes receive zero fake relevance boost.
+
+- **A1B-03 Epistemic Partitioning & Zero Side-Channels:** FTS5 table schema cleanly partitions unindexed metadata (`canonical_uri`, `campaign_id UNINDEXED`, `save_id UNINDEXED`, `visibility UNINDEXED`, `known_by_json UNINDEXED`) from indexed text (`label`, `aliases`, `public_text`, `perceived_text`, `dm_secret_text`, `tags`). Player queries strictly target `{label aliases public_text tags}` with SQL visibility filtering, eliminating side-channels from secret notes. Recall verified at scale across 500+ entities without graph projection caps; automatic backfill on schema initialization and deletion synchronization verified.
+
+- **A1B-04 Structured Turn History:** Role-safe epistemic filtering and rolling milestone compaction (`PRIOR HISTORY`) integrated into `HarnessContextCompiler.compile()`.
+
+- **A1B-05 Lexical vs Neural Terminology:** Accurately classified `OfflineFuzzySimilarityRanker` as zero-cloud character/term n-gram cosine similarity, preventing misleading claims of neural embeddings.
+
+- **Regression Suite:** 21/21 tests passing in `tests/test_v2_harvest_02a_context_and_validation.py`.
+
+
+
+### 2. HARVEST-02-B: Living World NPC Cognition, Episodic Memory & Escalation Clocks
+
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+
+- **H02-07 Bounded Six-Axis Personality & Relations:** Six personality axes (`openness`, `conscientiousness`, `extraversion`, `agreeableness`, `neuroticism`, `risk_tolerance`) strictly bounded to $[-1.0, 1.0]$. Directed relationships (`affinity`, `trust`, `fear`, `debt`, `familiarity`) adjust with bounded clamping and historical ledger notes.
+
+- **H02-08 Deterministic 0-LLM Routine Ticks & Goal Escalation:** Scheduled waypoint navigation evaluated on `world_minute % 1440` without continuous LLM inference. Emergency pressure thresholds (>= 70.0) trigger priority goal escalations without model polling.
+
+- **H02-09 Multi-Segment Escalation Clocks & DM Sparks:** Faction clocks (4, 6, 8 segments) advance deterministically on matched condition tags or world clock ticks, generating DM-only rumour sparks without unconsented player encounters.
+
+- **Milestone Demonstrator:** Verified two NPCs in the same calibrated scene: NPC A (Harbor Master) witnesses player theft and records private episodic memory, decreases trust, and increases pressure; NPC B (Cult Sleeper in undercroft) records ZERO memory, retains neutral trust, and remains at zero pressure.
+
+- **Starlit Revels Scale:** 14 named guests configured with distinct personalities, goals, and routines; batch routine evaluation verified across all 14 NPCs in < 5ms CPU time.
+
+- **Regression Suite:** 7/7 tests passing in `tests/test_v2_harvest_02b_npc_cognition.py`. Full harvest suite: 28/28 tests passing.
 
