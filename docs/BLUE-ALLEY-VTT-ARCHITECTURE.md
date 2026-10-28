@@ -200,3 +200,8 @@ export interface MapBackgroundArtwork {
 The image-first/grid calibration work must share the same scene/world coordinate boundary as durable Python-owned actor movement. Current React click/drag emits 0–100 percentage positions, while Python `MOVE_TOKEN` takes integer `targetX/targetY` with hardcoded 0–30 bounds; do not treat these as equivalent. Fix through a versioned typed adapter and backend scene geometry contract, not a rendering-only transform.
 
 Maintain individual PC, named NPC, and mob scene positions, footprints, occupancy, pathfinding, LOS, and AI-requested movement with R1 authority and save/restart persistence. The Starlit Revels (*Devil of a Night*, planned `CV_EVENT_STARLIT_REVELS`, 14 named guests plus optional crowd) is the full simulation acceptance fixture; no automatic scenario trigger or privileged player knowledge leakage. SP-00..SP-05 are subgates, not separate app/runtime or an excuse to defer Blue Alley zero-crop UX.
+
+
+## Future map geometry ingestion (deferred backlog)
+
+The approved but **not yet implemented** optional automatic mapping workflow is specified in [Future Automatic Spatial Map Ingestion](FUTURE-AUTOMATED-SPATIAL-MAP-INGESTION.md). Prioritise stable image-first zero-crop/grid calibration, Python-authoritative scene coordinates and manual geometry editing before optional .uvtt/.dd2vtt importing, CPU image segmentation, AI-assisted recognition and smart DM geometry approval. Do not treat this planned feature as shipped or displace the existing runtime/combat safety gates.
