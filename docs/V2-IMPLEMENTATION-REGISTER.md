@@ -389,6 +389,7 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 **Governing QA Brief:** `docs/V2-POST-SPATIAL-CHECKPOINT-INDEPENDENT-QA.md`  
 
 ### 1. Safety Gate S0: P0 Security & Role Authority Fixes (AUTOMATED VERIFIED)
+> **Acceptance Classification:** **AUTOMATED VERIFIED** (All 4 adversarial exploit regression tests pass against server HTTP and gateway contracts; remote LAN/multiplayer access remains gated until manual penetration review).
 - **P0-1 (`MOVE_TOKEN` DM Override Bypass):**
   - Restricted `dmOverride`, `forceMove`, `teleport`, and `isDmOverride` flags strictly to authenticated DM roles (`dm`, `dm_host`).
   - Player attempts to submit privileged override flags are ignored and rejected fail-closed (`REJECTED_VALIDATION_FAILURE`).
@@ -410,6 +411,7 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
   - Verified by exploit regression test `test_exploit_spatial_query_player_impersonation_rejected`.
 
 ### 2. Gameplay Gate S1: Movement Mechanics & RollRequest Lifecycle (AUTOMATED VERIFIED)
+> **Acceptance Classification:** **AUTOMATED VERIFIED** for automated server rules, budgets, topology, and staged RollRequest confirmation; **REAL GAMEPLAY ACCEPTANCE REMAINS SEPARATE** (Windows desktop player journey + tablet companion play pending).
 - **Authoritative Actor Footprint & Multi-Cell Occupancy:**
   - Creature footprints (`Tiny`, `Small`, `Medium`, `Large`, `Huge`, `Gargantuan`) derived from server entity definition; non-DM callers cannot forge smaller footprints.
   - Living actors' multi-cell footprints (`fp.occupied_cells()`) expand into the `occupied_cells` collision set.
@@ -431,15 +433,20 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
   - Under `REQUIRE_DM_CONFIRMATION`, HP patches are staged in `pendingAdjudications`; committed only when DM approves via `APPROVE_ADJUDICATION`.
   - Verified by `test_two_stage_attack_damage_roll_request_lifecycle` across gateway restart and recovery.
 
-### 3. AI Living World Gate S2: Autonomous Scheduler & AI Concurrency (PARTIAL / PROGRESS)
+### 3. AI Living World Gate S2: Autonomous Scheduler & AI Concurrency (PARTIAL)
+> **Acceptance Classification:** **PARTIAL**. Deterministic multi-actor routines, limited perception, and R1 movement submissions pass unit tests; live autonomous world simulation and multi-actor dialogue soak remain unproven.
 - **Deterministic Multi-Actor Scheduler (`tick_world_scheduler`):**
-  - Independent NPCs (`npc-jorren-vale`, `npc-duessa-starflower`) follow time-of-day waypoint routines.
-  - Each NPC queries bounded spatial awareness (`query_scene_spatial_context` with 60 ft radius), detects cell occupancy/bottlenecks, resolves conflicts via polite rerouting, and submits legal `MOVE_TOKEN` through R1 Single Commit Authority.
+  - Independent NPCs (`npc-jorren-vale`, `npc-duessa-starflower`) follow time-of-day waypoint routines using the Master World Clock (`worldClock.totalWorldMinutes`).
+  - Each NPC queries bounded spatial awareness (`query_scene_spatial_context` with 60 ft radius), detects cell occupancy/bottlenecks, resolves conflicts via polite rerouting, and submits legal `MOVE_TOKEN` through R1 Single Commit Authority (`dmOverride: False`).
+  - Moves and token positions survive process crash and restart.
   - Logs episodic perception updates without requiring LLM calls on every world tick.
   - Verified by `test_autonomous_living_world_scheduler_routines_and_conflict_resolution`.
 - **Single Model Concurrency Semaphore:**
   - `_model_execution_lock` mutex in `SingleBoundedAIHarness` serializes heavy model inferences to protect 4–6 GB VRAM budget.
-- **Honest Status:** SP-04 and SP-05 remain marked **PARTIAL** until full autonomous living-world behavior is proven in live desktop gameplay soak tests.
+
+### 4. Milestone SP-05 & Blue Alley Acceptance Status (PARTIAL / PENDING)
+- **SP-05 (Starlit Revels):** **PARTIAL** — Synthetic 14-guest movement fixture passed in automated test; real campaign stress test with autonomous decisions, live dialogue, and multi-actor soak remains **PENDING**.
+- **Blue Alley VTT:** **PARTIAL** — Two-point calibration math, zero-crop canvas, and authenticated asset endpoints verified in unit/integration tests; real-map user upload and Windows gameplay acceptance remain **PENDING**.
 
 ### 4. Complete Verification Evidence
 - **Backend Tests:** 415 collected tests across 49 test modules (`pytest`), 100% passing.
