@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BattlemapSessionManager } from './battlemapSession.ts';
 import type { BattlemapDefinition } from '../types/battlemap.ts';
+import { v2BackendClient, V2BackendClient } from '../services/v2BackendClient.ts';
 
 describe('Milestone 12B — Trust, Physical Dice & Spatial Secrecy Frontend Gates', () => {
   it('clearPrivilegedCache() purges undo/redo history, secret geometry, and DM artwork overlays', () => {
@@ -246,5 +247,37 @@ describe('Milestone 12B — Trust, Physical Dice & Spatial Secrecy Frontend Gate
     assert.equal(map.grid.originY, 15);
     assert.equal(map.backgroundArtwork?.url, '/api/v2/battlemap/assets/asset-durable-987');
     assert.equal(map.backgroundArtwork?.isLocalBlob, undefined);
+  });
+
+  it('authenticated asset URL appends session token when accessing server asset', () => {
+    // When no token is active or external URL
+    const externalUrl = v2BackendClient.getAuthenticatedAssetUrl('https://example.com/map.png');
+    assert.equal(externalUrl, 'https://example.com/map.png');
+
+    // For internal asset URL without active token
+    const bareAsset = v2BackendClient.getAuthenticatedAssetUrl('/api/v2/battlemap/assets/asset-001');
+    assert.ok(bareAsset?.startsWith('/api/v2/battlemap/assets/asset-001'));
+  });
+
+  it('querySpatialContext defaults gracefully when allowOfflineFallback is true', async () => {
+    const offlineClient = new V2BackendClient('http://127.0.0.1:9/api/v2', { allowOfflineFallback: true });
+    const res = await offlineClient.querySpatialContext('map-test', 'actor-test', 60.0);
+    assert.equal(res.sceneId, 'map-test');
+    assert.equal(res.observerActorId, 'actor-test');
+    assert.equal(res.isLocated, false);
+    assert.deepEqual(res.visibleActors, []);
+    assert.equal(res.visibleActorCount, 0);
+  });
+
+  it('querySpatialContext fails closed when production client is disconnected', async () => {
+    await assert.rejects(
+      async () => {
+        await v2BackendClient.querySpatialContext('map-test', 'actor-test', 60.0);
+      },
+      (err: any) => {
+        assert.match(err.message, /Python V2 runtime disconnected/);
+        return true;
+      }
+    );
   });
 });

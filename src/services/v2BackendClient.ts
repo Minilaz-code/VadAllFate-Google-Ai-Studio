@@ -1,4 +1,4 @@
-import { v2SessionHeaders } from './v2Session.ts';
+import { v2SessionHeaders, getV2Token } from './v2Session.ts';
 /**
  * V2 Authoritative Backend Client (KGP-03, HAR-01, Milestone 5)
  *
@@ -823,16 +823,18 @@ export class V2BackendClient {
   public async uploadBattlemapAsset(
     fileName: string,
     dataBase64: string,
-    assetId?: string
-  ): Promise<{ assetId: string; url: string; fileName: string; sizeBytes: number; mimeType: string }> {
+    assetId?: string,
+    isDmOnly: boolean = false
+  ): Promise<{ assetId: string; url: string; fileName: string; sizeBytes: number; mimeType: string; isDmOnly?: boolean }> {
     try {
       const resp = await fetch(`${this.baseUrl}/battlemap/assets`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders() },
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders('dm') },
         body: JSON.stringify({
           fileName,
           dataBase64,
           assetId,
+          isDmOnly,
         }),
       });
       if (resp.ok) {
@@ -850,8 +852,68 @@ export class V2BackendClient {
       fileName,
       sizeBytes: dataBase64.length,
       mimeType: 'image/png',
+      isDmOnly,
     };
   }
+
+  public getAuthenticatedAssetUrl(url: string | undefined, role?: string): string | undefined {
+    if (!url) return undefined;
+    if (!url.startsWith('/api/v2/battlemap/assets/')) return url;
+    const token = getV2Token(role);
+    if (!token) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}token=${encodeURIComponent(token)}`;
+  }
+
+  public async querySpatialContext(
+    sceneId: string,
+    observerId: string,
+    radiusFeet: number = 60.0,
+    role?: string
+  ): Promise<SpatialContextResult> {
+    try {
+      const q = new URLSearchParams({
+        scene_id: sceneId,
+        observer_id: observerId,
+        radius_feet: radiusFeet.toString(),
+      });
+      const resp = await fetch(`${this.baseUrl}/battlemap/spatial-query?${q.toString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json', ...v2SessionHeaders(role) },
+      });
+      if (resp.ok) {
+        return await resp.json();
+      }
+      await this.handleNonOk(resp, 'querySpatialContext');
+    } catch (err) {
+      this.handleCatch(err, 'querySpatialContext');
+    }
+    return {
+      sceneId,
+      observerActorId: observerId,
+      isLocated: false,
+      visibleActors: [],
+      actorsInReach: [],
+      visibleActorCount: 0,
+    };
+  }
+}
+
+export interface SpatialVisibleActor {
+  actorId: string;
+  cell: { x: number; y: number };
+  distanceFeet: number;
+  footprint: string;
+}
+
+export interface SpatialContextResult {
+  sceneId: string;
+  observerActorId: string;
+  isLocated: boolean;
+  observerCell?: { x: number; y: number };
+  visibleActors: SpatialVisibleActor[];
+  actorsInReach: SpatialVisibleActor[];
+  visibleActorCount: number;
 }
 
 export const v2BackendClient = new V2BackendClient();

@@ -383,8 +383,11 @@ export default function App() {
                     actionType: 'MOVE_TOKEN',
                     payload: {
                       entityId,
+                      cellX: targetX,
+                      cellY: targetY,
                       targetX,
                       targetY,
+                      targetCell: { x: targetX, y: targetY },
                       entityType,
                       coordinateSystem: 'grid_cell',
                     },

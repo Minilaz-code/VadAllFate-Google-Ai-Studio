@@ -263,6 +263,35 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     setViewport({ panX: 0, panY: 0, zoom: clampedZoom });
   }, [mapWidthPx, mapHeightPx]);
 
+  // SP-00 / SP-03 Authoritative Typed Coordinate Resolver
+  const resolveTokenPosition = useCallback(
+    (tok?: { x?: number; y?: number; cellX?: number; cellY?: number; coordinateSystem?: string }) => {
+      if (!tok) return { cellX: 0, cellY: 0, pctX: 0, pctY: 0 };
+      const rawX = tok.cellX !== undefined ? tok.cellX : (tok.x ?? 0);
+      const rawY = tok.cellY !== undefined ? tok.cellY : (tok.y ?? 0);
+      const coordSys = tok.coordinateSystem || (rawX > 30 || rawY > 30 ? 'percentage' : 'grid_cell');
+
+      let cellX: number;
+      let cellY: number;
+      let pctX: number;
+      let pctY: number;
+
+      if (coordSys === 'percentage') {
+        pctX = rawX;
+        pctY = rawY;
+        cellX = grid.width > 0 ? Math.round((rawX / 100) * grid.width) : 0;
+        cellY = grid.height > 0 ? Math.round((rawY / 100) * grid.height) : 0;
+      } else {
+        cellX = Math.round(rawX);
+        cellY = Math.round(rawY);
+        pctX = grid.width > 0 ? (cellX / grid.width) * 100 : 0;
+        pctY = grid.height > 0 ? (cellY / grid.height) * 100 : 0;
+      }
+      return { cellX, cellY, pctX, pctY };
+    },
+    [grid.width, grid.height]
+  );
+
   // Reset & Zero-Crop initial fit when map changes
   useEffect(() => {
     setMeasureStart(null);
@@ -709,11 +738,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
       // If user clicks on empty cell while an entity is selected, move it there
       if (selectedEntityId && !tokenDrag) {
         const char = characters.find((c) => c.id === selectedEntityId);
-        const npc = npcs.find((n) => n.id === selectedEntityId);
         const entityType = char ? 'character' : 'npc';
-        const pctX = Math.round((coords.gridX / grid.width) * 100);
-        const pctY = Math.round((coords.gridY / grid.height) * 100);
-        onMoveToken?.(selectedEntityId, pctX, pctY, entityType);
+        onMoveToken?.(selectedEntityId, coords.gridX, coords.gridY, entityType);
       }
     }
   };
@@ -802,9 +828,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
         if (tokenDrag.isDragging) {
           const coords = getMapCoords(e.clientX, e.clientY);
           if (coords) {
-            const pctX = Math.round((coords.gridX / grid.width) * 100);
-            const pctY = Math.round((coords.gridY / grid.height) * 100);
-            onMoveToken?.(tokenDrag.entityId, pctX, pctY, tokenDrag.entityType);
+            onMoveToken?.(tokenDrag.entityId, coords.gridX, coords.gridY, tokenDrag.entityType);
           }
         }
         setTokenDrag(null);
@@ -1063,8 +1087,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
     for (const char of activeChars) {
       // Find position in grid cells
-      const charX = (char.token.x / 100) * grid.width;
-      const charY = (char.token.y / 100) * grid.height;
+      const charPos = resolveTokenPosition(char.token);
+      const charX = charPos.cellX;
+      const charY = charPos.cellY;
       sources.push({
         id: char.id,
         name: char.name,
@@ -1242,10 +1267,11 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           const isNpc = extraData?.entityType === 'npc';
           if (isNpc) {
             const npc = extraData?.npc as (NonPlayerCharacter | PlayerSafeNpc) | undefined;
+            const npcPos = resolveTokenPosition(npc?.token);
             const isVis = npc
               ? isEntityVisibleOnBattlemap(
-                  (npc.token.x / 100) * grid.width,
-                  (npc.token.y / 100) * grid.height,
+                  npcPos.cellX,
+                  npcPos.cellY,
                   npc.token.isVisibleToPlayers,
                   false,
                   mapDefinition.fog,
@@ -2030,6 +2056,75 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           )}
 
           {/* ============================================================ */}
+          {/* LAYER 5.5: Server-Projected Movement Paths (SP-03)           */}
+          {/* ============================================================ */}
+          <svg className="absolute inset-0 pointer-events-none w-full h-full" style={{ zIndex: 19 }}>
+            {characters.map((c) => {
+              const path = (c.token as any)?.committedPath as Array<{ x: number; y: number }> | undefined;
+              if (!path || path.length < 2) return null;
+              const pointsStr = path
+                .map((pt) => {
+                  const px = (pt.x + 0.5) * grid.cellSizePx + (grid.originX || 0);
+                  const py = (pt.y + 0.5) * grid.cellSizePx + (grid.originY || 0);
+                  return `${px},${py}`;
+                })
+                .join(' ');
+              return (
+                <g key={`path-${c.id}`}>
+                  <polyline
+                    points={pointsStr}
+                    fill="none"
+                    stroke="#06b6d4"
+                    strokeWidth="3"
+                    strokeDasharray="6,4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.85"
+                  />
+                  {path.map((pt, idx) => {
+                    const cx = (pt.x + 0.5) * grid.cellSizePx + (grid.originX || 0);
+                    const cy = (pt.y + 0.5) * grid.cellSizePx + (grid.originY || 0);
+                    return (
+                      <circle
+                        key={`pt-${c.id}-${idx}`}
+                        cx={cx}
+                        cy={cy}
+                        r={idx === 0 || idx === path.length - 1 ? 4 : 2}
+                        fill={idx === path.length - 1 ? '#22c55e' : '#06b6d4'}
+                      />
+                    );
+                  })}
+                </g>
+              );
+            })}
+            {npcs.map((n) => {
+              const path = (n.token as any)?.committedPath as Array<{ x: number; y: number }> | undefined;
+              if (!path || path.length < 2) return null;
+              const pointsStr = path
+                .map((pt) => {
+                  const px = (pt.x + 0.5) * grid.cellSizePx + (grid.originX || 0);
+                  const py = (pt.y + 0.5) * grid.cellSizePx + (grid.originY || 0);
+                  return `${px},${py}`;
+                })
+                .join(' ');
+              return (
+                <g key={`path-${n.id}`}>
+                  <polyline
+                    points={pointsStr}
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="2.5"
+                    strokeDasharray="5,4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.75"
+                  />
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* ============================================================ */}
           {/* LAYER 6: Tokens & Labels (Section 2: Live Position Binding)  */}
           {/* ============================================================ */}
           {layerVisibility.tokens && (
@@ -2040,12 +2135,13 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 const isBeingDragged = tokenDrag?.entityId === char.id && tokenDrag.isDragging;
 
                 // Visual position: use live char.token.x / y (never overridden by static definitions)
+                const charPos = resolveTokenPosition(char.token);
                 const xPct = isBeingDragged
                   ? (tokenDrag.currentGridX / grid.width) * 100
-                  : char.token.x;
+                  : charPos.pctX;
                 const yPct = isBeingDragged
                   ? (tokenDrag.currentGridY / grid.height) * 100
-                  : char.token.y;
+                  : charPos.pctY;
 
                 return (
                   <div
@@ -2058,8 +2154,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                           entityType: 'character',
                           startX: e.clientX,
                           startY: e.clientY,
-                          currentGridX: Math.round((char.token.x / 100) * grid.width),
-                          currentGridY: Math.round((char.token.y / 100) * grid.height),
+                          currentGridX: charPos.cellX,
+                          currentGridY: charPos.cellY,
                           isDragging: false,
                         });
                         onSelectEntity?.(char.id, 'character');
@@ -2134,12 +2230,13 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 const isSelected = selectedEntityId === npc.id;
                 const isBeingDragged = tokenDrag?.entityId === npc.id && tokenDrag.isDragging;
 
+                const npcPos = resolveTokenPosition(npc.token);
                 const xPct = isBeingDragged
                   ? (tokenDrag.currentGridX / grid.width) * 100
-                  : npc.token.x;
+                  : npcPos.pctX;
                 const yPct = isBeingDragged
                   ? (tokenDrag.currentGridY / grid.height) * 100
-                  : npc.token.y;
+                  : npcPos.pctY;
 
                 const isHiddenFromParty = !npc.token.isVisibleToPlayers || !isCellVisibleToPlayers;
 
@@ -2154,8 +2251,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                           entityType: 'npc',
                           startX: e.clientX,
                           startY: e.clientY,
-                          currentGridX: Math.round((npc.token.x / 100) * grid.width),
-                          currentGridY: Math.round((npc.token.y / 100) * grid.height),
+                          currentGridX: npcPos.cellX,
+                          currentGridY: npcPos.cellY,
                           isDragging: false,
                         });
                         onSelectEntity?.(npc.id, 'npc');
@@ -2873,8 +2970,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                           setContextMenu((prev) => ({ ...prev, isOpen: false }));
                           return;
                         }
-                        const fromX = Math.round((activeChar.token.x / 100) * grid.width);
-                        const fromY = Math.round((activeChar.token.y / 100) * grid.height);
+                        const actPos = resolveTokenPosition(activeChar.token);
+                        const fromX = actPos.cellX;
+                        const fromY = actPos.cellY;
                         const toX = contextMenu.gridX;
                         const toY = contextMenu.gridY;
                         const distFeet = Math.round(Math.hypot(toX - fromX, toY - fromY) * (grid.feetPerCell || 5));

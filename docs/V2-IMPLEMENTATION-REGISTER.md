@@ -305,3 +305,75 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
   - **Backend Tests:** 390 collected tests across 47 test modules (`uv run pytest`), 100% passing.
   - **Frontend Tests:** 141 unit, integration & spatial secrecy tests across 21 test suites (`node --test`), 100% passing.
   - **Frontend Build:** Vite production build cleanly verified in 650ms.
+
+---
+
+## 19. Milestone 12B Final Closure & SP-00..SP-05 Authoritative 2D Spatial Simulation
+
+**Audit & Execution Date:** 2026-10-28  
+**Backend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Frontend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Core Deliverables & Architectural Conformance:**
+
+- **1. Cryptographic Server Entropy Vault Isolation (Gate 1 — AUTOMATED VERIFIED):**
+  - High-entropy 256-bit server secrets generated via `secrets.token_hex(32)` on campaign creation.
+  - Stored in dedicated SQLite table `campaign_server_secrets` outside `v2_state_mounts` and excluded from all public/player state projections.
+  - Generates HMAC-SHA256 non-mineable roll digests `hmac_sha256(server_secret, f"{campaign_id}:{seq}:{action_id}:{salt}")`.
+  - Concurrency-safe `INSERT OR IGNORE` initialization prevents race conditions on multi-threaded admissions.
+  - Non-reversible proof format `prf-<action_id[:8]>-<sha256(secret:salt)[:16]>` guarantees replay integrity without revealing future roll entropy.
+  - Regression verified in `tests/test_v2_trust_and_persistence_gates.py`.
+
+- **2. Persistent Authorised RollRequest Lifecycle (Gate 2 — AUTOMATED VERIFIED):**
+  - Fully pinned, persistent `RollRequest` lifecycle (`ACTIVE_AWAITING_INPUT`, `SUBMITTED_VALIDATED`, `SUPERSEDED_BY_REROLL`, `DM_CORRECTED`, `COMMITTED_TERMINAL`).
+  - Strict re-roll tracking (`maxRerolls`, `rerollsUsed`, `rerollReason`) and explicit authorized DM corrections (`DM_CORRECTED_PHYSICAL` / `DM_CORRECTED_DIGITAL`).
+  - Prevents mode-switching or resubmissions after unfavorable rolls.
+  - Verified across crash/restart and concurrent requests in `tests/test_v2_trust_and_persistence_gates.py`.
+
+- **3. Battlemap Asset Security & Role-Based Access Controls (Gate 3 — AUTOMATED VERIFIED):**
+  - Persistent SQLite asset registry `battlemap_asset_registry` with campaign ownership, SHA-256 deduplication, and magic-byte inspection (PNG, JPEG, WebP).
+  - Strict DM-only upload restriction (`aud.role in {"dm", "dm_host"}`); unauthorized player uploads fail-closed with HTTP 403.
+  - Enforces cross-campaign isolation and role-scoped download secrecy (DM-only assets return HTTP 403 to player clients).
+  - Safe connection cleanup prevents file locking across process restarts and Windows filesystem boundaries.
+  - Regression verified in `tests/test_v2_trust_and_persistence_gates.py`.
+
+- **4. Spatial Simulation Models & Coordinate Contract (SP-00 — AUTOMATED VERIFIED):**
+  - Implemented `v2_spatial_models.py` defining typed, unambiguous coordinate spaces:
+    - `ImagePixelPoint`: Natural battlemap image pixel coordinates `(x_px, y_px)`.
+    - `GridCalibration`: Sub-pixel origin offset, pitch in pixels/cell, feet per cell.
+    - `SceneCellPoint`: Discrete integer grid cell coordinate `(x, y)`.
+    - `SceneFeetPoint`: Continuous world feet coordinates `(x_feet, y_feet)`.
+  - Defined standard creature footprints (`Tiny`: 1x1, `Small`: 1x1, `Medium`: 1x1, `Large`: 2x2, `Huge`: 3x3, `Gargantuan`: 4x4) and topological scene entities (`WallSegment`, `DoorEntity`, `TerrainZone`, `SceneActorPlacement`).
+
+- **5. Deterministic 2D Raycast LOS & Spatial Simulation Engine (SP-01 — AUTOMATED VERIFIED):**
+  - Implemented `v2_spatial_engine.py`:
+    - 2D raycasting line of sight with strict segment intersection and corner occlusion.
+    - Closed and secret doors block vision and movement; open doors allow line of sight and passage.
+    - Distance rules supported: Standard 5e alternating diagonal (`5-10-5`), Euclidean, Manhattan, and standard grid (`5-5-5`).
+    - Grounded spatial perception query `query_spatial_context()` resolving visible actors and actors in reach.
+  - Verified in `tests/test_v2_spatial_simulation.py` (14/14 passed).
+
+- **6. R1-Validated Token Movement & A* Obstacle Pathfinding (SP-02 — AUTOMATED VERIFIED):**
+  - Gateway `MOVE_TOKEN` action commits strictly through R1 Single Commit Authority.
+  - Role permissions enforced: players can only move assigned characters; observers cannot move; DM/host can move any actor or use `dmOverride: True` / `teleport: True`.
+  - Dynamic grid dimension resolution from active scene configuration (`mapConfigs[sceneId]["gridDimensions"]`).
+  - Authoritative A* pathfinding evaluates multi-cell footprint occupancy, wall collisions, closed-door collisions, and difficult terrain multipliers (2x cost).
+  - Illegal movements crossing walls or closed doors are rejected fail-closed with `REJECTED_VALIDATION_FAILURE`.
+  - Commits `committedPath`, `lastMoveCostFeet`, and discrete cell coordinates to SQLite via `StatePatch`.
+
+- **7. Frontend Zero-Crop Battlemap & Path Rendering (SP-03 — AUTOMATED VERIFIED):**
+  - Decoupled canvas dimensions from grid bounds; 100% of preprinted battlemap artwork borders (e.g. Blue Alley) remain visible without cropping.
+  - Fixed coordinate mismatch in `BattlemapCanvas.tsx`: clicks and drag callbacks emit discrete integer cell coordinates (`gridX`, `gridY`) instead of percentage floats.
+  - `resolveTokenPosition()` safely interprets tokens regardless of legacy format.
+  - Layer 5.5 SVG movement path renderer visualizes server-projected cyan/amber dashed polylines and waypoints along `tok.committedPath`.
+  - Added `v2BackendClient.querySpatialContext()` calling `GET /api/v2/battlemap/spatial-query`.
+  - 144 frontend tests in 21 test suites passing (`npm test`).
+
+- **8. Living World AI Spatial Tool & Starlit Revels Soak Simulation (SP-04 / SP-05 — AUTOMATED VERIFIED):**
+  - Added `"spatial_query"` tool to `TASK_PROFILES` for `narrator`, `npc_interpreter`, `director`, and `planner` in `v2_ai_harness.py`.
+  - Implemented `GET /api/v2/battlemap/spatial-query` route with authenticated session scoping and role-based secrecy.
+  - Automated soak simulation (`test_starlit_revels_14_guest_stress_and_soak_simulation`): 14 named guests (including Davion, Mylon, Duessa) executing scheduled waypoint routines through a 2-cell doorway around dividing walls, followed by simulated restart and persistence verification against SQLite.
+
+- **9. Complete Verification Evidence:**
+  - **Backend Tests:** 408 collected tests across 49 test modules, 100% passing.
+  - **Frontend Tests:** 144 unit, integration & spatial secrecy tests across 21 test suites (`node --test`), 100% passing.
+  - **Frontend Build:** Clean Vite production build in 620ms.
