@@ -191,3 +191,12 @@ export interface MapBackgroundArtwork {
 2. **Two-Point Alignment:** Clicking 10 squares along a corridor calibrates the entire map within 2 seconds.
 3. **Drift-Free Precision:** The 50th grid square aligns with $< 2\text{ px}$ error against the preprinted art.
 4. **Transform Persistence:** Refreshing the browser or restarting the Python runtime restores the exact calibrated grid and token positions without drift.
+
+
+## Authoritative 2D Actor Simulation and Starlit Revels Acceptance (2026-10-28)
+
+**Mandatory companion spec:** [V2 Authoritative 2D Spatial Simulation and Starlit Revels Stress Test](V2-AUTHORITATIVE-2D-SPATIAL-SIMULATION-AND-STARLIT-REVELS-TEST.md).
+
+The image-first/grid calibration work must share the same scene/world coordinate boundary as durable Python-owned actor movement. Current React click/drag emits 0–100 percentage positions, while Python `MOVE_TOKEN` takes integer `targetX/targetY` with hardcoded 0–30 bounds; do not treat these as equivalent. Fix through a versioned typed adapter and backend scene geometry contract, not a rendering-only transform.
+
+Maintain individual PC, named NPC, and mob scene positions, footprints, occupancy, pathfinding, LOS, and AI-requested movement with R1 authority and save/restart persistence. The Starlit Revels (*Devil of a Night*, planned `CV_EVENT_STARLIT_REVELS`, 14 named guests plus optional crowd) is the full simulation acceptance fixture; no automatic scenario trigger or privileged player knowledge leakage. SP-00..SP-05 are subgates, not separate app/runtime or an excuse to defer Blue Alley zero-crop UX.
