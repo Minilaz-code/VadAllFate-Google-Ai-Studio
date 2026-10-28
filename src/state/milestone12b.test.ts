@@ -249,14 +249,13 @@ describe('Milestone 12B — Trust, Physical Dice & Spatial Secrecy Frontend Gate
     assert.equal(map.backgroundArtwork?.isLocalBlob, undefined);
   });
 
-  it('authenticated asset URL appends session token when accessing server asset', () => {
-    // When no token is active or external URL
+  it('P0-3 Security: getAuthenticatedAssetUrl never leaks bearer tokens in URL query strings', () => {
     const externalUrl = v2BackendClient.getAuthenticatedAssetUrl('https://example.com/map.png');
     assert.equal(externalUrl, 'https://example.com/map.png');
 
-    // For internal asset URL without active token
-    const bareAsset = v2BackendClient.getAuthenticatedAssetUrl('/api/v2/battlemap/assets/asset-001');
-    assert.ok(bareAsset?.startsWith('/api/v2/battlemap/assets/asset-001'));
+    const internalAsset = v2BackendClient.getAuthenticatedAssetUrl('/api/v2/battlemap/assets/asset-001', 'dm');
+    assert.equal(internalAsset, '/api/v2/battlemap/assets/asset-001');
+    assert.ok(!internalAsset?.includes('token='));
   });
 
   it('querySpatialContext defaults gracefully when allowOfflineFallback is true', async () => {

@@ -856,13 +856,35 @@ export class V2BackendClient {
     };
   }
 
-  public getAuthenticatedAssetUrl(url: string | undefined, role?: string): string | undefined {
+  private _blobUrlCache: Map<string, string> = new Map();
+
+  public getAuthenticatedAssetUrl(url: string | undefined, _role?: string): string | undefined {
     if (!url) return undefined;
-    if (!url.startsWith('/api/v2/battlemap/assets/')) return url;
-    const token = getV2Token(role);
-    if (!token) return url;
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}token=${encodeURIComponent(token)}`;
+    // P0-3 Security: Never append bearer session tokens in URL query strings to prevent leakage in history, logs, or referrers
+    return url;
+  }
+
+  public async fetchAuthenticatedAssetBlobUrl(url: string, role?: string): Promise<string> {
+    if (!url) return '';
+    if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+    if (this._blobUrlCache.has(url)) return this._blobUrlCache.get(url)!;
+
+    const fullUrl = url.startsWith('http') ? url : `${this.baseUrl.replace(/\/api\/v2\/?$/, '')}${url}`;
+    try {
+      const resp = await fetch(fullUrl, {
+        method: 'GET',
+        headers: v2SessionHeaders(role),
+      });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        this._blobUrlCache.set(url, blobUrl);
+        return blobUrl;
+      }
+    } catch {
+      // Return original URL as fallback
+    }
+    return url;
   }
 
   public async querySpatialContext(

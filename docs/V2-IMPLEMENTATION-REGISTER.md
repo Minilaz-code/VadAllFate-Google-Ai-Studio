@@ -368,12 +368,80 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
   - Added `v2BackendClient.querySpatialContext()` calling `GET /api/v2/battlemap/spatial-query`.
   - 144 frontend tests in 21 test suites passing (`npm test`).
 
-- **8. Living World AI Spatial Tool & Starlit Revels Soak Simulation (SP-04 / SP-05 — AUTOMATED VERIFIED):**
+- **8. Living World AI Spatial Tool & Starlit Revels Soak Simulation (SP-04 / SP-05 — PARTIAL):**
   - Added `"spatial_query"` tool to `TASK_PROFILES` for `narrator`, `npc_interpreter`, `director`, and `planner` in `v2_ai_harness.py`.
   - Implemented `GET /api/v2/battlemap/spatial-query` route with authenticated session scoping and role-based secrecy.
-  - Automated soak simulation (`test_starlit_revels_14_guest_stress_and_soak_simulation`): 14 named guests (including Davion, Mylon, Duessa) executing scheduled waypoint routines through a 2-cell doorway around dividing walls, followed by simulated restart and persistence verification against SQLite.
+  - Automated movement fixture (`test_starlit_revels_14_guest_stress_and_soak_simulation`): 14 named guests (including Davion, Mylon, Duessa) executing scripted waypoint movements through a 2-cell doorway around dividing walls, followed by simulated restart and persistence verification against SQLite.
+  - Honest audit: Kept marked as **PARTIAL** per Independent QA findings. The synthetic 14-guest fixture proves waypoint persistence and path navigation, not autonomous scheduler decisions, live dialogue, or realistic soak duration.
 
 - **9. Complete Verification Evidence:**
   - **Backend Tests:** 408 collected tests across 49 test modules, 100% passing.
   - **Frontend Tests:** 144 unit, integration & spatial secrecy tests across 21 test suites (`node --test`), 100% passing.
   - **Frontend Build:** Clean Vite production build in 620ms.
+
+---
+
+## 20. Post-Spatial QA Closure, P0 Security Hardening & Gate S0–S2 Implementation
+
+**Audit & Execution Date:** 2026-10-28  
+**Backend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Frontend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Governing QA Brief:** `docs/V2-POST-SPATIAL-CHECKPOINT-INDEPENDENT-QA.md`  
+
+### 1. Safety Gate S0: P0 Security & Role Authority Fixes (AUTOMATED VERIFIED)
+- **P0-1 (`MOVE_TOKEN` DM Override Bypass):**
+  - Restricted `dmOverride`, `forceMove`, `teleport`, and `isDmOverride` flags strictly to authenticated DM roles (`dm`, `dm_host`).
+  - Player attempts to submit privileged override flags are ignored and rejected fail-closed (`REJECTED_VALIDATION_FAILURE`).
+  - Verified by exploit regression test `test_exploit_player_move_token_dm_override_rejected`.
+- **P0-2 (`DM_PHYSICAL` Role Spoofing & Confirmation Bypass):**
+  - Gated `DM_PHYSICAL` to authenticated DM roles across all roll entrypoints: `ATTACK_ACTION`, `SKILL_CHECK`, `SAVING_THROW`, `REQUEST_ROLL`, and `SUBMIT_ROLL`.
+  - Non-DM submissions claiming `DM_PHYSICAL` under `REQUIRE_DM_CONFIRMATION` or `SERVER_DIGITAL_ONLY` are rejected with `REJECTED_UNAUTHORIZED_ROLE` with zero side effects.
+  - Verified by exploit regression test `test_exploit_player_dm_physical_spoofing_rejected`.
+- **P0-3 (Battlemap Asset Ownership & Fail-Closed Registry):**
+  - `POST /api/v2/battlemap/assets` pins `campaignId` and `ownerActorId` to verified session; blocks cross-campaign overwrites (`FORBIDDEN_ASSET_OVERWRITE`) and validates magic bytes.
+  - `GET /api/v2/battlemap/assets/{assetId}` fails closed on unregistered files (HTTP 404 `ASSET_NOT_FOUND`, never checks disk) and enforces DM-only secrecy (HTTP 403 `FORBIDDEN_ASSET_ACCESS`).
+  - Frontend `v2BackendClient` eliminates bearer tokens from URL query strings (`getAuthenticatedAssetUrl` returns clean URLs; `fetchAuthenticatedAssetBlobUrl` uses headers).
+  - Verified by exploit regression test `test_exploit_asset_cross_campaign_overwrite_and_unregistered_fail_closed`.
+- **P0-4 (Spatial Query Observer Impersonation & Radius Limits):**
+  - `GET /api/v2/battlemap/spatial-query` strictly verifies `observer_id` matches assigned player character; rejects player impersonation with HTTP 403 `FORBIDDEN_IMPERSONATION`.
+  - Rejects observer role viewpoint queries with HTTP 403 `OBSERVER_VIEWPOINT_RESTRICTED`.
+  - Caps sight radius to 120.0 ft for players (300.0 ft for DM).
+  - SingleBoundedAIHarness pins actor identity and campaign ID.
+  - Verified by exploit regression test `test_exploit_spatial_query_player_impersonation_rejected`.
+
+### 2. Gameplay Gate S1: Movement Mechanics & RollRequest Lifecycle (AUTOMATED VERIFIED)
+- **Authoritative Actor Footprint & Multi-Cell Occupancy:**
+  - Creature footprints (`Tiny`, `Small`, `Medium`, `Large`, `Huge`, `Gargantuan`) derived from server entity definition; non-DM callers cannot forge smaller footprints.
+  - Living actors' multi-cell footprints (`fp.occupied_cells()`) expand into the `occupied_cells` collision set.
+- **Combat Movement Budget & Action Economy:**
+  - In combat (`combatState.isActive == True`), verifies the moving entity is the active turn combatant (rejects out-of-turn moves with `REJECTED_VALIDATION_FAILURE`).
+  - Enforces `remainingMovementFeet` budget (initial 30 ft per turn, decremented by path cost); rejects moves exceeding budget.
+  - Exploration pacing caps single moves to 120.0 ft.
+  - `START_COMBAT` / `START_ENCOUNTER` and `NEXT_TURN` initialize and reset `remainingMovementFeet`.
+  - Verified by `test_spatial_movement_combat_turn_budget_and_multicell_occupancy`.
+- **Scene Geometry Topology:**
+  - `MOVE_TOKEN` and `query_scene_spatial_context` merge doors, walls, and terrain from `battlemapState` and active `mapConfigs[sceneId].geometry` (`doors`, `walls`, `terrainZones`).
+  - Handles `isOpen` / `state: "open"` and `isLocked` / `state: "locked"` seamlessly.
+- **Strict Coordinate System Versioning:**
+  - Eliminates ambiguous `raw_tx > 30` heuristic guessing.
+  - Preserves integer grid cell migration when within grid bounds; rejects ambiguous floating-point or out-of-bounds coordinates without explicit `coordinateSystem`.
+- **Two-Stage RollRequest Lifecycle & HP Resolution:**
+  - Server validates and pins formula/dice schema in `REQUEST_ROLL` (e.g. Rapier 1d8, Greatsword 2d6, d20 checks).
+  - `SUBMIT_ROLL` computes damage and applies HP mutations to target characters and NPCs.
+  - Under `REQUIRE_DM_CONFIRMATION`, HP patches are staged in `pendingAdjudications`; committed only when DM approves via `APPROVE_ADJUDICATION`.
+  - Verified by `test_two_stage_attack_damage_roll_request_lifecycle` across gateway restart and recovery.
+
+### 3. AI Living World Gate S2: Autonomous Scheduler & AI Concurrency (PARTIAL / PROGRESS)
+- **Deterministic Multi-Actor Scheduler (`tick_world_scheduler`):**
+  - Independent NPCs (`npc-jorren-vale`, `npc-duessa-starflower`) follow time-of-day waypoint routines.
+  - Each NPC queries bounded spatial awareness (`query_scene_spatial_context` with 60 ft radius), detects cell occupancy/bottlenecks, resolves conflicts via polite rerouting, and submits legal `MOVE_TOKEN` through R1 Single Commit Authority.
+  - Logs episodic perception updates without requiring LLM calls on every world tick.
+  - Verified by `test_autonomous_living_world_scheduler_routines_and_conflict_resolution`.
+- **Single Model Concurrency Semaphore:**
+  - `_model_execution_lock` mutex in `SingleBoundedAIHarness` serializes heavy model inferences to protect 4–6 GB VRAM budget.
+- **Honest Status:** SP-04 and SP-05 remain marked **PARTIAL** until full autonomous living-world behavior is proven in live desktop gameplay soak tests.
+
+### 4. Complete Verification Evidence
+- **Backend Tests:** 415 collected tests across 49 test modules (`pytest`), 100% passing.
+- **Frontend Tests:** 144 unit, integration & spatial secrecy tests across 21 test suites (`npm test`), 100% passing.
+- **Frontend Build:** Clean Vite production build in 640ms.
