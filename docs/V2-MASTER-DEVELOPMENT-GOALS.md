@@ -2,8 +2,8 @@
 
 **Updated:** 2026-10-28  
 **Status:** APPROVED PRODUCT DIRECTION AND DELIVERY GOVERNANCE; **NOT** an implementation-complete claim.  
-**Branch:** \`v2/srd51-rules-browser\`; do not merge \`main\` without explicit user approval.  
-**Implementation baselines reviewed:** backend \`20f40f8\`, frontend \`6cfc268\` (Milestone 12B); consult the latest branch heads, not these as fixed edit bases.  
+**Branch:** `v2/srd51-rules-browser`; do not merge `main` without explicit user approval.  
+**Implementation baselines reviewed:** backend `20f40f8`, frontend `6cfc268` (Milestone 12B); consult the latest branch heads, not these as fixed edit bases.  
 **Authority:** This charter expresses the agreed end goal; companion architectural and milestone documents define detailed contracts and holds. It must not override frozen R1 schemas, Step 51 coverage restrictions or existing security gates.
 
 ## 1. Primary Objective
@@ -16,7 +16,7 @@ An AI controls narrative decisions and proposes actions; the **deterministic Pyt
 
 ## 2. Immutable Architecture and Product Contracts
 
-- **Existing authority stays:** R1 \`ActionEnvelope → SnapshotRef → Rules/StatePatch → Validation → CommitRequest → CommitReceipt\`; Python/SQLite single Commit Authority, deterministic replay/recovery, explicit revision and idempotency. No replacement runtime and no second authoritative campaign database.
+- **Existing authority stays:** R1 `ActionEnvelope → SnapshotRef → Rules/StatePatch → Validation → CommitRequest → CommitReceipt`; Python/SQLite single Commit Authority, deterministic replay/recovery, explicit revision and idempotency. No replacement runtime and no second authoritative campaign database.
 - **Rules and source:** SRD 5.1 read-only source database, provenance, licensing, precedence and approved homebrew; no unverified source content masquerading as resolved rules. Frozen schemas change only through explicit reviewed migrations.
 - **Separate knowledge from state:** canonical established facts, NPC beliefs/suspicions, player knowledge, proposed DM plans, draft homebrew and committed gameplay effects must remain distinguishable. No unauthorised AI or Markdown direct canonical mutation.
 - **Three native workspaces:** PLAY/HOST; DM PLANNING (native Markdown, links/backlinks, graph and visual Canvas); HOMEBREW WORKSHOP (draft/validate/publish versioned rules, items, factions, creatures, NPCs, relationships). Shared knowledge service but strict proposal/confirmation/publication boundaries.
@@ -25,7 +25,7 @@ An AI controls narrative decisions and proposes actions; the **deterministic Pyt
 - **Voice:** Chatterbox Nano TTS runs *natively inside VadAllFate*; VadAllVox is a separate voice-casting and fine-tuning **authoring** tool, not a runtime dependency or sidecar that must be launched for play.
 - **Operating budget:** prioritise local-first, 4–6 GB VRAM / 16 GB RAM clients; do not require constant cloud calls or one LLM inference per ordinary NPC/world tick.
 - **Multiplayer/security:** host/DM/player/observer identities, character ownership, private messages, player-specific knowledge, consent, replay-safe actions, secure map assets and role-scoped projections are enforced **server-side**.
-- **Compatibility:** retain existing VTT, runtime, recovery contracts, legitimate source/licence holds, and working features. No unilateral redesign or \`main\` merge.
+- **Compatibility:** retain existing VTT, runtime, recovery contracts, legitimate source/licence holds, and working features. No unilateral redesign or `main` merge.
 
 ## 3. Evidence Grades: Avoid False Completion
 
@@ -35,7 +35,7 @@ An AI controls narrative decisions and proposes actions; the **deterministic Pyt
 **HUMAN ACCEPTED:** actual user scenario meets all criteria on real maps/content and suitable hardware.  
 **HOLD/PARTIAL:** required behaviour is missing or a known security/integrity issue remains.
 
-Always separate *reported agent test counts* from independent examination and human acceptance. A successful UI screenshot or \`COMMITTED\` event alone is not a full game-loop acceptance test.
+Always separate *reported agent test counts* from independent examination and human acceptance. A successful UI screenshot or `COMMITTED` event alone is not a full game-loop acceptance test.
 
 ## 4. Development Priority and Goals
 
@@ -43,11 +43,11 @@ Always separate *reported agent test counts* from independent examination and hu
 
 Python must correctly adjudicate attacks, damage, criticals, defenses, spells, slots, conditions, death saves, rests and skills from validated character data and approved rules. SRD 5.1 monster mechanics are held where Step 51 coverage is unverified; unsupported effects must fail closed, not use invented generic damage or statistics.
 
-**Dice is explicitly multi-source:** \`SERVER_DIGITAL\`, \`PLAYER_PHYSICAL\`, \`DM_PHYSICAL\` and separately authorised \`DM_ADJUDICATED_OVERRIDE\`. Mixed dice in one encounter is a core product requirement. For physical rolls, players report **raw faces only**; Python validates the authorised, pinned roll request and computes bonuses/AC/DC/damage/HP. Session policies: honour-system mixed, require DM confirmation, digital-only. An unverified physical claim is not proof of the physical die face but is legitimate when host policy allows. AI DM must pause for pending player rolls and resume from committed results.
+**Dice is explicitly multi-source:** `SERVER_DIGITAL`, `PLAYER_PHYSICAL`, `DM_PHYSICAL` and separately authorised `DM_ADJUDICATED_OVERRIDE`. Mixed dice in one encounter is a core product requirement. For physical rolls, players report **raw faces only**; Python validates the authorised, pinned roll request and computes bonuses/AC/DC/damage/HP. Session policies: honour-system mixed, require DM confirmation, digital-only. An unverified physical claim is not proof of the physical die face but is legitimate when host policy allows. AI DM must pause for pending player rolls and resume from committed results.
 
 **P0 security findings from Milestone 12B source review (2026-10-28):**
-1. Digital HMAC RNG currently seeds \`serverDiceSecret\` with a **predictable hardcoded campaign-derived string** in seed state and fallback; that is *not* unmineable player-unpredictable entropy. Securely generate/store a per-campaign secret **outside publicly projected/replay-leaked campaign document**, implement safe migration/rotation and replay proof without revealing future rolls. Never regenerate secret silently during restart.
-2. Existing physical-dice implementation mostly submits \`diceMode/rawRolls/damageRolls\` as part of an action; it **does not yet demonstrate a fully pinned, persistent \`RollRequest\` lifecycle** that prevents resubmission/mode-switch-after-unfavourable-roll, validates separate roll stages, handles interruptions or lets AI suspend/resume robustly. Build and test that contract rather than counting toggle UI as finished.
+1. Digital HMAC RNG currently seeds `serverDiceSecret` with a **predictable hardcoded campaign-derived string** in seed state and fallback; that is *not* unmineable player-unpredictable entropy. Securely generate/store a per-campaign secret **outside publicly projected/replay-leaked campaign document**, implement safe migration/rotation and replay proof without revealing future rolls. Never regenerate secret silently during restart.
+2. Existing physical-dice implementation mostly submits `diceMode/rawRolls/damageRolls` as part of an action; it **does not yet demonstrate a fully pinned, persistent `RollRequest` lifecycle** that prevents resubmission/mode-switch-after-unfavourable-roll, validates separate roll stages, handles interruptions or lets AI suspend/resume robustly. Build and test that contract rather than counting toggle UI as finished.
 3. Verify attacker ownership, nonce/action ID selection, forged modifiers and consequences, anti-replay, multi-die formula accuracy (greatsword 2d6 / critical 4d6), advantage/disadvantage, DM physical and explicit overrides.
 4. Enforce real single-active-model execution, versioned R1 recovery, pack import conflict approval, atomic/restart-safe reconciliation, and rollback/compensation safety.
 
@@ -57,7 +57,7 @@ Python must correctly adjudicate attacks, damage, criticals, defenses, spells, s
 
 Treat every PC, named NPC and creature as an actor with stable campaign/save/scene identity, versioned canonical coordinates, footprint, permitted movement modes, world-time position and revisions, **not merely a draggable icon**. Python must validate boundaries, collisions, walls/doors, visibility/LOS, reach, targeting, cover, difficult terrain, routing, encounter movement budgets, scene transitions, actor occupancy and simultaneous moves. AI requests movement via restricted tools; Python resolves and commits it, then VTT animates the committed route.
 
-Four independent coordinate spaces: natural **image pixels**, calibrated grid, canonical scene cells/feet, and client viewport pixels. Explicit typed transforms only. **Do not silently guess** \`grid_cell\` versus \`percentage\` based on values; existing Milestone 12B compatibility adapter is transitional, not the end-state spatial model. Save/restore geometry and actor placements after full app restart. Player knowledge, occlusion and DM map secrecy stay separate from ground-truth geometry.
+Four independent coordinate spaces: natural **image pixels**, calibrated grid, canonical scene cells/feet, and client viewport pixels. Explicit typed transforms only. **Do not silently guess** `grid_cell` versus `percentage` based on values; existing Milestone 12B compatibility adapter is transitional, not the end-state spatial model. Save/restore geometry and actor placements after full app restart. Player knowledge, occlusion and DM map secrecy stay separate from ground-truth geometry.
 
 **Blue Alley:** import genuine source artwork uncropped; map and grid remain independently editable; calibrate printed squares; save/reload original artwork, fog/walls/doors/actors; test with the user's actual image when provided, rather than treating generated fixture art as proof.
 
@@ -85,7 +85,7 @@ Player/DM must readily see and use their character sheet and notes, enter a **ph
 
 ### Goal 5 — Portable campaigns, native notes and safe homebrew (**P1–P2**)
 
-Complete \`.vadpack\` lifecycle: safe read/dry run, DM review of pinned conflicts, R1-authoritative import with crash repair, Pack Manager, provenance/licence tracking, export with per-player secrecy, version management, save branching and install isolation. No campaign-specific Python edits to run a new adventure; source copyright permissions and asset licences must be respected.
+Complete `.vadpack` lifecycle: safe read/dry run, DM review of pinned conflicts, R1-authoritative import with crash repair, Pack Manager, provenance/licence tracking, export with per-player secrecy, version management, save branching and install isolation. No campaign-specific Python edits to run a new adventure; source copyright permissions and asset licences must be respected.
 
 DM PLANNING has native Markdown files, structured graph and Canvas, with proposed/confirmed campaign planning semantics. HOMEBREW WORKSHOP has draft/validated/implemented/deprecated versions with actual, testable rules effects where supported and explicit publication. Players can write personal/party notes without gaining DM truth. External Obsidian vault import/export is optional; SQLite remains state authority.
 
@@ -107,7 +107,7 @@ Completion must be demonstrated by *vertical gameplay*:
 
 Support 2–3 Windows laptops and mobiles/tablets as clients or optional controlled workers, with per-character ownership, DM/host/player/observer roles, join/invite, presence, private/public actions, fog/knowledge separation, reconnection, push/poll sync and coherent commit-order projections. Do not expose the V2 runtime to the LAN until threat review, auth/transport/asset ACL, origin/CSRF protections, secret projection and denial-of-service tests pass.
 
-**P0 for map assets:** Milestone 12B \`GET /api/v2/battlemap/assets/{id}\` path currently has **no explicit session/role check at that route** and assets are selected from a shared directory by ID. Before remotely shared play, implement access-controlled per-campaign asset ownership and player-safe image variants; validate file type/content, size, and safe rendering. \`POST\` likewise needs correct DM upload authorisation, not merely any authenticated identity. Inspect rather than assume the enclosing HTTP layer covers it.
+**P0 for map assets:** Milestone 12B `GET /api/v2/battlemap/assets/{id}` path currently has **no explicit session/role check at that route** and assets are selected from a shared directory by ID. Before remotely shared play, implement access-controlled per-campaign asset ownership and player-safe image variants; validate file type/content, size, and safe rendering. `POST` likewise needs correct DM upload authorisation, not merely any authenticated identity. Inspect rather than assume the enclosing HTTP layer covers it.
 
 **Acceptance:** wrong user/role/campaign cannot read hidden assets or mutate objects; role-switch clears privileged caches, including image and renderer state; offline/reconnect maintains correct world position without leaking DM state.
 
@@ -131,7 +131,7 @@ Native Chatterbox Nano renders narration/NPC speech within VadAllFate; VadAllVox
 
 **Campaign pipeline:** continue CPP-04/05 and original Dragon Heist integration without bypassing import licences, step holds or abandoning other modules.
 
-**Future, not blockers now:** annotated VTT map import (\`.uvtt\`/\`.dd2vtt\`), CPU wall/room/door detection, optional AI vision, smart DM-approved geometry editing; distributed local-model workers; broader rules/source coverage beyond independently verified SRD; richer settlements/economy beyond the initial vertical slice. Keep these in tracked backlog. See [Automatic Map Ingestion](FUTURE-AUTOMATED-SPATIAL-MAP-INGESTION.md).
+**Future, not blockers now:** annotated VTT map import (`.uvtt`/`.dd2vtt`), CPU wall/room/door detection, optional AI vision, smart DM-approved geometry editing; distributed local-model workers; broader rules/source coverage beyond independently verified SRD; richer settlements/economy beyond the initial vertical slice. Keep these in tracked backlog. See [Automatic Map Ingestion](FUTURE-AUTOMATED-SPATIAL-MAP-INGESTION.md).
 
 ## 6. Development Discipline and Reporting
 
@@ -144,18 +144,18 @@ For every checkpoint:
 5. Test unit, integration, property/negative, adversarial, concurrency, crash/restart, secrecy and replay scenarios as appropriate.
 6. Test the actual authenticated Windows launcher/browser, desktop/tablet/mobile when applicable; show real evidence distinct from mocked fixtures.
 7. Update evidence-based implementation registers with PASS / PARTIAL / HOLD, known bugs, risk, coverage and test exact command/environment. Counts alone do not establish product readiness.
-8. Commit and push to existing \`v2/srd51-rules-browser\` development branches as appropriate. **Never merge main without explicit approval.**
+8. Commit and push to existing `v2/srd51-rules-browser` development branches as appropriate. **Never merge main without explicit approval.**
 9. Prioritise the next *user-visible complete gameplay journey*, not the most easily countable number of handlers.
 10. Never claim a user-selected layout, map asset, NPC intelligence, production security or full D&D coverage that has not actually been implemented and accepted.
 
 ## 7. Companion Documents
 
-- \`docs/V2-MILESTONE-12B-EXECUTION-BRIEF.md\` — recent digital/physical dice, VTT trust and persistence milestone (implementation claims are reviewed separately).
-- \`docs/V2-DICE-ROLL-INPUT-MODES-AND-AUTHORITY.md\` — approved roll-request, provenance, trust policy and UI rules.
-- \`docs/V2-AUTHORITATIVE-2D-SPATIAL-SIMULATION-AND-STARLIT-REVELS-TEST.md\` — SP-00..05 actor navigation and stress criteria.
-- \`docs/BLUE-ALLEY-VTT-ARCHITECTURE.md\` — image-first VTT and calibration.
-- \`docs/FUTURE-AUTOMATED-SPATIAL-MAP-INGESTION.md\` — deferred annotated-map import and automatic geometry proposal.
-- \`docs/V2-PORTABLE-CAMPAIGN-PACKS-AND-OBSIDIAN-INTEROP.md\` (backend) — import/notes/campaign pack lifecycle.
-- \`docs/V2-IMPLEMENTATION-REGISTER.md\` — evidence-based milestone implementation status.
+- `docs/V2-MILESTONE-12B-EXECUTION-BRIEF.md` — recent digital/physical dice, VTT trust and persistence milestone (implementation claims are reviewed separately).
+- `docs/V2-DICE-ROLL-INPUT-MODES-AND-AUTHORITY.md` — approved roll-request, provenance, trust policy and UI rules.
+- `docs/V2-AUTHORITATIVE-2D-SPATIAL-SIMULATION-AND-STARLIT-REVELS-TEST.md` — SP-00..05 actor navigation and stress criteria.
+- `docs/BLUE-ALLEY-VTT-ARCHITECTURE.md` — image-first VTT and calibration.
+- `docs/FUTURE-AUTOMATED-SPATIAL-MAP-INGESTION.md` — deferred annotated-map import and automatic geometry proposal.
+- `docs/V2-PORTABLE-CAMPAIGN-PACKS-AND-OBSIDIAN-INTEROP.md` (backend) — import/notes/campaign pack lifecycle.
+- `docs/V2-IMPLEMENTATION-REGISTER.md` — evidence-based milestone implementation status.
 
 **Governing success condition:** A human can open VadAllFate, run a real D&D campaign with either physical or digital dice, see NPCs act and move in a persistent world under the correct rules and permissions, save and resume without continuity loss, and switch to a different campaign without changing the engine. *Passing tests is necessary but not a substitute for that outcome.*
