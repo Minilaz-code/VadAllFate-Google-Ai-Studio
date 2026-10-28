@@ -1,5 +1,7 @@
 # VadAllFate V2 — Evidence-Based Implementation Register & Specification Audit
 
+> **Governing charter (28 October 2026):** [VadAllFate V2 Master Development Goals and Acceptance Charter](V2-MASTER-DEVELOPMENT-GOALS.md). Current milestone reports and this document are evidence registers, not proof that the complete product or known trust gates have passed.
+
 **Audit & Execution Date:** 2026-10-27 (Milestone 10A Critical Authority Recovery, Co-DM Forward Compensation, and Pack Staging Security QA)  
 **Active Backend Worktree / Branch:** `d:\Development\VadAllFate-v2-srd` (`v2/srd51-rules-browser`)  
 **Active Frontend Worktree / Branch:** `d:\Development\VadAllFate-Google-Ai-Studio` (`v2/srd51-rules-browser`)  
