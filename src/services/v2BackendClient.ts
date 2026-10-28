@@ -825,7 +825,7 @@ export class V2BackendClient {
     dataBase64: string,
     assetId?: string,
     isDmOnly: boolean = false
-  ): Promise<{ assetId: string; url: string; fileName: string; sizeBytes: number; mimeType: string; isDmOnly?: boolean }> {
+  ): Promise<{ assetId: string; url: string; fileName: string; sizeBytes: number; mimeType: string; isDmOnly?: boolean; isLocalDemo?: boolean }> {
     try {
       const resp = await fetch(`${this.baseUrl}/battlemap/assets`, {
         method: 'POST',
@@ -844,7 +844,7 @@ export class V2BackendClient {
     } catch (err) {
       this.handleCatch(err, 'uploadBattlemapAsset');
     }
-    // Fallback if offline/local demo:
+    // Only reached if allowOfflineFallback is true (otherwise handleCatch throws):
     const fallbackId = assetId || `asset-${Date.now()}`;
     return {
       assetId: fallbackId,
@@ -853,10 +853,47 @@ export class V2BackendClient {
       sizeBytes: dataBase64.length,
       mimeType: 'image/png',
       isDmOnly,
+      isLocalDemo: true,
     };
   }
 
   private _blobUrlCache: Map<string, string> = new Map();
+
+  /**
+   * Stage W0: Clear and revoke all cached object URLs.
+   * Crucial during role/identity/campaign switches to prevent DM-only images leaking into player sessions.
+   */
+  public clearAssetBlobCache(): void {
+    for (const blobUrl of this._blobUrlCache.values()) {
+      try {
+        if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function' && blobUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(blobUrl);
+        }
+      } catch {
+        // ignore revoke errors
+      }
+    }
+    this._blobUrlCache.clear();
+  }
+
+  /**
+   * Revoke and purge a specific cached asset object URL.
+   */
+  public revokeAssetBlobUrl(url: string, role?: string): void {
+    const effectiveRole = role || 'player';
+    const cacheKey = `${effectiveRole}:${url}`;
+    const blobUrl = this._blobUrlCache.get(cacheKey);
+    if (blobUrl) {
+      try {
+        if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function' && blobUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(blobUrl);
+        }
+      } catch {
+        // ignore
+      }
+      this._blobUrlCache.delete(cacheKey);
+    }
+  }
 
   public getAuthenticatedAssetUrl(url: string | undefined, _role?: string): string | undefined {
     if (!url) return undefined;
@@ -867,22 +904,42 @@ export class V2BackendClient {
   public async fetchAuthenticatedAssetBlobUrl(url: string, role?: string): Promise<string> {
     if (!url) return '';
     if (url.startsWith('data:') || url.startsWith('blob:')) return url;
-    if (this._blobUrlCache.has(url)) return this._blobUrlCache.get(url)!;
+
+    // Stage W0 Security: Key cache by effective role to prevent DM-only images from leaking to player views!
+    const effectiveRole = role || 'player';
+    const cacheKey = `${effectiveRole}:${url}`;
+    if (this._blobUrlCache.has(cacheKey)) {
+      return this._blobUrlCache.get(cacheKey)!;
+    }
 
     const fullUrl = url.startsWith('http') ? url : `${this.baseUrl.replace(/\/api\/v2\/?$/, '')}${url}`;
     try {
       const resp = await fetch(fullUrl, {
         method: 'GET',
-        headers: v2SessionHeaders(role),
+        headers: v2SessionHeaders(effectiveRole),
       });
       if (resp.ok) {
         const blob = await resp.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        this._blobUrlCache.set(url, blobUrl);
+        const blobUrl = typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
+          ? URL.createObjectURL(blob)
+          : url;
+        this._blobUrlCache.set(cacheKey, blobUrl);
         return blobUrl;
       }
-    } catch {
-      // Return original URL as fallback
+      if (resp.status === 403) {
+        throw new Error('HTTP 403 Forbidden: Battlemap asset access restricted or DM-only.');
+      }
+      if (resp.status === 404) {
+        throw new Error('HTTP 404 Not Found: Battlemap asset not registered in active campaign.');
+      }
+      await this.handleNonOk(resp, 'fetchAuthenticatedAssetBlobUrl');
+    } catch (err: any) {
+      if (err?.message?.startsWith('HTTP')) {
+        throw err;
+      }
+      if (!this.allowOfflineFallback) {
+        throw err;
+      }
     }
     return url;
   }

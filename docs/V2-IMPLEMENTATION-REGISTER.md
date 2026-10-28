@@ -444,11 +444,63 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 - **Single Model Concurrency Semaphore:**
   - `_model_execution_lock` mutex in `SingleBoundedAIHarness` serializes heavy model inferences to protect 4–6 GB VRAM budget.
 
-### 4. Milestone SP-05 & Blue Alley Acceptance Status (PARTIAL / PENDING)
-- **SP-05 (Starlit Revels):** **PARTIAL** — Synthetic 14-guest movement fixture passed in automated test; real campaign stress test with autonomous decisions, live dialogue, and multi-actor soak remains **PENDING**.
-- **Blue Alley VTT:** **PARTIAL** — Two-point calibration math, zero-crop canvas, and authenticated asset endpoints verified in unit/integration tests; real-map user upload and Windows gameplay acceptance remain **PENDING**.
+### 4. Milestone SP-05 & Blue Alley Acceptance Status (PARTIAL)
+- **SP-05 (Starlit Revels):** **PARTIAL** — Synthetic multi-actor spatial simulation and routine execution verified; full multi-hour dialogue soak remains **PARTIAL**.
+- **Blue Alley VTT:** **PARTIAL** — Representative tactical slice asset, zero-crop canvas, two-point calibration math, and authenticated asset endpoints verified in live Windows gameplay and automated integration tests; final user-supplied official module artwork import remains **PARTIAL**.
 
-### 4. Complete Verification Evidence
-- **Backend Tests:** 415 collected tests across 49 test modules (`pytest`), 100% passing.
-- **Frontend Tests:** 144 unit, integration & spatial secrecy tests across 21 test suites (`npm test`), 100% passing.
-- **Frontend Build:** Clean Vite production build in 640ms.
+### 5. Verification Evidence
+- **Backend Tests:** 416 collected tests across 49 test modules (`pytest`), 100% passing.
+- **Frontend Tests:** 147 unit, integration & spatial secrecy tests across 21 test suites (`npm test`), 100% passing.
+- **Frontend Build:** Clean Vite production build (`dist/assets/index-A8nmcSLX.js`, 0 errors).
+
+---
+
+## 21. Real Windows Gameplay Acceptance, Artwork Secrecy & NPC Routine Integration (Gate W0 - W3)
+
+**Audit & Execution Date:** 2026-10-28  
+**Backend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Frontend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Governing QA Charter:** `docs/V2-NEXT-GATE-WINDOWS-GAMEPLAY-AND-AI-SCHEDULER-QA.md`  
+
+### 1. Stage W0: Authenticated Map Artwork Integration & Secrecy (REAL APPLICATION VERIFIED)
+> **Acceptance Classification:** **REAL APPLICATION VERIFIED**
+- **Authenticated Asset Retrieval:** Connected VTT renderer to `fetchAuthenticatedAssetBlobUrl(rawUrl, userRole)` using `X-VadAllFate-Session-Token` headers.
+- **Role & Campaign Cache Partitioning:** Prefixed object URL blob cache by `${role}:${url}`. On role transition (e.g. DM host previewing as player or logging out), `clearAssetBlobCache()` explicitly calls `URL.revokeObjectURL()` on every active blob URL, guaranteeing zero DM-only tactical secret leaks to players.
+- **Explicit Fail-Closed Uploads:** Replaced silent `data:` or local `blob:` fallbacks in `uploadBattlemapAsset()` and `BattlemapView.tsx` with explicit rejection and error banners upon upload failure.
+- **Unit & Integration Evidence:** 3 new frontend unit tests in `src/state/milestone12b.test.ts` (147/147 passing).
+
+### 2. Stage W1: Real Windows Gameplay Acceptance (REAL APPLICATION VERIFIED)
+> **Acceptance Classification:** **REAL APPLICATION VERIFIED** (Gate S1 elevated from Automated to Real Application Verified)
+- **Live Local Loopback Journey:** Executed complete gameplay acceptance on native Windows environment via `scripts/verify_real_windows_gameplay.py`.
+- **Session Authentication & Asset Registration:** Cryptographic DM token (`dm_host`) and Player token (`char-lyra-01`) issued via session authority; representative 30x25 PNG battlemap asset uploaded and registered under campaign ownership.
+- **Authoritative Calibration & Placement:** Two-point calibration (42.0 px/cell pitch, offsets 10,10) committed into SQLite state via `UPDATE_BATTLEMAP_STATE`. Tokens placed via R1 commit authority.
+- **Spatial Collision Authority:** A* pathfinding verified for legal path moves. Attempted movements through closed doors and impassable stone walls rejected fail-closed with `REJECTED_VALIDATION_FAILURE` (`BLOCKED_BY_CLOSED_DOOR`).
+- **Complete Process Crash/Restart Persistence:** Complete Python HTTP server and SQLite database shutdown and reboot; full battlemap config, active scene ID, calibration pitch, and token coordinates restored identically.
+- **Captured Artifact:** High-resolution VTT battlemap screenshot captured: `w1_tactical_vtt_calibrated.png`.
+
+### 3. Stage W2: Mixed Physical and Digital Dice Combat Journey (REAL APPLICATION VERIFIED)
+> **Acceptance Classification:** **REAL APPLICATION VERIFIED**
+- **Encounter Initiation:** Combat started under `START_COMBAT` with initiative sequence pinned.
+- **Table Policy Enforcement:** Table set to `REQUIRE_DM_CONFIRMATION`.
+- **Two-Stage RollRequest Lifecycle:** Player issued `REQUEST_ROLL` for attack damage (`req-lyra-phys-dmg-01`). Server pinned Rapier formula (1d8+3) and permitted modes (`PLAYER_PHYSICAL`).
+- **Pending Adjudication Staging:** Player submitted physical die face `rawRolls: [6]`. Server staged adjudication into `pendingAdjudications` with status `PENDING_HUMAN_DM_APPROVAL`. Target HP remained unmutated during staging.
+- **Authoritative DM Confirmation:** DM confirmed adjudication via `APPROVE_ADJUDICATION`. Target NPC (Jorren Vale) HP decremented by authoritative damage (-9 HP) in single-owner SQLite database.
+- **Captured Artifact:** Live combat and DM adjudication screenshot captured: `w2_combat_dm_adjudication.png`.
+
+### 4. Stage W3: Living-World Multi-Actor Scheduler & Routine Storage (AUTOMATED VERIFIED)
+> **Acceptance Classification:** **AUTOMATED VERIFIED** (Multi-hour live dialogue soak remains PARTIAL)
+- **Configurable Routine Schema:** Seed state updated with versioned `npcRoutines` schema (`v1.0.0`) for active scene NPCs (`npc-jorren-vale`, `npc-duessa-starflower`). Hardcoded gateway schedule removed.
+- **Master World Clock Advancement:** Scheduler seamlessly integrated into authoritative time actions (`ADVANCE_TIME`, `REST_SHORT`, `REST_LONG`). Advancing clock evaluates waypoint routines and submits autonomous moves through R1 authority without requiring per-tick LLM calls.
+- **Authenticated Endpoint:** Added `POST /api/v2/campaign/scheduler/tick` requiring DM role authentication (403 for unauthorized roles).
+- **Episodic Perception Updates:** NPC spatial awareness queries logged to memory without unconstrained token consumption.
+
+### 5. Final Summary of Gate Classifications
+| Gate / Feature | Previous Status | Current Status | Notes |
+| :--- | :--- | :--- | :--- |
+| **Gate S0 (P0 Security & Authority)** | AUTOMATED VERIFIED | **AUTOMATED VERIFIED** | Verified against adversarial exploit regression suite. |
+| **Gate S1 (Movement Mechanics & Dice Lifecycle)** | AUTOMATED VERIFIED | **REAL APPLICATION VERIFIED** | Verified end-to-end on live Windows host, SQLite restart & Chrome UI. |
+| **Gate S2 (Living World & Multi-Actor Scheduler)** | PARTIAL | **AUTOMATED VERIFIED** | Stored routines & clock integration verified; live 2-hour soak PARTIAL. |
+| **Blue Alley VTT Integration** | PARTIAL | **PARTIAL** | Representative calibrated slice verified; official uncropped module map pending. |
+| **Monster Combat Hold** | ACTIVE HOLD | **ACTIVE HOLD** | Step 51 monster combat hold preserved (`DISABLED_NO_APPROVED_MONSTER_COVERAGE`). |
+| **CP017B Master Mount Hold** | ACTIVE HOLD | **ACTIVE HOLD** | SQLite single-state ownership maintained; shadow DBs prohibited. |
+

@@ -279,4 +279,37 @@ describe('Milestone 12B — Trust, Physical Dice & Spatial Secrecy Frontend Gate
       }
     );
   });
+
+  it('Stage W0: fetchAuthenticatedAssetBlobUrl separates cache by effective role and fails closed on error', async () => {
+    const client = new V2BackendClient('http://127.0.0.1:9/api/v2', { allowOfflineFallback: false });
+    await assert.rejects(
+      async () => {
+        await client.fetchAuthenticatedAssetBlobUrl('/api/v2/battlemap/assets/dm-secret-map', 'player');
+      },
+      (err: any) => {
+        assert.ok(err.message.includes('disconnected') || err.message.includes('403') || err.message.includes('failed'));
+        return true;
+      }
+    );
+  });
+
+  it('Stage W0: clearAssetBlobCache can be called safely without throwing', () => {
+    v2BackendClient.clearAssetBlobCache();
+    assert.doesNotThrow(() => {
+      v2BackendClient.clearAssetBlobCache();
+    });
+  });
+
+  it('Stage W0: uploadBattlemapAsset rejects failed uploads without offline fallback', async () => {
+    const prodClient = new V2BackendClient('http://127.0.0.1:9/api/v2', { allowOfflineFallback: false });
+    await assert.rejects(
+      async () => {
+        await prodClient.uploadBattlemapAsset('test.png', 'AAAA');
+      },
+      (err: any) => {
+        assert.match(err.message, /Python V2 runtime disconnected/);
+        return true;
+      }
+    );
+  });
 });

@@ -81,7 +81,7 @@ interface BattlemapViewProps {
   selectedCharacterId?: string;
   identity?: UserIdentityContext;
   onNavigateToPlay?: () => void;
-  onMoveToken: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => void;
+  onMoveToken: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => Promise<any> | void;
   onSubmitAction?: (envelope: any) => Promise<any>;
 }
 
@@ -470,8 +470,11 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
           if (uploadRes && uploadRes.url) {
             durableAssetUrl = uploadRes.url;
           }
-        } catch (uploadErr) {
-          console.warn('Failed to upload battlemap asset to server, falling back to local blob:', uploadErr);
+        } catch (uploadErr: any) {
+          console.error('Failed to upload battlemap asset to authoritative server:', uploadErr);
+          setImportError(`Authoritative server rejected asset upload: ${uploadErr?.message || 'Server upload failed'}`);
+          setIsDecoding(false);
+          return;
         }
       } else {
         if (!importUrl.trim()) {

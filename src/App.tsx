@@ -29,6 +29,7 @@ import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import { ShieldAlert } from 'lucide-react';
 import { consumeHostKeyFromUrlFragment, hasV2Session } from './services/v2Session.ts';
+import { v2BackendClient } from './services/v2BackendClient.ts';
 import { battlemapSessionManager } from './state/battlemapSession.ts';
 
 export default function App() {
@@ -130,6 +131,12 @@ export default function App() {
       battlemapSessionManager.hydrateFromBackendProjection((projection as any).battlemapState);
     }
   }, [projection]);
+
+  // Stage W0: Invalidate asset blob URL cache when switching roles or identities
+  // to prevent DM-only cached blob URLs from leaking into player views
+  useEffect(() => {
+    v2BackendClient.clearAssetBlobCache();
+  }, [effectiveRole, identity.actorId, identity.campaignId, identity.assignedCharacterId]);
 
   // Handlers for switching identity preset
   const handleSelectIdentity = (newIdentity: UserIdentityContext) => {
@@ -376,7 +383,7 @@ export default function App() {
                 onNavigateToPlay={() => setCurrentTab('play')}
                 onSubmitAction={(env) => activeClient.submitActionEnvelope(env)}
                 onMoveToken={(entityId, targetX, targetY, entityType) => {
-                  activeClient.submitActionEnvelope({
+                  return activeClient.submitActionEnvelope({
                     actionId: `move-${Date.now()}`,
                     actorId: entityId,
                     actorRole: effectiveRole,

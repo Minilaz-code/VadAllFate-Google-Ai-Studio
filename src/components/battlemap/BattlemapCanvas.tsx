@@ -80,6 +80,7 @@ import {
   type VisionSource,
 } from '../../utils/lineOfSight.ts';
 import type { FogOfWarState } from '../../types/battlemap.ts';
+import { v2BackendClient } from '../../services/v2BackendClient.ts';
 
 interface BattlemapCanvasProps {
   mapDefinition: BattlemapDefinition;
@@ -95,7 +96,7 @@ interface BattlemapCanvasProps {
   brushRadiusCells?: number;
   onSelectEntity?: (id: string, type: 'character' | 'npc') => void;
   onSelectGeometry?: (geom: SelectedGeometryRef | null) => void;
-  onMoveToken?: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => void;
+  onMoveToken?: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => Promise<any> | void;
   onAddRoom?: (room: RectangularRoom) => void;
   onAddCorridor?: (corridor: CorridorSegment) => void;
   onAddWall?: (wall: WallSegment) => void;
@@ -203,6 +204,49 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   const [calibrationAxis, setCalibrationAxis] = useState<'horizontal' | 'vertical' | 'diagonal'>('horizontal');
   const [showFineTuneHud, setShowFineTuneHud] = useState(false);
   const [isSavingCalibration, setIsSavingCalibration] = useState(false);
+
+  // Authenticated Protected Asset Blob URL Resolution (Stage W0)
+  const [resolvedArtworkUrl, setResolvedArtworkUrl] = useState<string>('');
+  const [isArtworkLoading, setIsArtworkLoading] = useState<boolean>(false);
+  const [artworkError, setArtworkError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const rawUrl = mapDefinition.backgroundArtwork?.url;
+    if (!rawUrl) {
+      setResolvedArtworkUrl('');
+      setArtworkError(null);
+      setIsArtworkLoading(false);
+      return;
+    }
+
+    if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
+      setResolvedArtworkUrl(rawUrl);
+      setArtworkError(null);
+      setIsArtworkLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsArtworkLoading(true);
+    setArtworkError(null);
+
+    v2BackendClient.fetchAuthenticatedAssetBlobUrl(rawUrl, userRole)
+      .then((blobUrl) => {
+        if (!isMounted) return;
+        setResolvedArtworkUrl(blobUrl);
+        setIsArtworkLoading(false);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setArtworkError(err?.message || 'Failed to load protected battlemap artwork');
+        setResolvedArtworkUrl('');
+        setIsArtworkLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [mapDefinition.backgroundArtwork?.url, userRole]);
 
   // Zero-Crop Natural Dimension Detection
   const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number } | null>(() => {
@@ -734,14 +778,43 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
       return;
     }
 
-    if (activeTool === 'token') {
-      // If user clicks on empty cell while an entity is selected, move it there
-      if (selectedEntityId && !tokenDrag) {
-        const char = characters.find((c) => c.id === selectedEntityId);
-        const entityType = char ? 'character' : 'npc';
-        onMoveToken?.(selectedEntityId, coords.gridX, coords.gridY, entityType);
+    const handleDispatchMove = async (
+    entityId: string,
+    targetX: number,
+    targetY: number,
+    entityType: 'character' | 'npc'
+  ) => {
+    if (!onMoveToken) return;
+    try {
+      const res: any = await onMoveToken(entityId, targetX, targetY, entityType);
+      if (res && res.receipt) {
+        if (
+          res.receipt.status === 'REJECTED_VALIDATION_FAILURE' ||
+          res.receipt.status === 'REJECTED_UNAUTHORIZED_ROLE' ||
+          res.receipt.status === 'REJECTED_STALE_SNAPSHOT'
+        ) {
+          const reason =
+            res.receipt.error ||
+            res.receipt.rejectionReason ||
+            'Movement rejected by Python authoritative rules.';
+          setCanvasNotice(`Movement Rejected: ${reason}`);
+          setTimeout(() => setCanvasNotice(null), 4500);
+        }
       }
+    } catch (err: any) {
+      setCanvasNotice(`Movement Failed: ${err?.message || 'Server error'}`);
+      setTimeout(() => setCanvasNotice(null), 4500);
     }
+  };
+
+  if (activeTool === 'token') {
+    // If user clicks on empty cell while an entity is selected, move it there
+    if (selectedEntityId && !tokenDrag) {
+      const char = characters.find((c) => c.id === selectedEntityId);
+      const entityType = char ? 'character' : 'npc';
+      handleDispatchMove(selectedEntityId, coords.gridX, coords.gridY, entityType);
+    }
+  }
   };
 
 
@@ -828,7 +901,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
         if (tokenDrag.isDragging) {
           const coords = getMapCoords(e.clientX, e.clientY);
           if (coords) {
-            onMoveToken?.(tokenDrag.entityId, coords.gridX, coords.gridY, tokenDrag.entityType);
+            handleDispatchMove(tokenDrag.entityId, coords.gridX, coords.gridY, tokenDrag.entityType);
           }
         }
         setTokenDrag(null);
@@ -1467,35 +1540,64 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           {/* ============================================================ */}
           {/* LAYER 1: Background Artwork (100% Unclipped Natural Plane)   */}
           {/* ============================================================ */}
-          {layerVisibility.artwork && mapDefinition.backgroundArtwork?.url && (
+          {layerVisibility.artwork && (resolvedArtworkUrl || mapDefinition.backgroundArtwork?.url) && (
             <div
               className="absolute inset-0 pointer-events-none flex items-center justify-center"
               style={{
-                opacity: mapDefinition.backgroundArtwork.opacity ?? 0.7,
+                opacity: mapDefinition.backgroundArtwork?.opacity ?? 0.7,
               }}
             >
-              <img
-                src={mapDefinition.backgroundArtwork.url}
-                alt={mapDefinition.backgroundArtwork.name || 'Map Artwork'}
-                onLoad={handleImageLoad}
-                style={{
-                  width: naturalWidth > 0 ? `${naturalWidth}px` : '100%',
-                  height: naturalHeight > 0 ? `${naturalHeight}px` : '100%',
-                  transform: `scale(${mapDefinition.backgroundArtwork.scale ?? 1.0}) translate(${
-                    mapDefinition.backgroundArtwork.offsetX ?? 0
-                  }px, ${mapDefinition.backgroundArtwork.offsetY ?? 0}px)`,
-                  maxWidth: 'none',
-                  maxHeight: 'none',
-                  objectFit: 'contain',
-                }}
-                className="select-none pointer-events-none"
-                draggable={false}
-              />
+              {resolvedArtworkUrl ? (
+                <img
+                  src={resolvedArtworkUrl}
+                  alt={mapDefinition.backgroundArtwork?.name || 'Map Artwork'}
+                  onLoad={handleImageLoad}
+                  style={{
+                    width: naturalWidth > 0 ? `${naturalWidth}px` : '100%',
+                    height: naturalHeight > 0 ? `${naturalHeight}px` : '100%',
+                    transform: `scale(${mapDefinition.backgroundArtwork?.scale ?? 1.0}) translate(${
+                      mapDefinition.backgroundArtwork?.offsetX ?? 0
+                    }px, ${mapDefinition.backgroundArtwork?.offsetY ?? 0}px)`,
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    objectFit: 'contain',
+                  }}
+                  className="select-none pointer-events-none"
+                  draggable={false}
+                />
+              ) : null}
             </div>
           )}
 
-          {/* Fallback pattern if no background artwork */}
-          {(!mapDefinition.backgroundArtwork?.url || !layerVisibility.artwork) && (
+          {/* Loading Indicator for Authenticated Map Asset */}
+          {layerVisibility.artwork && isArtworkLoading && (
+            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center bg-black/40 text-amber-300 text-xs gap-2 z-10">
+              <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+              <span>Loading secure battlemap artwork...</span>
+            </div>
+          )}
+
+          {/* Access Restricted / Asset Error Overlay */}
+          {layerVisibility.artwork && artworkError && (
+            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center bg-neutral-950/70 text-neutral-300 p-6 text-center z-10">
+              <div className="p-4 rounded-lg bg-neutral-900 border border-neutral-700 max-w-sm flex flex-col items-center gap-2 shadow-2xl">
+                <Shield className="w-8 h-8 text-amber-500" />
+                <span className="font-semibold text-amber-200">
+                  {artworkError.includes('403') || artworkError.includes('restricted')
+                    ? 'DM-Only Battlemap Layer'
+                    : 'Map Artwork Unavailable'}
+                </span>
+                <span className="text-[11px] text-neutral-400">
+                  {artworkError.includes('403') || artworkError.includes('restricted')
+                    ? 'This map artwork contains Dungeon Master secrets and is restricted to the DM role.'
+                    : artworkError}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Fallback pattern if no background artwork or hidden */}
+          {(!resolvedArtworkUrl || !layerVisibility.artwork) && !isArtworkLoading && (
             <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
           )}
 
