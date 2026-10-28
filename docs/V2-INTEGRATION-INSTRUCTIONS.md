@@ -1,5 +1,7 @@
 # VadAllFate Google AI Studio Frontend — V2 Integration Instructions
 
+> **Governing charter (28 October 2026):** [VadAllFate V2 Master Development Goals and Acceptance Charter](V2-MASTER-DEVELOPMENT-GOALS.md). Current milestone reports and this document are evidence registers, not proof that the complete product or known trust gates have passed.
+
 **Status:** Architectural instructions; UI/transport implementation is not claimed.  
 **Canonical architecture:** https://github.com/Minilaz-code/VadAllFate/blob/v2/srd51-rules-browser/docs/V2-ARCHITECTURE-INSTRUCTIONS-HARNESS-KNOWLEDGE-GRAPH.md
 
