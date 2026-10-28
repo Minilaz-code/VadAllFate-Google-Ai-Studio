@@ -399,6 +399,145 @@ export class BattlemapSessionManager {
     this.notify();
   }
 
+  public hydrateFromBackendProjection(battlemapState: any): void {
+    if (!battlemapState || typeof battlemapState !== 'object') return;
+
+    let hasChanged = false;
+    const mapConfigs = battlemapState.mapConfigs || {};
+
+    // 1. Update existing maps or append new maps declared in authoritative projection
+    for (const [mapId, cfg] of Object.entries<any>(mapConfigs)) {
+      if (!cfg || typeof cfg !== 'object') continue;
+
+      const existingMap = this.maps.find((m) => m.id === mapId);
+      if (existingMap) {
+        let mapModified = false;
+
+        // Hydrate Grid dimensions and calibration offsets
+        if (cfg.gridDimensions) {
+          const prevGrid = existingMap.grid;
+          existingMap.grid = {
+            ...prevGrid,
+            ...(cfg.gridDimensions.width !== undefined ? { width: cfg.gridDimensions.width } : {}),
+            ...(cfg.gridDimensions.height !== undefined ? { height: cfg.gridDimensions.height } : {}),
+            ...(cfg.gridDimensions.cellSizePx !== undefined ? { cellSizePx: cfg.gridDimensions.cellSizePx } : {}),
+            ...(cfg.gridDimensions.originX !== undefined ? { originX: cfg.gridDimensions.originX } : {}),
+            ...(cfg.gridDimensions.originY !== undefined ? { originY: cfg.gridDimensions.originY } : {}),
+          };
+          mapModified = true;
+        }
+
+        // Hydrate Background artwork and calibration metadata
+        if (cfg.backgroundArtwork) {
+          const prevArt = existingMap.backgroundArtwork || {
+            url: '',
+            name: 'Artwork',
+            scale: 1.0,
+            offsetX: 0,
+            offsetY: 0,
+            opacity: 1.0,
+          };
+          existingMap.backgroundArtwork = {
+            ...prevArt,
+            ...cfg.backgroundArtwork,
+            calibration: cfg.backgroundArtwork.calibration
+              ? {
+                  ...(prevArt.calibration || { pitchPxPerCell: existingMap.grid.cellSizePx, originOffsetX: 0, originOffsetY: 0 }),
+                  ...cfg.backgroundArtwork.calibration,
+                }
+              : prevArt.calibration,
+          };
+          mapModified = true;
+        }
+
+        // Hydrate Geometry if present
+        if (cfg.geometry) {
+          existingMap.geometry = {
+            ...existingMap.geometry,
+            ...cfg.geometry,
+          };
+          mapModified = true;
+        }
+
+        if (mapModified) {
+          hasChanged = true;
+        }
+      } else {
+        // Map does not exist in local sample set: instantiate new BattlemapDefinition from authoritative state
+        const newMap: BattlemapDefinition = {
+          id: mapId,
+          name: cfg.name || cfg.mapName || mapId,
+          locationId: `loc-${mapId}`,
+          sceneSummary: cfg.sceneSummary || 'Synchronized tactical battlemap from server projection.',
+          grid: {
+            width: cfg.gridDimensions?.width || 20,
+            height: cfg.gridDimensions?.height || 20,
+            cellSizePx: cfg.gridDimensions?.cellSizePx || 40,
+            feetPerCell: cfg.gridDimensions?.feetPerCell || 5,
+            showGrid: true,
+            gridColor: 'rgba(255, 255, 255, 0.2)',
+            originX: cfg.gridDimensions?.originX || 0,
+            originY: cfg.gridDimensions?.originY || 0,
+          },
+          backgroundArtwork: cfg.backgroundArtwork
+            ? {
+                url: cfg.backgroundArtwork.url || '',
+                name: cfg.backgroundArtwork.name || 'Artwork',
+                scale: cfg.backgroundArtwork.scale ?? 1.0,
+                offsetX: cfg.backgroundArtwork.offsetX ?? 0,
+                offsetY: cfg.backgroundArtwork.offsetY ?? 0,
+                opacity: cfg.backgroundArtwork.opacity ?? 0.8,
+                calibration: cfg.backgroundArtwork.calibration,
+              }
+            : undefined,
+          geometry: {
+            rooms: cfg.geometry?.rooms || [],
+            corridors: cfg.geometry?.corridors || [],
+            walls: cfg.geometry?.walls || [],
+            doors: cfg.geometry?.doors || [],
+            windows: cfg.geometry?.windows || [],
+            railings: cfg.geometry?.railings || [],
+            terrain: cfg.geometry?.terrain || [],
+          },
+          fog: {
+            enabled: battlemapState.fogEnabled ?? false,
+            defaultState: 'revealed',
+            revealedCells: battlemapState.revealedCells || [],
+            hiddenCells: [],
+            exploredCells: battlemapState.revealedCells || [],
+            partySharedVision: true,
+            autoComputeTokenLos: true,
+          },
+          lineOfSight: {
+            enabled: true,
+            blocksOnWalls: true,
+            blocksOnClosedDoors: true,
+            maxSightRadiusFeet: 60,
+            defaultSightRadiusFeet: 60,
+          },
+          tokens: [],
+        };
+        this.maps.push(newMap);
+        hasChanged = true;
+      }
+    }
+
+    // 2. Synchronize active map doors and fog if present on activeMapId
+    if (battlemapState.activeMapId) {
+      const active = this.maps.find((m) => m.id === battlemapState.activeMapId);
+      if (active) {
+        if (battlemapState.revealedCells && Array.isArray(battlemapState.revealedCells)) {
+          active.fog.revealedCells = [...battlemapState.revealedCells];
+          hasChanged = true;
+        }
+      }
+    }
+
+    if (hasChanged) {
+      this.notify();
+    }
+  }
+
   public resetToDefaults(): void {
     // Revoke all tracked blobs safely
     this.blobUrlRefCounts.forEach((_, url) => {

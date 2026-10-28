@@ -139,20 +139,76 @@ Specifically engineered for Co-DM and Human DM operation: divides the screen int
 
 ---
 
-## 5. Comparative Evaluation
+## 5. Proposal D: Hybrid Cockpit (B-style VTT + A-style Collapsible Drawers + C-style Co-DM Staging)
 
-| Feature / Criterion | Proposal A: Split Cockpit | Proposal B: Glass HUD | Proposal C: Director Console |
-| :--- | :---: | :---: | :---: |
-| **Map Visibility** | High (50–60% dedicated) | Maximum (100% fullscreen) | High (65% dedicated) |
-| **Narrative Focus** | Excellent (Dedicated Feed) | Moderate (Collapsible Tray) | Moderate (Event Ledger) |
-| **Co-DM Adjudication** | Good | Moderate | Superior (Dedicated Staging) |
-| **Tablet Usability (1024x768)** | Very Good (Drawer layout) | Excellent (Floating pills) | Moderate (Dense matrix) |
-| **SRD 5.1 Rules Accessibility** | Quick Modal | Floating Card | Integrated Split View |
-| **Visual Atmosphere** | Structured Tabletop | Modern Immersive Glass | Command Cockpit |
+### Concept
+The **Hybrid Cockpit** combines the strengths of Proposals A, B, and C:
+- **Base Surface:** A full-bleed, 100% viewport battlemap canvas guaranteeing uncropped, high-resolution rendering with dynamic pan/zoom and SVG tactical overlays.
+- **Collapsible Side Drawers (from Proposal A):** Left drawer for Narrative Dialogue, Rules Lookup, and Causal Event Log; Right drawer for Combat Tracker, Token Inspector, and Actions. Both drawers slide over or dock beside the canvas without forcing artificial zoom scaling or letterbox distortion.
+- **Floating Tactical Island (from Proposal B):** Unobtrusive bottom toolbar for map calibration, fog brush, measurement rulers, grid snapping, and view centering.
+- **Co-DM Adjudication Tray (from Proposal C):** Dedicated collapsible staging card in the combat drawer allowing DMs to approve AI-primary proposals, review rolls, or execute authoritative state overrides with a single click.
+
+```
++----------------------------------------------------------------------------------------------------+
+|  [VADALLFATE V2 COCKPIT]  [Mode: AI-Primary Co-DM]  [Clock: 14:30]  [Host DM]  [Receipt #24] [SRD] |
++----------------------------------------------------------------------------------------------------+
+| [NARRATIVE DRAWER]       |                 TACTICAL BATTLEMAP (FULL-BLEED)     | [COMBAT / CO-DM]  |
+| < (Dock / Float / Hide)  |                                                     | (Hide / Dock) >   |
+| - Scene: Blue Alley Maze |                                                     | Round 1 (Turn 2)  |
+| - Dialogue Feed          |            [100% ZERO-CROP BATTLEMAP SURFACE]       | Lyra: 27/27 HP    |
+| - Action Nonce Receipts  |                                                     | Skeleton 1: 13 HP |
+| - Prompt Input           |                 (Tokens, LOS Fog, SVG Grid)         | Skeleton 2: 13 HP |
+|                          |                                                     | ----------------- |
+|                          |                                                     | [CO-DM STAGING]   |
+|                          |                                                     | "Skeleton 2 moves |
+|                          |                                                     |  flanks Lyra..."  |
+|                          |                     +--------------------------+    | [Approve] [Veto]  |
+|                          |                     | FLOATING TACTICAL ISLAND |    | ----------------- |
+|                          |                     | [Pan] [Ruler] [Fog] [Cal]|    | [Melee] [Spell]   |
+|                          |                     +--------------------------+    | [Dash]  [Diseng]  |
++--------------------------+-----------------------------------------------------+-------------------+
+```
+
+### Color Palette & Visual Token Hierarchy
+- **Canvas Base & Void:** Deep Obsidian Charcoal (`#090b0e`).
+- **Surface Elevation 1 (Drawers & Trays):** Dark Slate (`#12161c`) with subtle 1px border (`#1c222b`).
+- **Surface Elevation 2 (Floating Islands & Modals):** Frosted Slate Glass (`rgba(18, 22, 28, 0.88)` with `backdrop-filter: blur(12px)`).
+- **Authoritative Accent & Primary Focus:** Burnished Copper / Warm Bronze (`#b45309`, `#d97706`, `#f59e0b`) indicating committed state, active turns, and validated dice rolls.
+- **Tactical Highlights & Target Reticles:** Restrained Phosphor Teal (`#0d9488`, `#14b8a6`, `#2dd4bf`) for line-of-sight bounds, measurement distances, and valid move destinations.
+- **Danger & HP Criticals:** Crimson (`#e11d48`, `#ef4444`).
+
+### Responsive Breakpoint Specifications
+
+| Viewport Tier | Resolution | Layout Behavior |
+| :--- | :--- | :--- |
+| **Desktop Ultra** | **1600 × 1100** | Full dual-drawer pinned cockpit. Canvas gets 58% center width. Both narrative and combat/co-DM drawers visible simultaneously with full statblock detail. |
+| **Laptop Standard** | **1366 × 768** | Single-drawer active docking or compact 280px sidebars. Center map gets 60% width. Quick-actions collapse into tabbed accordion groups. |
+| **Tablet Landscape** | **1024 × 768** | Drawers collapse into floating edge pill badges (`[Narrative (2)]`, `[Tactics: Lyra's Turn]`). Clicking an edge badge slides the drawer as a frosted overlay without unmounting the canvas. |
+| **Phone Portrait** | **390 × 844** | Bottom navigation bar switching between Fullscreen Map, Narrative Chat, and Combat Card. Floating mini-compass and quick attack button remain persistent. |
+
+### Pros & Cons
+- **Pros:** Highest flexibility; combines cinematic fullscreen tactical combat with instant access to narrative logs and Co-DM adjudication; adapts gracefully across desktop, laptop, and tablet.
+- **Cons:** Slightly more frontend UI state to manage drawer docking modes (docked vs floating vs hidden).
 
 ---
 
-## 6. Recommendation
+## 6. Comparative Evaluation Matrix
 
-- **Primary Recommendation:** **Proposal A (Split Cockpit)** with elements of **Proposal B's** collapsible tray transitions. It delivers optimal ergonomics for single-screen desktop and tablet users while cleanly preserving the zero-crop canvas view and narrative dialogue thread.
-- **Secondary Evolution:** Implement the Co-DM Staging Card from **Proposal C** inside the right-hand combat drawer of Proposal A, ensuring human DMs retain instant veto power over AI actions while battlemap tokens move in real time.
+| Feature / Criterion | Proposal A: Split Cockpit | Proposal B: Glass HUD | Proposal C: Director Console | Proposal D: Hybrid Cockpit |
+| :--- | :---: | :---: | :---: | :---: |
+| **Map Canvas Area** | High (50–60%) | Maximum (100%) | High (65%) | Maximum (100% full-bleed) |
+| **Zero-Crop Guarantee** | Supported | Supported | Supported | Full dynamic auto-fit |
+| **Narrative Stream Ergonomics** | Dedicated Column | Collapsible Floating Tray | Event Ledger | Dockable Drawer + Floating Pill |
+| **Co-DM Adjudication Cards** | Basic | Floating Card | Split Console | Dedicated Staging Card |
+| **Tablet Usability (1024x768)** | Drawer tabs | Floating HUD | Dense matrix | Edge Drawer Overlays |
+| **Phone Usability (390x844)** | Tab switching | Overlapping glass | Not optimized | Bottom navigation + quick drawer |
+| **Visual Immersion** | Structured | High Glass | Functional/DM Screen | Cinematic Charcoal & Bronze |
+
+---
+
+## 7. Deferred Implementation Notice
+
+> [!IMPORTANT]
+> **Implementation Hold Active:** In accordance with pair-programming governance, no structural frontend redesign or layout replacement will be implemented until the user has reviewed the visual mockups and explicitly selected their preferred layout (Proposal A, B, C, or D).
+>
+> All Milestone 12A functional deliverables (combat authority closure, concealed geometry protection, and calibration projection hydration) have been verified independently of UI layout modifications.

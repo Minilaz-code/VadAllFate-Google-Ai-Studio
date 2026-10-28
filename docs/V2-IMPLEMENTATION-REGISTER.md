@@ -232,5 +232,31 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
     - Headless Chrome CDP Acceptance Testing: Verified Desktop (1600x1100) zero-crop view (`vtt_desktop_view.png`), Tablet (1024x768) responsive scaling (`vtt_tablet_view.png`), and aligned calibration HUD (`vtt_calibration_aligned.png`).
     - Formulated 3 UI layout proposals in `docs/V2-UI-LAYOUT-PROPOSALS.md` (Proposal A: Split Cockpit, Proposal B: Glass Overlay HUD, Proposal C: Dual-Surface Director Console).
     - All 137 frontend tests pass (`137/137`); clean production build in 4.95s.
+- **Completed in Milestone 12A (Correctness Closure & Concealed Geometry Protection):**
+  - **Priority 1: Authoritative Combat Hardening & Forged Input Rejection:**
+    - Player `ATTACK_ACTION` requests strictly ignore and strip client-supplied `d20`, `attackBonus`, `totalToHit`, and `damage`.
+    - Server calculates all attack rolls deterministically from commit digest (`roll_digest`), resolves attack bonuses from actor ability/proficiency scores, and resolves damage dice according to 5e weapon definitions (1d4, 1d6, 1d8, 1d12) + ability modifier.
+    - Double weapon damage dice applied on critical hits (natural 20), preserving flat modifier once.
+    - Explicit authorized DM overrides (`actor_role in {"dm", "dm_host"}` with `isDmOverride: true` or `DM_OVERRIDE_STATE`) preserved separately for manual table adjustments.
+    - Negative regression tests prove valid-looking forged player values (`d20=20, attackBonus=30, totalToHit=50, damage=50`) are rejected/ignored by the authoritative pipeline.
+  - **Priority 2: VTT Calibration Projection Hydration & Durable Persistence:**
+    - `BattlemapSessionManager.hydrateFromBackendProjection`: Hydrates saved map configurations from `projection.battlemapState.mapConfigs` into the active frontend session on projection updates, updating `gridDimensions`, `backgroundArtwork`, `calibration`, and `geometry`, while instantiating unrecognised maps into local state.
+    - `BattlemapCanvas.handleSaveCalibration`: Dispatches `UPDATE_BATTLEMAP_STATE` with active snapshot (`currentSnapshot`), requires verified `COMMITTED` receipt before displaying success, displays actionable errors on `REJECTED_STALE_SNAPSHOT`, `REJECTED_UNAUTHORIZED_ROLE`, or gateway disconnect, and displays explicit warning when local `blob:` URLs are used.
+    - Real Blue Alley cartography acceptance test marked `PENDING USER ARTWORK ASSET` (procedural fixture verified; pending official production art file).
+  - **Priority 3: Concealed Spatial Geometry & Epistemic Leak Protection:**
+    - Server-side spatial projection audit in `get_projection(role="player")`: filters `mapConfigs` to exclude secret/undiscovered rooms, concealed walls, secret doors (unless open), concealed/hidden tokens (`isConcealed`, `isHidden`, `visibility: "dm_only"`, `entityType: "trap"`), hazard zones, and strips all privileged DM metadata (`dmNotes`, `secretDc`, `lockpickDc`, `gmGuidance`).
+    - Negative tests check serialized JSON string response (`json.dumps(player_proj)`) to prove zero leakage to player clients.
+  - **Priority 4: Test Suite & Test Count Discrepancy Closure:**
+    - Backend: 383 collected tests across 46 test modules (`uv run pytest`), 100% passing.
+    - Discrepancy reconciliation: Milestone 11B had 370 tests (text typo had referenced 380). Milestone 11B-QA added 10 tests in `test_v2_combat_and_admission_qa.py` (total 380). Milestone 12A added 3 tests (total 383).
+    - Frontend: 139 unit & regression tests across 20 suites (`node --test`), 100% passing.
+    - Frontend build: Vite production build succeeded in 3.73s with 0 errors.
+  - **Priority 5: UI Layout Architecture Proposals & Generative UI Mockups:**
+    - Expanded `docs/V2-UI-LAYOUT-PROPOSALS.md` with **Proposal D: Hybrid Cockpit** (B-style full-bleed VTT + A-style collapsible narrative/combat drawers + C-style Co-DM staging tray) and complete responsive breakpoints (desktop 1600x1100, laptop 1366x768, tablet 1024x768, phone 390x844).
+    - Palette specifications: deep obsidian charcoal (`#090b0e`), slate elevations (`#12161c`, `#1c222b`), burnished copper/bronze (`#b45309`, `#f59e0b`), and restrained teal highlights (`#0d9488`, `#2dd4bf`).
+    - Interactive Generative UI mockups artifact (`v2_ui_layout_mockups.html`) created for human review and visual validation.
+    - Layout implementation explicitly deferred pending human review and selection.
+
 - **Next Development Milestone (Milestone 13):**
-  - **UX-04 Tabletop Cockpit & Modern Charcoal/Bronze Design System Integration:** Implement Proposal A Split Cockpit layout unifying Narrative Feed, Calibrated Battlemap, and Interactive Combat Tracker.
+  - **UX-04 Tabletop Cockpit & Modern Charcoal/Bronze Design System Integration:** Implement user-selected layout proposal (Proposal A, B, C, or D) unifying Narrative Feed, Calibrated Battlemap, and Interactive Combat Tracker.
+

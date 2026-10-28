@@ -2085,6 +2085,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             onSetActiveTool={setActiveTool}
             onUpdateGridConfig={(gridCfg) => battlemapSessionManager.updateGrid(activeMap.id, gridCfg)}
             onUpdateArtwork={(artCfg) => battlemapSessionManager.updateArtwork(activeMap.id, artCfg)}
+            currentSnapshot={currentSnapshot}
             onSubmitAction={onSubmitAction}
           />
         </main>

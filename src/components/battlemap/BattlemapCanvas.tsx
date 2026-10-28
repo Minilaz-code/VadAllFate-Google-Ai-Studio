@@ -36,7 +36,7 @@ import {
 import type { MapGridConfig, MapBackgroundArtwork } from '../../types/battlemap.ts';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
-import type { UserRole, PlayerSafeNpc, UserIdentityContext } from '../../types/runtime.ts';
+import type { UserRole, PlayerSafeNpc, UserIdentityContext, SnapshotRef } from '../../types/runtime.ts';
 import { canAccessDmWorkspaces } from '../../runtime/roleAuthority.ts';
 import type {
   BattlemapDefinition,
@@ -113,6 +113,7 @@ interface BattlemapCanvasProps {
   onSetActiveTool?: (tool: BattlemapEditorTool) => void;
   onUpdateGridConfig?: (grid: Partial<MapGridConfig>) => void;
   onUpdateArtwork?: (artwork: Partial<MapBackgroundArtwork>) => void;
+  currentSnapshot?: SnapshotRef;
   onSubmitAction?: (envelope: any) => Promise<any>;
 }
 
@@ -156,6 +157,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   onSetActiveTool,
   onUpdateGridConfig,
   onUpdateArtwork,
+  currentSnapshot,
   onSubmitAction,
 }) => {
   // Viewport navigation (pan & zoom)
@@ -494,51 +496,79 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   const handleSaveCalibration = async () => {
     setIsSavingCalibration(true);
     try {
-      if (onSubmitAction) {
-        await onSubmitAction({
-          actionId: `act-calib-${Date.now()}`,
-          clientNonce: `nonce-calib-${Date.now()}`,
-          actorId: isEffectiveDm ? 'dm-1' : (identity?.actorId || 'dm-1'),
-          actorRole: userRole,
-          actionType: 'UPDATE_BATTLEMAP_STATE',
-          snapshotRef: {
-            campaignId: 'aethelgard-vault-001',
-            commitSequence: 1,
-            ...((window as any).__LAST_SNAPSHOT_REF__ || {}),
-          },
-          payload: {
-            mapId: mapDefinition.id,
-            gridDimensions: {
-              width: grid.width,
-              height: grid.height,
-              cellSizePx: grid.cellSizePx,
-              originX: grid.originX || 0,
-              originY: grid.originY || 0,
-            },
-            backgroundArtwork: {
-              ...mapDefinition.backgroundArtwork,
-              calibration: {
-                isCalibrated: true,
-                calibratedAtUtc: new Date().toISOString(),
-                pitchPxPerCell: grid.cellSizePx,
-                originOffsetX: grid.originX || 0,
-                originOffsetY: grid.originY || 0,
-                anchorPoint: calibrationPoint1 || undefined,
-                referencePoint: calibrationPoint2 || undefined,
-                measuredUnitCount: calibrationUnits,
-                measuredAxis: calibrationAxis,
-              },
-            },
-          },
-          timestampUtc: new Date().toISOString(),
-        });
+      const isBlob = !!mapDefinition.backgroundArtwork?.url?.startsWith('blob:');
+
+      if (!onSubmitAction) {
+        setCanvasNotice('Action submission unavailable: Tabletop disconnected.');
+        return;
       }
-      setCanvasNotice('Calibration durably saved to authoritative state.');
-      setTimeout(() => setCanvasNotice(null), 3000);
+
+      const snap = currentSnapshot || (window as any).__LAST_SNAPSHOT_REF__ || {
+        campaignId: 'aethelgard-vault-001',
+        commitSequence: 1,
+      };
+
+      const result = await onSubmitAction({
+        actionId: `act-calib-${Date.now()}`,
+        clientNonce: `nonce-calib-${Date.now()}`,
+        actorId: isEffectiveDm ? 'dm-1' : (identity?.actorId || 'dm-1'),
+        actorRole: userRole,
+        actionType: 'UPDATE_BATTLEMAP_STATE',
+        snapshotRef: snap,
+        payload: {
+          mapId: mapDefinition.id,
+          gridDimensions: {
+            width: grid.width,
+            height: grid.height,
+            cellSizePx: grid.cellSizePx,
+            originX: grid.originX || 0,
+            originY: grid.originY || 0,
+          },
+          backgroundArtwork: {
+            ...mapDefinition.backgroundArtwork,
+            calibration: {
+              isCalibrated: true,
+              calibratedAtUtc: new Date().toISOString(),
+              pitchPxPerCell: grid.cellSizePx,
+              originOffsetX: grid.originX || 0,
+              originOffsetY: grid.originY || 0,
+              anchorPoint: calibrationPoint1 || undefined,
+              referencePoint: calibrationPoint2 || undefined,
+              measuredUnitCount: calibrationUnits,
+              measuredAxis: calibrationAxis,
+            },
+          },
+        },
+        timestampUtc: new Date().toISOString(),
+      });
+
+      const receipt = result?.receipt;
+      if (!receipt || receipt.status !== 'COMMITTED') {
+        const status = receipt?.status || 'SUBMISSION_FAILED';
+        const err = receipt?.error || 'Failed to commit calibration to authoritative game state.';
+        let actionable = `Calibration rejected (${status}): ${err}`;
+        if (status === 'REJECTED_STALE_SNAPSHOT') {
+          actionable = 'Calibration rejected: Stale campaign snapshot. Please reload or refresh current game state.';
+        } else if (status === 'REJECTED_UNAUTHORIZED_ROLE') {
+          actionable = 'Calibration rejected: Dungeon Master authority required to save map calibration.';
+        }
+        setCanvasNotice(actionable);
+        return;
+      }
+
+      // Success
+      if (isBlob) {
+        setCanvasNotice('Calibration saved to authoritative state. Warning: Local blob URL used. Persistent restart requires server asset.');
+      } else {
+        setCanvasNotice('Calibration durably saved to authoritative state.');
+      }
+      setTimeout(() => setCanvasNotice(null), 4000);
       setShowFineTuneHud(false);
       setCalibrationPoint1(null);
       setCalibrationPoint2(null);
       onSetActiveTool?.('token');
+    } catch (err: any) {
+      setCanvasNotice(`Calibration save failed: ${err?.message || 'Disconnected or network failure.'}`);
     } finally {
       setIsSavingCalibration(false);
     }

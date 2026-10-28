@@ -29,6 +29,7 @@ import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import { ShieldAlert } from 'lucide-react';
 import { consumeHostKeyFromUrlFragment, hasV2Session } from './services/v2Session.ts';
+import { battlemapSessionManager } from './state/battlemapSession.ts';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<ApplicationTab>('play');
@@ -122,6 +123,13 @@ export default function App() {
       gatewayError = e.message;
     }
   }
+
+  // Hydrate persistent battlemap session state from authoritative backend projection
+  useEffect(() => {
+    if (projection && (projection as any).battlemapState) {
+      battlemapSessionManager.hydrateFromBackendProjection((projection as any).battlemapState);
+    }
+  }, [projection]);
 
   // Handlers for switching identity preset
   const handleSelectIdentity = (newIdentity: UserIdentityContext) => {

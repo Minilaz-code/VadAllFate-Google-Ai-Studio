@@ -155,4 +155,100 @@ describe('Battlemap Session Lifecycle & Workspace Persistence (AIUI-CP002B1)', (
     assert.deepEqual(session.getActiveMap().fog.revealedCells, ['4,4', '4,5', '5,4']);
     assert.equal(session.getActiveMap().lineOfSight.defaultSightRadiusFeet, 120);
   });
+
+  it('hydrates existing map calibration and geometry from authoritative backend projection', () => {
+    const session = new BattlemapSessionManager();
+    let notified = false;
+    session.subscribe(() => {
+      notified = true;
+    });
+
+    const projectionBattlemapState = {
+      activeMapId: 'map-blue-alley',
+      revealedCells: ['10,10', '10,11'],
+      mapConfigs: {
+        'map-blue-alley': {
+          gridDimensions: {
+            width: 42,
+            height: 42,
+            cellSizePx: 52,
+            originX: 12,
+            originY: 18,
+          },
+          backgroundArtwork: {
+            url: '/assets/maps/blue_alley_uncompressed.png',
+            name: 'Blue Alley Authoritative Map',
+            scale: 1.05,
+            offsetX: 12,
+            offsetY: 18,
+            calibration: {
+              isCalibrated: true,
+              calibratedAtUtc: '2026-10-28T12:00:00Z',
+              pitchPxPerCell: 52,
+              originOffsetX: 12,
+              originOffsetY: 18,
+              measuredUnitCount: 10,
+              measuredAxis: 'horizontal',
+            },
+          },
+          geometry: {
+            rooms: [
+              { id: 'r-persisted-entry', name: 'Persisted Entry', x: 10, y: 10, width: 20, height: 20, floorType: 'stone' },
+            ],
+          },
+        },
+      },
+    };
+
+    session.hydrateFromBackendProjection(projectionBattlemapState);
+    assert.equal(notified, true);
+
+    const blueAlley = session.getMaps().find((m) => m.id === 'map-blue-alley');
+    assert.ok(blueAlley);
+    assert.equal(blueAlley.grid.cellSizePx, 52);
+    assert.equal(blueAlley.grid.originX, 12);
+    assert.equal(blueAlley.grid.originY, 18);
+    assert.equal(blueAlley.grid.width, 42);
+    assert.equal(blueAlley.backgroundArtwork?.calibration?.pitchPxPerCell, 52);
+    assert.equal(blueAlley.backgroundArtwork?.calibration?.originOffsetX, 12);
+    assert.equal(blueAlley.geometry.rooms[0]?.id, 'r-persisted-entry');
+    assert.deepEqual(blueAlley.fog.revealedCells, ['10,10', '10,11']);
+  });
+
+  it('instantiates new BattlemapDefinition when authoritative projection declares unknown map', () => {
+    const session = new BattlemapSessionManager();
+    const initialCount = session.getMaps().length;
+
+    const projectionBattlemapState = {
+      activeMapId: 'map-new-catacomb',
+      mapConfigs: {
+        'map-new-catacomb': {
+          name: 'The Obsidian Crypts',
+          sceneSummary: 'Dark underground burial site.',
+          gridDimensions: {
+            width: 30,
+            height: 25,
+            cellSizePx: 45,
+            originX: 4,
+            originY: 4,
+          },
+          backgroundArtwork: {
+            url: '/assets/maps/catacomb.png',
+            name: 'Catacomb Map',
+          },
+        },
+      },
+    };
+
+    session.hydrateFromBackendProjection(projectionBattlemapState);
+    assert.equal(session.getMaps().length, initialCount + 1);
+
+    const newMap = session.getMaps().find((m) => m.id === 'map-new-catacomb');
+    assert.ok(newMap);
+    assert.equal(newMap.name, 'The Obsidian Crypts');
+    assert.equal(newMap.grid.width, 30);
+    assert.equal(newMap.grid.height, 25);
+    assert.equal(newMap.grid.cellSizePx, 45);
+    assert.equal(newMap.grid.originX, 4);
+  });
 });
