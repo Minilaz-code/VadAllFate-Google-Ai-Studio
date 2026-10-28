@@ -1,5 +1,7 @@
 # VadAllFate V2 — Evidence-Based Implementation Register & Specification Audit
 
+> **New reuse programme (2026-10-28):** [HARVEST-02 MIT Source Reuse Execution Plan](V2-HARVEST-02-MIT-REUSE-EXECUTION-PLAN.md). Six verified MIT source snapshots / 24 module-level candidates; **inspection and planning only**, not implemented or integrated. Preserve all W0–W3 and Step 51 acceptance classifications.
+
 > **Governing charter (28 October 2026):** [VadAllFate V2 Master Development Goals and Acceptance Charter](V2-MASTER-DEVELOPMENT-GOALS.md). Current milestone reports and this document are evidence registers, not proof that the complete product or known trust gates have passed.
 
 **Audit & Execution Date:** 2026-10-27 (Milestone 10A Critical Authority Recovery, Co-DM Forward Compensation, and Pack Staging Security QA)  
