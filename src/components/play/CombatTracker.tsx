@@ -146,6 +146,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   };
 
   const handleQuickHpAdjust = async (entityId: string, delta: number) => {
+    if (!isDm) return;
     const entity = getCombatantEntity(entityId);
     if (!entity) return;
 
@@ -185,6 +186,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   };
 
   const handleToggleCondition = async (entityId: string, cond: string) => {
+    if (!isDm) return;
     const entity = getCombatantEntity(entityId);
     if (!entity) return;
 
@@ -220,22 +222,8 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
     const target = getCombatantEntity(targetId);
     if (!attacker || !target) return;
 
-    const d20 = Math.floor(Math.random() * 20) + 1;
-    const bonus = 5;
-    const totalToHit = d20 + bonus;
-    const isCritical = d20 === 20;
-    const isFumble = d20 === 1;
-
-    let targetAc = 14;
-    if (target.type === 'character') {
-      targetAc = target.data.armorClass || 14;
-    } else if ((target.data as any).statBlock?.armorClass) {
-      targetAc = (target.data as any).statBlock.armorClass;
-    }
-
-    const hits = !isFumble && (isCritical || totalToHit >= targetAc);
-    const damage = hits ? (Math.floor(Math.random() * 8) + 1 + 3) * (isCritical ? 2 : 1) : 0;
-
+    // Milestone 11B-QA: Dice rolls, hit calculations, and damage are resolved authoritatively in Python.
+    // Client sends action intent only; no Math.random() rolls or fabricated outcomes.
     await onSubmitAction({
       actionId: `act-atk-${Date.now()}`,
       clientNonce: `nonce-atk-${Date.now()}`,
@@ -247,12 +235,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
         attackerId: attacker.data.id,
         targetId: target.data.id,
         attackName: selectedWeapon || 'Longsword',
-        roll: d20,
-        totalToHit,
-        targetAc,
-        damage,
-        isCritical,
-        isFumble,
+        weaponName: selectedWeapon || 'Longsword',
       },
       timestampUtc: new Date().toISOString(),
     });
@@ -269,9 +252,8 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
     if (!caster) return;
 
     const spellName = selectedSpell || 'Firebolt';
-    const isHealing = spellName.toLowerCase().includes('cure') || spellName.toLowerCase().includes('heal');
-    const dmgOrHeal = Math.floor(Math.random() * 10) + 1 + 4;
 
+    // Milestone 11B-QA: Spell slot expenditure, validation, and healing/damage outcomes are authoritative in Python.
     await onSubmitAction({
       actionId: `act-spell-${Date.now()}`,
       clientNonce: `nonce-spell-${Date.now()}`,
@@ -284,8 +266,6 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
         targetId: targetId || undefined,
         spellName,
         slotLevel: selectedSpellLevel,
-        damage: !isHealing ? dmgOrHeal : 0,
-        healing: isHealing ? dmgOrHeal : 0,
       },
       timestampUtc: new Date().toISOString(),
     });
@@ -458,37 +438,39 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
                     />
                   </div>
 
-                  {/* Quick HP Adjustment Steppers */}
-                  <div className="flex items-center justify-between pt-1 gap-1 text-[10px] font-mono">
-                    <button
-                      onClick={() => handleQuickHpAdjust(entry.entityId, -5)}
-                      className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-red-950 text-red-400 hover:text-red-200 border border-neutral-800 hover:border-red-800 transition-colors"
-                      title="Deal 5 Damage"
-                    >
-                      -5
-                    </button>
-                    <button
-                      onClick={() => handleQuickHpAdjust(entry.entityId, -1)}
-                      className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-red-950 text-red-400 hover:text-red-200 border border-neutral-800 hover:border-red-800 transition-colors"
-                      title="Deal 1 Damage"
-                    >
-                      -1
-                    </button>
-                    <button
-                      onClick={() => handleQuickHpAdjust(entry.entityId, 1)}
-                      className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-200 border border-neutral-800 hover:border-emerald-800 transition-colors"
-                      title="Heal 1 HP"
-                    >
-                      +1
-                    </button>
-                    <button
-                      onClick={() => handleQuickHpAdjust(entry.entityId, 5)}
-                      className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-200 border border-neutral-800 hover:border-emerald-800 transition-colors"
-                      title="Heal 5 HP"
-                    >
-                      +5
-                    </button>
-                  </div>
+                  {/* Quick HP Adjustment Steppers (DM Only) */}
+                  {isDm && (
+                    <div className="flex items-center justify-between pt-1 gap-1 text-[10px] font-mono">
+                      <button
+                        onClick={() => handleQuickHpAdjust(entry.entityId, -5)}
+                        className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-red-950 text-red-400 hover:text-red-200 border border-neutral-800 hover:border-red-800 transition-colors"
+                        title="Deal 5 Damage"
+                      >
+                        -5
+                      </button>
+                      <button
+                        onClick={() => handleQuickHpAdjust(entry.entityId, -1)}
+                        className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-red-950 text-red-400 hover:text-red-200 border border-neutral-800 hover:border-red-800 transition-colors"
+                        title="Deal 1 Damage"
+                      >
+                        -1
+                      </button>
+                      <button
+                        onClick={() => handleQuickHpAdjust(entry.entityId, 1)}
+                        className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-200 border border-neutral-800 hover:border-emerald-800 transition-colors"
+                        title="Heal 1 HP"
+                      >
+                        +1
+                      </button>
+                      <button
+                        onClick={() => handleQuickHpAdjust(entry.entityId, 5)}
+                        className="flex-1 py-0.5 rounded bg-neutral-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-200 border border-neutral-800 hover:border-emerald-800 transition-colors"
+                        title="Heal 5 HP"
+                      >
+                        +5
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Spell Slots Summary (If Spellcaster) */}
@@ -508,31 +490,35 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
                   {conditions.map((cond) => (
                     <span
                       key={cond}
-                      onClick={() => handleToggleCondition(entry.entityId, cond)}
-                      className="cursor-pointer px-1.5 py-0.5 rounded text-[9px] font-mono bg-red-950/80 text-red-300 border border-red-800 hover:bg-red-900 transition-colors"
-                      title="Click to remove condition"
+                      onClick={() => isDm && handleToggleCondition(entry.entityId, cond)}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono bg-red-950/80 text-red-300 border border-red-800 ${
+                        isDm ? 'cursor-pointer hover:bg-red-900 transition-colors' : 'cursor-default'
+                      }`}
+                      title={isDm ? 'Click to remove condition' : cond}
                     >
-                      {cond} ×
+                      {cond}{isDm ? ' ×' : ''}
                     </span>
                   ))}
 
-                  {/* Add condition quick popover */}
-                  <select
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleToggleCondition(entry.entityId, e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                    defaultValue=""
-                    className="bg-neutral-900 text-neutral-400 border border-neutral-800 rounded px-1 py-0.5 text-[9px] font-mono cursor-pointer hover:border-neutral-700"
-                    aria-label={`Add condition to ${entry.name}`}
-                  >
-                    <option value="" disabled>+ Cond</option>
-                    {COMMON_CONDITIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  {/* Add condition quick popover (DM Only) */}
+                  {isDm && (
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleToggleCondition(entry.entityId, e.target.value);
+                          e.target.value = '';
+                        }
+                      }}
+                      defaultValue=""
+                      className="bg-neutral-900 text-neutral-400 border border-neutral-800 rounded px-1 py-0.5 text-[9px] font-mono cursor-pointer hover:border-neutral-700"
+                      aria-label={`Add condition to ${entry.name}`}
+                    >
+                      <option value="" disabled>+ Cond</option>
+                      {COMMON_CONDITIONS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 

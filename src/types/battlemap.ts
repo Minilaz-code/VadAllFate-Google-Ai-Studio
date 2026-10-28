@@ -19,6 +19,20 @@ export interface MapGridConfig {
   originY?: number;        // Grid vertical alignment offset in pixels
 }
 
+export interface GridCalibrationMetadata {
+  isCalibrated: boolean;
+  calibratedAtUtc?: string;
+  calibratedByActorId?: string;
+  anchorPoint?: { x: number; y: number };
+  referencePoint?: { x: number; y: number };
+  measuredUnitCount?: number;
+  measuredAxis?: 'horizontal' | 'vertical' | 'diagonal';
+  pitchPxPerCell: number;
+  originOffsetX: number;
+  originOffsetY: number;
+  rotationDegrees?: number;
+}
+
 export interface MapBackgroundArtwork {
   url: string;
   name: string;
@@ -30,6 +44,7 @@ export interface MapBackgroundArtwork {
   isLocalBlob?: boolean;   // True if created from local file input (session-only)
   naturalWidth?: number;   // Image original pixel width
   naturalHeight?: number;  // Image original pixel height
+  calibration?: GridCalibrationMetadata;
 }
 
 export interface RectangularRoom {
@@ -134,6 +149,7 @@ export type BattlemapEditorTool =
   | 'select'          // Select geometry or inspect elements
   | 'token'           // Token movement mode (default play mode)
   | 'pan'             // Pan canvas viewport
+  | 'calibrate'       // Two-point interactive grid calibration
   | 'room'            // Draw rectangular room
   | 'corridor'        // Draw connecting corridor
   | 'wall'            // Draw line-segment wall
@@ -385,6 +401,77 @@ export const SAMPLE_BATTLEMAPS: BattlemapDefinition[] = [
     },
     tokens: [
       { id: 'tok-kaelen-road', entityId: 'char-kaelen', entityType: 'character', name: 'Kaelen Shadowstrider', x: 45, y: 55, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
+    ],
+  },
+  {
+    id: 'map-blue-alley',
+    name: 'Blue Alley — The Ivy-Wreathed Complex',
+    locationId: 'loc-blue-alley',
+    sceneSummary: 'The infamous death-trap maze constructed by Keilier in the Sea Ward of Waterdeep, paved with blue cobblestones.',
+    grid: {
+      width: 40,
+      height: 40,
+      cellSizePx: 48,
+      feetPerCell: 5,
+      showGrid: true,
+      gridColor: 'rgba(56, 189, 248, 0.35)',
+      originX: 0,
+      originY: 0,
+    },
+    backgroundArtwork: {
+      url: '/assets/maps/blue_alley_uncompressed.png',
+      name: 'Blue Alley High-Resolution Map',
+      scale: 1.0,
+      offsetX: 0,
+      offsetY: 0,
+      opacity: 0.85,
+      naturalWidth: 1920,
+      naturalHeight: 1920,
+      aspectRatio: '1:1',
+      calibration: {
+        isCalibrated: true,
+        calibratedAtUtc: '2026-10-28T10:00:00Z',
+        pitchPxPerCell: 48,
+        originOffsetX: 0,
+        originOffsetY: 0,
+        measuredUnitCount: 10,
+        measuredAxis: 'horizontal',
+      },
+    },
+    geometry: {
+      rooms: [
+        { id: 'r-alley-entry', name: 'Entryway Courtyard', x: 10, y: 10, width: 20, height: 20, floorType: 'stone' },
+      ],
+      corridors: [
+        { id: 'c-alley-main', startX: 10, startY: 20, endX: 30, endY: 20, widthCells: 2 },
+      ],
+      walls: [
+        { id: 'w-alley-n', x1: 10, y1: 10, x2: 30, y2: 10, blocksMovement: true, blocksVision: true },
+        { id: 'w-alley-s', x1: 10, y1: 30, x2: 30, y2: 30, blocksMovement: true, blocksVision: true },
+      ],
+      doors: [
+        { id: 'd-alley-gate', x: 20, y: 30, orientation: 'horizontal', state: 'closed', blocksVisionWhenClosed: true },
+      ],
+    },
+    fog: {
+      enabled: false,
+      defaultState: 'revealed',
+      revealedCells: [],
+      exploredCells: [],
+      hiddenCells: [],
+      partySharedVision: true,
+      autoComputeTokenLos: true,
+    },
+    lineOfSight: {
+      enabled: true,
+      blocksOnWalls: true,
+      blocksOnClosedDoors: true,
+      maxSightRadiusFeet: 60,
+      defaultSightRadiusFeet: 60,
+    },
+    tokens: [
+      { id: 'tok-lyra-blue-alley', entityId: 'char-lyra-01', entityType: 'character', name: 'Lyra Vance', x: 15, y: 15, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
+      { id: 'tok-jorren-blue-alley', entityId: 'npc-jorren-vale', entityType: 'npc', name: 'Jorren Vale', x: 25, y: 25, sizeCells: 1, isVisibleToPlayers: true, elevationFt: 0 },
     ],
   },
 ];

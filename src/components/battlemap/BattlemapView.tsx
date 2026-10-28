@@ -81,6 +81,7 @@ interface BattlemapViewProps {
   identity?: UserIdentityContext;
   onNavigateToPlay?: () => void;
   onMoveToken: (entityId: string, targetX: number, targetY: number, entityType: 'character' | 'npc') => void;
+  onSubmitAction?: (envelope: any) => Promise<any>;
 }
 
 export const BattlemapView: React.FC<BattlemapViewProps> = ({
@@ -92,6 +93,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   identity,
   onNavigateToPlay,
   onMoveToken,
+  onSubmitAction,
 }) => {
   // Subscribe to persistent session manager for map data
   const [, setSessionTick] = useState(0);
@@ -1059,6 +1061,21 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             <Ruler className="w-3.5 h-3.5" />
             <span>Ruler</span>
           </button>
+
+          {isDm && (
+            <button
+              onClick={() => setActiveTool(activeTool === 'calibrate' ? 'token' : 'calibrate')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                activeTool === 'calibrate'
+                  ? 'bg-cyan-600 text-neutral-950 font-bold shadow'
+                  : 'bg-neutral-800 text-cyan-300 hover:bg-neutral-700'
+              }`}
+              title="Two-Point Interactive Grid Calibration Tool"
+            >
+              <Grid className="w-3.5 h-3.5" />
+              <span>Calibrate Grid</span>
+            </button>
+          )}
 
           {isDm && (
             <>
@@ -2066,6 +2083,9 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             onUpdateTokenVisibility={handleUpdateTokenVisibility}
             onDeleteToken={handleDeleteToken}
             onSetActiveTool={setActiveTool}
+            onUpdateGridConfig={(gridCfg) => battlemapSessionManager.updateGrid(activeMap.id, gridCfg)}
+            onUpdateArtwork={(artCfg) => battlemapSessionManager.updateArtwork(activeMap.id, artCfg)}
+            onSubmitAction={onSubmitAction}
           />
         </main>
 

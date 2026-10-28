@@ -360,6 +360,7 @@ export default function App() {
                 selectedCharacterId={effectiveCharId}
                 identity={identity}
                 onNavigateToPlay={() => setCurrentTab('play')}
+                onSubmitAction={(env) => activeClient.submitActionEnvelope(env)}
                 onMoveToken={(entityId, targetX, targetY, entityType) => {
                   activeClient.submitActionEnvelope({
                     actionId: `move-${Date.now()}`,

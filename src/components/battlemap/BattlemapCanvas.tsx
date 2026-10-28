@@ -30,7 +30,10 @@ import {
   Square,
   Minus,
   MousePointer,
+  Sliders,
+  CheckCircle2,
 } from 'lucide-react';
+import type { MapGridConfig, MapBackgroundArtwork } from '../../types/battlemap.ts';
 import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type { UserRole, PlayerSafeNpc, UserIdentityContext } from '../../types/runtime.ts';
@@ -108,6 +111,9 @@ interface BattlemapCanvasProps {
   onUpdateTokenVisibility?: (tokenId: string, isVisible: boolean) => void;
   onDeleteToken?: (tokenId: string) => void;
   onSetActiveTool?: (tool: BattlemapEditorTool) => void;
+  onUpdateGridConfig?: (grid: Partial<MapGridConfig>) => void;
+  onUpdateArtwork?: (artwork: Partial<MapBackgroundArtwork>) => void;
+  onSubmitAction?: (envelope: any) => Promise<any>;
 }
 
 export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
@@ -148,6 +154,9 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   onUpdateTokenVisibility,
   onDeleteToken,
   onSetActiveTool,
+  onUpdateGridConfig,
+  onUpdateArtwork,
+  onSubmitAction,
 }) => {
   // Viewport navigation (pan & zoom)
   const [viewport, setViewport] = useState<ViewportTransform>({
@@ -184,6 +193,33 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   // Status message for geometry warnings (e.g. floating door)
   const [canvasNotice, setCanvasNotice] = useState<string | null>(null);
 
+  // Milestone 12: Two-Point Interactive Calibration State
+  const [calibrationPoint1, setCalibrationPoint1] = useState<{ x: number; y: number } | null>(null);
+  const [calibrationPoint2, setCalibrationPoint2] = useState<{ x: number; y: number } | null>(null);
+  const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [calibrationUnits, setCalibrationUnits] = useState(10);
+  const [calibrationAxis, setCalibrationAxis] = useState<'horizontal' | 'vertical' | 'diagonal'>('horizontal');
+  const [showFineTuneHud, setShowFineTuneHud] = useState(false);
+  const [isSavingCalibration, setIsSavingCalibration] = useState(false);
+
+  // Zero-Crop Natural Dimension Detection
+  const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number } | null>(() => {
+    if (mapDefinition.backgroundArtwork?.naturalWidth && mapDefinition.backgroundArtwork?.naturalHeight) {
+      return {
+        width: mapDefinition.backgroundArtwork.naturalWidth,
+        height: mapDefinition.backgroundArtwork.naturalHeight,
+      };
+    }
+    return null;
+  });
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (img.naturalWidth && img.naturalHeight) {
+      setNaturalDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    }
+  };
+
   const containerRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
@@ -197,17 +233,52 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   };
 
   const { widthPx: mapWidthPx, heightPx: mapHeightPx } = getMapPixelSize(grid);
+  const naturalWidth = naturalDimensions?.width || mapDefinition.backgroundArtwork?.naturalWidth || 0;
+  const naturalHeight = naturalDimensions?.height || mapDefinition.backgroundArtwork?.naturalHeight || 0;
+  const surfaceWidthPx = Math.max(mapWidthPx, naturalWidth);
+  const surfaceHeightPx = Math.max(mapHeightPx, naturalHeight);
 
-  // Reset zoom & pan when map changes to keep map centered
+  // Zoom-to-Fit-Image & Zoom-to-Fit-Grid
+  const handleZoomToFitImage = useCallback(() => {
+    if (!containerRef.current) return;
+    const cWidth = containerRef.current.clientWidth;
+    const cHeight = containerRef.current.clientHeight;
+    if (cWidth <= 0 || cHeight <= 0) return;
+    const padding = 32;
+    const fitZoom = Math.min((cWidth - padding * 2) / surfaceWidthPx, (cHeight - padding * 2) / surfaceHeightPx, 1.0);
+    const clampedZoom = Math.max(0.1, Math.min(3.0, Math.round(fitZoom * 100) / 100));
+    setViewport({ panX: 0, panY: 0, zoom: clampedZoom });
+  }, [surfaceWidthPx, surfaceHeightPx]);
+
+  const handleZoomToFitGrid = useCallback(() => {
+    if (!containerRef.current) return;
+    const cWidth = containerRef.current.clientWidth;
+    const cHeight = containerRef.current.clientHeight;
+    if (cWidth <= 0 || cHeight <= 0) return;
+    const padding = 32;
+    const fitZoom = Math.min((cWidth - padding * 2) / mapWidthPx, (cHeight - padding * 2) / mapHeightPx, 1.0);
+    const clampedZoom = Math.max(0.1, Math.min(3.0, Math.round(fitZoom * 100) / 100));
+    setViewport({ panX: 0, panY: 0, zoom: clampedZoom });
+  }, [mapWidthPx, mapHeightPx]);
+
+  // Reset & Zero-Crop initial fit when map changes
   useEffect(() => {
-    setViewport({ panX: 0, panY: 0, zoom: 1.0 });
     setMeasureStart(null);
     setMeasureCurrent(null);
     setDrawStart(null);
     setDrawCurrent(null);
     setTokenDrag(null);
     setCanvasNotice(null);
-  }, [mapDefinition.id]);
+    setCalibrationPoint1(null);
+    setCalibrationPoint2(null);
+    setShowCalibrationModal(false);
+    setShowFineTuneHud(false);
+
+    const timer = setTimeout(() => {
+      handleZoomToFitImage();
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [mapDefinition.id, handleZoomToFitImage]);
 
   // Convert client coordinate into map space
   const getMapCoords = useCallback(
@@ -362,6 +433,117 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     setContextMenu((prev) => ({ ...prev, isOpen: false }));
   }, [grid.cellSizePx, mapWidthPx, mapHeightPx, viewport.zoom]);
 
+
+  // Two-Point Calibration Actions
+  const applyTwoPointCalibration = () => {
+    if (!calibrationPoint1 || !calibrationPoint2) return;
+    const dx = Math.abs(calibrationPoint2.x - calibrationPoint1.x);
+    const dy = Math.abs(calibrationPoint2.y - calibrationPoint1.y);
+    const count = Math.max(1, calibrationUnits);
+    let pitch = 40;
+    if (calibrationAxis === 'horizontal') {
+      pitch = dx / count;
+    } else if (calibrationAxis === 'vertical') {
+      pitch = dy / count;
+    } else {
+      pitch = Math.sqrt(dx * dx + dy * dy) / (count * Math.SQRT2);
+    }
+    const cellPitch = Math.max(10, Math.min(200, Math.round(pitch * 10) / 10));
+    const origX = Math.round((calibrationPoint1.x % cellPitch) * 10) / 10;
+    const origY = Math.round((calibrationPoint1.y % cellPitch) * 10) / 10;
+
+    onUpdateGridConfig?.({
+      cellSizePx: cellPitch,
+      originX: origX,
+      originY: origY,
+    });
+
+    onUpdateArtwork?.({
+      calibration: {
+        isCalibrated: true,
+        calibratedAtUtc: new Date().toISOString(),
+        pitchPxPerCell: cellPitch,
+        originOffsetX: origX,
+        originOffsetY: origY,
+        anchorPoint: calibrationPoint1,
+        referencePoint: calibrationPoint2,
+        measuredUnitCount: count,
+        measuredAxis: calibrationAxis,
+      },
+    });
+
+    setShowCalibrationModal(false);
+    setShowFineTuneHud(true);
+    setCanvasNotice(`Grid calibrated: ${cellPitch}px/cell (Origin: ${origX}, ${origY}). Fine-tune or Save in HUD.`);
+  };
+
+  const handleNudgeOrigin = (dx: number, dy: number) => {
+    const curX = grid.originX || 0;
+    const curY = grid.originY || 0;
+    const nextX = Math.round((curX + dx) * 10) / 10;
+    const nextY = Math.round((curY + dy) * 10) / 10;
+    onUpdateGridConfig?.({ originX: nextX, originY: nextY });
+  };
+
+  const handleNudgePitch = (delta: number) => {
+    const curPitch = grid.cellSizePx;
+    const nextPitch = Math.max(10, Math.min(200, Math.round((curPitch + delta) * 10) / 10));
+    onUpdateGridConfig?.({ cellSizePx: nextPitch });
+  };
+
+  const handleSaveCalibration = async () => {
+    setIsSavingCalibration(true);
+    try {
+      if (onSubmitAction) {
+        await onSubmitAction({
+          actionId: `act-calib-${Date.now()}`,
+          clientNonce: `nonce-calib-${Date.now()}`,
+          actorId: isEffectiveDm ? 'dm-1' : (identity?.actorId || 'dm-1'),
+          actorRole: userRole,
+          actionType: 'UPDATE_BATTLEMAP_STATE',
+          snapshotRef: {
+            campaignId: 'aethelgard-vault-001',
+            commitSequence: 1,
+            ...((window as any).__LAST_SNAPSHOT_REF__ || {}),
+          },
+          payload: {
+            mapId: mapDefinition.id,
+            gridDimensions: {
+              width: grid.width,
+              height: grid.height,
+              cellSizePx: grid.cellSizePx,
+              originX: grid.originX || 0,
+              originY: grid.originY || 0,
+            },
+            backgroundArtwork: {
+              ...mapDefinition.backgroundArtwork,
+              calibration: {
+                isCalibrated: true,
+                calibratedAtUtc: new Date().toISOString(),
+                pitchPxPerCell: grid.cellSizePx,
+                originOffsetX: grid.originX || 0,
+                originOffsetY: grid.originY || 0,
+                anchorPoint: calibrationPoint1 || undefined,
+                referencePoint: calibrationPoint2 || undefined,
+                measuredUnitCount: calibrationUnits,
+                measuredAxis: calibrationAxis,
+              },
+            },
+          },
+          timestampUtc: new Date().toISOString(),
+        });
+      }
+      setCanvasNotice('Calibration durably saved to authoritative state.');
+      setTimeout(() => setCanvasNotice(null), 3000);
+      setShowFineTuneHud(false);
+      setCalibrationPoint1(null);
+      setCalibrationPoint2(null);
+      onSetActiveTool?.('token');
+    } finally {
+      setIsSavingCalibration(false);
+    }
+  };
+
   // Canvas Mouse Down
   const handleMouseDown = (e: React.MouseEvent) => {
     // Middle click, Space+click, Shift+click, or 'pan' tool triggers viewport pan
@@ -393,6 +575,18 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     if (activeTool === 'fog_box_reveal' || activeTool === 'fog_box_hide') {
       setDrawStart({ gridX: coords.gridX, gridY: coords.gridY });
       setDrawCurrent({ gridX: coords.gridX, gridY: coords.gridY });
+      return;
+    }
+
+    if (activeTool === 'calibrate') {
+      if (!calibrationPoint1) {
+        setCalibrationPoint1({ x: Math.round(coords.mapX), y: Math.round(coords.mapY) });
+        setCanvasNotice('Point 1 set. Click Point 2 on another grid square along same axis (e.g. 10 squares away).');
+      } else if (!calibrationPoint2) {
+        setCalibrationPoint2({ x: Math.round(coords.mapX), y: Math.round(coords.mapY) });
+        setShowCalibrationModal(true);
+        setCanvasNotice('Point 2 set. Confirm grid distance in calibration modal.');
+      }
       return;
     }
 
@@ -1202,24 +1396,24 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
         }}
         className="relative flex-1 overflow-hidden flex items-center justify-center bg-[#090b0e] p-6"
       >
-        {/* Transform Surface Wrapper */}
+        {/* Transform Surface Wrapper (Zero-Crop natural dimension plane) */}
         <div
           ref={surfaceRef}
           style={{
-            width: `${mapWidthPx}px`,
-            height: `${mapHeightPx}px`,
+            width: `${surfaceWidthPx}px`,
+            height: `${surfaceHeightPx}px`,
             transform: `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})`,
             transformOrigin: 'center center',
           }}
-          className="relative transition-transform duration-75 shadow-2xl rounded border border-neutral-800 bg-[#101317] overflow-hidden"
+          className="relative transition-transform duration-75 shadow-2xl rounded border border-neutral-800 bg-[#101317]"
           onContextMenu={(e) => handleContextMenu(e, 'blank')}
         >
           {/* ============================================================ */}
-          {/* LAYER 1: Background Artwork (Preserves Natural Aspect Ratio) */}
+          {/* LAYER 1: Background Artwork (100% Unclipped Natural Plane)   */}
           {/* ============================================================ */}
           {layerVisibility.artwork && mapDefinition.backgroundArtwork?.url && (
             <div
-              className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden"
+              className="absolute inset-0 pointer-events-none flex items-center justify-center"
               style={{
                 opacity: mapDefinition.backgroundArtwork.opacity ?? 0.7,
               }}
@@ -1227,7 +1421,10 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
               <img
                 src={mapDefinition.backgroundArtwork.url}
                 alt={mapDefinition.backgroundArtwork.name || 'Map Artwork'}
+                onLoad={handleImageLoad}
                 style={{
+                  width: naturalWidth > 0 ? `${naturalWidth}px` : '100%',
+                  height: naturalHeight > 0 ? `${naturalHeight}px` : '100%',
                   transform: `scale(${mapDefinition.backgroundArtwork.scale ?? 1.0}) translate(${
                     mapDefinition.backgroundArtwork.offsetX ?? 0
                   }px, ${mapDefinition.backgroundArtwork.offsetY ?? 0}px)`,
@@ -1666,8 +1863,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
           {layerVisibility.fog && mapDefinition.fog.enabled && (
             <svg
               className="absolute inset-0 pointer-events-none"
-              width={mapWidthPx}
-              height={mapHeightPx}
+              width={surfaceWidthPx}
+              height={surfaceHeightPx}
               style={{ zIndex: 18 }}
             >
               <defs>
@@ -2151,8 +2348,307 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
               )}
             </div>
           )}
+
+          {/* LAYER 8: Two-Point Grid Calibration Crosshairs */}
+          {activeTool === 'calibrate' && (
+            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 40 }}>
+              {calibrationPoint1 && (
+                <div
+                  className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center"
+                  style={{ left: `${calibrationPoint1.x}px`, top: `${calibrationPoint1.y}px` }}
+                >
+                  <div className="w-9 h-9 rounded-full border-2 border-cyan-400 bg-cyan-500/25 flex items-center justify-center shadow-lg shadow-cyan-500/50 animate-pulse">
+                    <div className="w-2.5 h-2.5 rounded-full bg-cyan-300 shadow" />
+                  </div>
+                  <span className="mt-1 px-2 py-0.5 rounded bg-neutral-950/90 text-cyan-300 font-mono text-[10px] font-bold border border-cyan-600 shadow">
+                    Anchor P1 ({calibrationPoint1.x}, {calibrationPoint1.y})
+                  </span>
+                </div>
+              )}
+
+              {calibrationPoint2 && (
+                <div
+                  className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center"
+                  style={{ left: `${calibrationPoint2.x}px`, top: `${calibrationPoint2.y}px` }}
+                >
+                  <div className="w-9 h-9 rounded-full border-2 border-amber-400 bg-amber-500/25 flex items-center justify-center shadow-lg shadow-amber-500/50 animate-pulse">
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-300 shadow" />
+                  </div>
+                  <span className="mt-1 px-2 py-0.5 rounded bg-neutral-950/90 text-amber-300 font-mono text-[10px] font-bold border border-amber-600 shadow">
+                    Ref P2 ({calibrationPoint2.x}, {calibrationPoint2.y})
+                  </span>
+                </div>
+              )}
+
+              {calibrationPoint1 && calibrationPoint2 && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  <line
+                    x1={calibrationPoint1.x}
+                    y1={calibrationPoint1.y}
+                    x2={calibrationPoint2.x}
+                    y2={calibrationPoint2.y}
+                    stroke="#38bdf8"
+                    strokeWidth="3"
+                    strokeDasharray="6 4"
+                  />
+                </svg>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+
+      {/* Two-Point Grid Calibration Modal */}
+      {showCalibrationModal && calibrationPoint1 && calibrationPoint2 && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-lg shadow-2xl max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center gap-2 text-cyan-400">
+                <GridIcon className="w-5 h-5" />
+                <h3 className="font-cinzel font-bold text-base text-neutral-100">Two-Point Grid Calibration</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCalibrationModal(false);
+                  setCalibrationPoint1(null);
+                  setCalibrationPoint2(null);
+                }}
+                className="text-neutral-400 hover:text-neutral-100 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-300 font-mono leading-relaxed">
+              Calculate cell pitch and origin offset by measuring the preprinted squares between Anchor Point 1 and Reference Point 2.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 bg-neutral-950 p-3 rounded border border-neutral-800 text-xs font-mono">
+              <div>
+                <span className="text-neutral-500 block text-[10px] uppercase">Point 1 (Anchor):</span>
+                <span className="text-cyan-300 font-bold">({calibrationPoint1.x}, {calibrationPoint1.y})</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block text-[10px] uppercase">Point 2 (Reference):</span>
+                <span className="text-amber-300 font-bold">({calibrationPoint2.x}, {calibrationPoint2.y})</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block text-[10px] uppercase">Delta X:</span>
+                <span className="text-neutral-200">{Math.abs(calibrationPoint2.x - calibrationPoint1.x)} px</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 block text-[10px] uppercase">Delta Y:</span>
+                <span className="text-neutral-200">{Math.abs(calibrationPoint2.y - calibrationPoint1.y)} px</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-mono text-neutral-300 mb-1">
+                  Grid Squares Count between points:
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={calibrationUnits}
+                    onChange={(e) => setCalibrationUnits(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded px-3 py-1.5 text-neutral-100 font-mono text-sm focus:border-cyan-500 outline-none"
+                  />
+                  <span className="text-xs font-mono text-neutral-400 whitespace-nowrap">
+                    ({calibrationUnits * 5} ft)
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-neutral-300 mb-1">
+                  Measurement Axis:
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['horizontal', 'vertical', 'diagonal'] as const).map((ax) => (
+                    <button
+                      key={ax}
+                      type="button"
+                      onClick={() => setCalibrationAxis(ax)}
+                      className={`px-3 py-1.5 rounded text-xs font-mono capitalize border transition-colors ${
+                        calibrationAxis === ax
+                          ? 'bg-cyan-600 text-neutral-950 font-bold border-cyan-400'
+                          : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-700'
+                      }`}
+                    >
+                      {ax}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(() => {
+                const dx = Math.abs(calibrationPoint2.x - calibrationPoint1.x);
+                const dy = Math.abs(calibrationPoint2.y - calibrationPoint1.y);
+                const count = Math.max(1, calibrationUnits);
+                let pitch = calibrationAxis === 'horizontal' ? dx / count : (calibrationAxis === 'vertical' ? dy / count : Math.sqrt(dx * dx + dy * dy) / (count * Math.SQRT2));
+                pitch = Math.round(pitch * 10) / 10;
+                const ox = Math.round((calibrationPoint1.x % pitch) * 10) / 10;
+                const oy = Math.round((calibrationPoint1.y % pitch) * 10) / 10;
+                return (
+                  <div className="bg-cyan-950/40 border border-cyan-800/60 rounded p-2.5 text-xs font-mono text-cyan-200 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-cyan-400">Calculated Cell Pitch:</span>
+                      <span className="font-bold">{pitch} px/cell</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-cyan-400">Calculated Origin Offset:</span>
+                      <span className="font-bold">({ox}px, {oy}px)</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCalibrationModal(false);
+                  setCalibrationPoint1(null);
+                  setCalibrationPoint2(null);
+                }}
+                className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={applyTwoPointCalibration}
+                className="px-4 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-neutral-950 font-bold font-mono text-xs transition-colors shadow"
+              >
+                Apply & Open Fine-Tuning
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Fine-Tuning Calibration HUD */}
+      {showFineTuneHud && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-neutral-900/95 border border-cyan-500/80 rounded-lg shadow-2xl p-3 backdrop-blur-md flex flex-wrap items-center gap-3 text-xs font-mono text-neutral-200">
+          <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
+            <Sliders className="w-4 h-4" />
+            <span>Calibration HUD:</span>
+          </div>
+
+          <div className="h-4 w-px bg-neutral-700" />
+
+          {/* Pitch Steppers */}
+          <div className="flex items-center gap-1 bg-neutral-950 px-2 py-1 rounded border border-neutral-800">
+            <span className="text-neutral-400 text-[10px] uppercase">Pitch:</span>
+            <span className="font-bold text-amber-300 w-16 text-center">{grid.cellSizePx.toFixed(1)} px</span>
+            <button
+              onClick={() => handleNudgePitch(-0.1)}
+              className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[10px]"
+              title="Decrease cell pitch by 0.1px"
+            >
+              -0.1
+            </button>
+            <button
+              onClick={() => handleNudgePitch(0.1)}
+              className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[10px]"
+              title="Increase cell pitch by 0.1px"
+            >
+              +0.1
+            </button>
+          </div>
+
+          {/* Origin X Steppers */}
+          <div className="flex items-center gap-1 bg-neutral-950 px-2 py-1 rounded border border-neutral-800">
+            <span className="text-neutral-400 text-[10px] uppercase">Origin X:</span>
+            <span className="font-bold text-cyan-300 w-12 text-center">{grid.originX || 0} px</span>
+            <button
+              onClick={() => handleNudgeOrigin(-1, 0)}
+              className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[10px]"
+              title="Nudge grid left 1px"
+            >
+              -1
+            </button>
+            <button
+              onClick={() => handleNudgeOrigin(1, 0)}
+              className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[10px]"
+              title="Nudge grid right 1px"
+            >
+              +1
+            </button>
+          </div>
+
+          {/* Origin Y Steppers */}
+          <div className="flex items-center gap-1 bg-neutral-950 px-2 py-1 rounded border border-neutral-800">
+            <span className="text-neutral-400 text-[10px] uppercase">Origin Y:</span>
+            <span className="font-bold text-cyan-300 w-12 text-center">{grid.originY || 0} px</span>
+            <button
+              onClick={() => handleNudgeOrigin(0, -1)}
+              className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[10px]"
+              title="Nudge grid up 1px"
+            >
+              -1
+            </button>
+            <button
+              onClick={() => handleNudgeOrigin(0, 1)}
+              className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[10px]"
+              title="Nudge grid down 1px"
+            >
+              +1
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-neutral-700" />
+
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleZoomToFitImage}
+              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px]"
+              title="Fit 100% of Map Artwork in Viewport"
+            >
+              Fit Image
+            </button>
+            <button
+              onClick={handleZoomToFitGrid}
+              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px]"
+              title="Fit Grid in Viewport"
+            >
+              Fit Grid
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-neutral-700" />
+
+          {/* Action Buttons */}
+          <button
+            onClick={handleSaveCalibration}
+            disabled={isSavingCalibration}
+            className="flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-neutral-950 font-bold font-mono shadow transition-colors disabled:opacity-50"
+            title="Persist grid calibration to authoritative SQLite state"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>{isSavingCalibration ? 'Saving...' : 'Save Calibration'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowFineTuneHud(false);
+              setCalibrationPoint1(null);
+              setCalibrationPoint2(null);
+              onSetActiveTool?.('token');
+            }}
+            className="p-1 rounded text-neutral-400 hover:text-neutral-100"
+            title="Close Calibration HUD"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Viewport Help Pill (AIUI-CP002C1) */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3.5 py-1 rounded-full bg-neutral-900/90 border border-neutral-700/80 text-[11px] font-mono text-neutral-300 shadow-xl flex items-center gap-2 backdrop-blur-sm">

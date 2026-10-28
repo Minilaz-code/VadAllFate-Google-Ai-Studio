@@ -214,3 +214,23 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
     - Separates Natural Image Plane, Grid Overlay Plane, World Spatial Plane, and Viewport Plane for zero-crop rendering.
 - **Next Development Milestone (Milestone 12):**
   - **UX-03 Zero-Crop VTT Overhaul & Two-Point Grid Calibration:** Blue Alley high-resolution tactical map, sub-pixel grid calibration, and multi-room spatial discovery.
+
+- **Completed in Milestone 11B-QA & Milestone 12 (Authoritative Combat Alignment & Blue Alley Zero-Crop VTT):**
+  - **Phase 1: Milestone 11B-QA Authoritative Combat Authority Closure:**
+    - Python Single Commit Authority alone determines authoritative dice rolls, bonuses, hit/miss, damage calculation, spell-slot expenditure, and HP effects.
+    - React frontend sends action intent only (`attackerId`, `targetId`, `weaponName`, `spellName`, `slotLevel`); removed all client-side `Math.random()`, hardcoded attack bonuses, and local damage calculation from `CombatTracker.tsx`.
+    - Eliminated critical double-multiplication bug: 5e rules roll damage dice twice on critical hit, adding flat ability modifier once.
+    - Strict server-side RBAC validation: `DM_OVERRIDE_STATE`, `APPLY_CONDITION`, `REMOVE_CONDITION`, `ADVANCE_TIME`, and `UPDATE_BATTLEMAP_STATE` restricted strictly to DM roles (`dm_host`, `human_primary_codm`, `ai_primary_codm`, `human_dm_assist`, `human_sovereign`). Unauthorised player requests fail-closed with `REJECTED_UNAUTHORIZED_ROLE`.
+    - Validated dual spell slot schema synchronization (`spellcasting.slots` and `spellSlots[lvl]`).
+    - Exhaustive regression test suite `tests/test_v2_combat_and_admission_qa.py` (10/10 passed); all 370 backend tests pass (`370/370`).
+  - **Phase 2: Milestone 12 Blue Alley VTT & Map Calibration Overhaul:**
+    - Zero-Crop Full Image Architecture: Canvas surface dimensions decoupled from grid bounds (`surfaceWidthPx = Math.max(mapWidthPx, naturalWidth)`). Removed `overflow-hidden` constraints to ensure 100% of battlemap artwork borders are visible on initial load.
+    - Uncompressed Crisp Blue Alley Battlemap: Added 1920x1920 PNG asset (`public/assets/maps/blue_alley_uncompressed.png`) with preprinted 48px grid corridors, traps, and rooms.
+    - Two-Point Interactive Grid Calibration: Implemented Anchor Point 1 and Reference Point 2 interactive crosshairs, dynamic modal calculating cell pitch (Δx / Nx) and origin offset, and mathematical drift elimination over 100 cells.
+    - Floating Fine-Tuning Calibration HUD: Micro-pitch stepper (±0.1 px/cell), origin nudging (±1 px), Zoom to Fit Image, Zoom to Fit Grid, and Save Calibration button.
+    - Authoritative State Persistence: Wired `handleSaveCalibration` to dispatch `UPDATE_BATTLEMAP_STATE` action envelope; committed via R1 Commit Authority into SQLite campaign state.
+    - Headless Chrome CDP Acceptance Testing: Verified Desktop (1600x1100) zero-crop view (`vtt_desktop_view.png`), Tablet (1024x768) responsive scaling (`vtt_tablet_view.png`), and aligned calibration HUD (`vtt_calibration_aligned.png`).
+    - Formulated 3 UI layout proposals in `docs/V2-UI-LAYOUT-PROPOSALS.md` (Proposal A: Split Cockpit, Proposal B: Glass Overlay HUD, Proposal C: Dual-Surface Director Console).
+    - All 137 frontend tests pass (`137/137`); clean production build in 4.95s.
+- **Next Development Milestone (Milestone 13):**
+  - **UX-04 Tabletop Cockpit & Modern Charcoal/Bronze Design System Integration:** Implement Proposal A Split Cockpit layout unifying Narrative Feed, Calibrated Battlemap, and Interactive Combat Tracker.
