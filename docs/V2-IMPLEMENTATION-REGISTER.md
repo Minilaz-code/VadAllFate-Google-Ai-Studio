@@ -592,3 +592,44 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 
 - **Regression Suite:** 7/7 tests passing in `tests/test_v2_harvest_02b_npc_cognition.py`. Full harvest suite: 28/28 tests passing.
 
+---
+
+## 23. HARVEST-02-B1C: Living-World Authority, Truthful Perception, and Clock Idempotence (2026-10-28)
+
+**Audit & Execution Date:** 2026-10-28  
+**Governing Charters:** `docs/V2-HARVEST-02B1C-LIVING-WORLD-AUTHORITY-AND-PERCEPTION-QA.md` & `docs/V2-MASTER-DEVELOPMENT-GOALS.md`  
+**Backend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Frontend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+
+### 1. P0 Blocker Elimination: Single Commit Authority Enforcement (B1C-00)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **Elimination of Direct SQLite Bypass:** Completely removed all production invocations of direct SQLite `UPDATE campaign_state` execution (`_write_campaign_authority_state`), restricting it to an explicitly labelled `_test_seed_campaign_authority_state` exclusively for offline test harness setup.
+- **Authoritative R1 Mutations:**
+  - `update_npc_cognition()` now submits versioned `UPDATE_NPC_COGNITION` action envelopes through `submit_action(...)` with host scheduler session authority.
+  - `tick_world_scheduler()` clock advancements and DM sparks now commit through versioned `ADVANCE_WORLD_ARC` action envelopes via R1.
+- **Audit & Idempotence Ledgers:** Produces genuine `CommitReceipt` with `status="COMMITTED"`, monotonic `commitSequence` advance, state hash pinning, and durable event logs.
+
+### 2. Truthful Perception: Hearing != Seeing & Intent != Guilt (B1C-01)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **Ground Truth Integrity:** Unverified player intent flags (`isTheft: True`, `valence: -0.7`, `targetItem: "Ancient Gem"`) are never adopted as canonical ground truth or leaked to observers.
+- **Sensory Truth Modalities:**
+  - **`SAW` (Clear Line of Sight):** Direct visual confirmation within sight radius records neutral physical manipulation (e.g. "Witnessed Lyra manipulating items suspiciously at (5, 5)"), never disclosing secret target item names. Degrades actor trust and spikes situational pressure.
+  - **`HEARD` (Obstructed Line of Sight):** Raycast through closed doors or muffled acoustic zones (up to 35 ft, 60 ft for loud combat) records unidentified sound descriptions ("Heard suspicious rustling and footsteps nearby", `actor_id="unknown"`). Raises local alertness and pressure without corrupting specific character relationships.
+  - **`UNNOTICED` (Solid Walls / Stealth Beat):** Solid stone walls (> 15 ft) or contested Stealth/Sleight of Hand rolls $\ge$ passive perception produce zero memory, zero pressure, and complete epistemic isolation.
+  - **`HEARSAY` (Third-Party Reports):** Memory is stamped with `source_actor`, `witness_mode="HEARSAY"`, and `is_unverified=True`. Relationship impact is proportionally scaled by the observer's trust in the reporting source (`(trust + 1.0) / 2.0`).
+
+### 3. Replay-Safe World Scheduler & Clock Idempotence (B1C-02)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **Trigger Consumption & Idempotence:** Escalation clocks consume trigger keys (`consumed_triggers`) and remove processed tags from `state["occurredTags"]` upon R1 commit. Repeated evaluations at the same world minute or re-runs with persistent tags advance zero extra segments and generate zero duplicate sparks.
+- **Deterministic Action IDs:** Scheduler token movements use deterministic action IDs (`act-sched-{npc_id}-{world_minute}`) and nonces, preventing duplicate actions on retries.
+- **Synchronous Pacing Safety:** Actions advancing time (`REST_SHORT`, `REST_LONG`, `ADVANCE_TIME`) synchronously tick the scheduler and automatically update the returned receipt's `commitSequence` to reflect subsequent scheduler commits, preventing `REJECTED_STALE_SNAPSHOT` failures on subsequent client turns.
+
+### 4. Verification Evidence
+- **B1C Dedicated Acceptance Suite:** 5/5 passing in `tests/test_v2_harvest_02b1c_living_world_authority.py`.
+- **Harvest Test Suite:** 40/40 passing across all 4 harvest test suites (`test_v2_harvest_*.py`).
+- **All V2 Test Suites:** 167/167 passing across all 18 V2 test modules.
+- **Full Backend Suite:** 456/456 passing across all 53 test files (`pytest`).
+- **Frontend Test Suite:** 147/147 passing across 21 suites (`npm test -- --run`).
+- **Frontend Production Build:** Clean Vite build (`npm run build`, 0 errors).
+
+
