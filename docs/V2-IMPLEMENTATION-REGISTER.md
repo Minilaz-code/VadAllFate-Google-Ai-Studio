@@ -637,6 +637,54 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 - **Frontend Test Suite:** 147/147 passing across 21 suites (`npm test -- --run`).
 - **Frontend Production Build:** Clean Vite build (`npm run build`, 0 errors).
 
+---
+
+## 24. HARVEST-02-B1D: Authority, Trusted Outcomes, and Replay Closure (2026-10-28)
+
+**Audit & Execution Date:** 2026-10-28  
+**Governing Charters:** `docs/V2-HARVEST-02B1D-AUTHORITY-INPUT-AND-REPLAY-QA.md` & `docs/V2-MASTER-DEVELOPMENT-GOALS.md`  
+**Backend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+**Frontend Commit / Checkpoint:** Verified on branch `v2/srd51-rules-browser`  
+
+### 1. Action Authority & Role Gating (P0-01)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **DM Privileged Actions Whitelist:** Added `UPDATE_NPC_COGNITION` and `ADVANCE_WORLD_ARC` to `DM_PRIVILEGED_ACTIONS = frozenset({...})` in `v2_campaign_gateway.py`.
+- **Defense-in-Depth Validation:** Added role checking in `StateDeltaValidator.validate_patches` rejecting `UPDATE_NPC_COGNITION` and `ADVANCE_WORLD_ARC` when `actor_role not in {"dm", "dm_host"}`.
+- **Identity Anti-Spoofing:** Caller-supplied `authenticatedRole` and `authenticatedActorId` are cleanly stripped (`pop`) from incoming payloads in `submit_action`, preventing players and observers from forging DM authority. Non-DM callers attempting these mutations receive `REJECTED_VALIDATION_FAILURE` (`ACTION_TYPE_ROLE_UNAUTHORIZED`).
+
+### 2. Trusted Sensory Outcomes for Perception (P0-02)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **Independent Sensory Truth:** Grounded perception logic in `_process_spatial_perceptions_and_cognition` decouples observation from unverified client claims (`rollTotal`, `isTheft`, fake `sceneCoordinates`).
+- **Scene Token Anchor:** Observation coordinates anchor strictly to the creature's verified scene token position (`(actor_token.x, actor_token.y)`).
+- **Authoritative Dice Integration:** Stealth and Sleight of Hand skill checks rely strictly on verified `dice_roll_data["total"]` from authoritative server/DM resolution.
+- **Unconfirmed Roll Containment:** Under `REQUIRE_DM_CONFIRMATION`, player unconfirmed physical rolls (`PLAYER_REPORTED_UNVERIFIED` / `override_receipt_status == "PENDING_HUMAN_DM_APPROVAL"`) cannot suppress perception; unverified stealth is treated as failed against observer passive perception.
+- **Objective Grounded Descriptions:** Observers record physical observations ("manipulating items suspiciously", "moving stealthily") without fabricating moral/legal guilt or leaking secret item names.
+
+### 3. Hardened Recovery Identity Provenance (P0-03)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **Authentic Recovery Provenance:** In `_recover_pending_admissions_internal`, both `STAGED_NEEDS_VALIDATION` and `DISPATCH_REQUIRED` recovery paths strictly inspect durably admitted payload provenance `payload.get("authenticatedRole")`.
+- **Zero Raw Privilege Replay:** Never trusts raw `envelope.actor_role` or client claims on recovery replays.
+- **Fail-Closed Discard:** If a DM-privileged action lacks authentic DM provenance (`dm` / `dm_host`), it is immediately discarded via `authority.discard_invalid_admission` with status `STALE`, preserving R1 single-state authority.
+
+### 4. Stable Event Identities & Clock Idempotence (P1-04)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **Event-Scoped Triggers:** In `v2_npc_cognition.py`, `WorldArcManager.tick_world_events` supports event-scoped tags (e.g. `alarm_raised@evt-1`, `gate_breached@evt-2`), permitting multiple distinct events occurring in the same world minute to trigger separate escalation clocks.
+- **Deterministic Action Nonces:** Generates deterministic, content-anchored IDs for world arc updates (`act-world-arc-{clock_id}-{current_min}-{uuid5(tag)}`) and scheduler token moves, ensuring strict idempotent replay.
+
+### 5. Immutable Commit Receipts (P1-05)
+> **Acceptance Classification:** **AUTOMATED VERIFIED**
+- **Original Receipt Preservation:** In `submit_action`, after synchronous scheduler ticks triggered by time-advancing actions (`ADVANCE_TIME`, `REST_SHORT`, `REST_LONG`), the original receipt `commitSequence` is never overwritten.
+- **Client Turn Sync:** Returns original `receipt` intact with its authentic `commitSequence`, alongside `latestSnapshotRef` and `schedulerCommittedActions` to inform the client of subsequent commits and eliminate `REJECTED_STALE_SNAPSHOT` failures on subsequent client turns.
+
+### 6. Verification Evidence
+- **B1D Dedicated Acceptance Suite:** 7/7 passing in `tests/test_v2_harvest_02b1d_authority_and_replay.py`.
+- **Harvest Test Suites:** 47/47 passing across all 5 harvest test suites (`test_v2_harvest_*.py`).
+- **All V2 Test Suites:** 174/174 passing across all 19 V2 test modules.
+- **Full Backend Suite:** 463/463 passing across all 54 test files (`pytest`).
+- **Frontend Test Suite:** 147/147 passing across 21 suites (`npm test -- --run`).
+- **Frontend Production Build:** Clean Vite build (`npm run build`, 0 errors).
+
+
 
 ## 24. Continuous MIT Harvest & M-Series World Simulation (2026-10-29)
 

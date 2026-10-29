@@ -269,9 +269,10 @@ describe('Milestone 12B — Trust, Physical Dice & Spatial Secrecy Frontend Gate
   });
 
   it('querySpatialContext fails closed when production client is disconnected', async () => {
+    const disconnectedClient = new V2BackendClient('http://127.0.0.1:9/api/v2', { allowOfflineFallback: false });
     await assert.rejects(
       async () => {
-        await v2BackendClient.querySpatialContext('map-test', 'actor-test', 60.0);
+        await disconnectedClient.querySpatialContext('map-test', 'actor-test', 60.0);
       },
       (err: any) => {
         assert.match(err.message, /Python V2 runtime disconnected/);
