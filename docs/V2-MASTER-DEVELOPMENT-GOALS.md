@@ -27,8 +27,6 @@ An AI controls narrative decisions and proposes actions; the **deterministic Pyt
 - **Multiplayer/security:** host/DM/player/observer identities, character ownership, private messages, player-specific knowledge, consent, replay-safe actions, secure map assets and role-scoped projections are enforced **server-side**.
 - **Compatibility:** retain existing VTT, runtime, recovery contracts, legitimate source/licence holds, and working features. No unilateral redesign or `main` merge.
 
-## 3. Evidence Grades: Avoid False Completion
-
 ## 2A. Standing Development Policy — Reuse Before Reinvention and M-Series Integration
 
 **Continuous harvesting is mandatory for significant new features.** Before building weather, travel, NPC cognition, faction politics, rules tools, scheduling, news, rumours, maps, UI tools or any other substantial subsystem, compare the current VadAllFate implementation with properly licensed upstream code **and tests**. Search our pinned `HARVEST_REGISTER.md` first, then discover relevant GitHub MIT implementations beyond D&D-specific repositories where useful. Decide COPY / ADAPT / PORT / TEST-HARVEST / REFERENCE ONLY / REJECT, record exact upstream commit/file/licence, preserve notices, and integrate **small compatible units** into the existing R1 and React architecture. Do not copy unclear-licence code, third-party game assets or a rival runtime/database. Harvesting continues throughout V2 and future development, not just HARVEST-02.
@@ -39,7 +37,7 @@ An AI controls narrative decisions and proposes actions; the **deterministic Pyt
 
 **Normative implementation and acceptance plan:** [V2 Continuous Harvest and M-Series Simulation Plan](V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md). This policy is *approved direction*, not a claim of M-series migration, source harvest or user acceptance.
 
-
+## 3. Evidence Grades: Avoid False Completion
 
 **IMPLEMENTED / SOURCE REVIEWED:** files and executable paths exist; does not prove correct behaviour.  
 **AUTOMATED VERIFIED:** tests meaningfully cover success, rejection, roles, crash/restart, race conditions, determinism, no secret leaks.  
@@ -156,7 +154,7 @@ Native Chatterbox Nano renders narration/NPC speech within VadAllFate; VadAllVox
 For every checkpoint:
 
 1. Fetch and inspect current backend/frontend heads and contracts; preserve local uncommitted work. Do not duplicate or replace working subsystems.
-1a. **Reuse-before-reinvent gate:** compare the requested feature against the current pinned MIT harvest queue and conduct bounded fresh upstream discovery; record selected source file/commit/licence, compatible tests and expected engineering benefit. No wholesale clone or new authority. For living-world work, check the original M-series module/ledger before reauthoring its content or behaviour.
+   **Reuse-before-reinvent gate:** compare the requested feature against the current pinned MIT harvest queue and conduct bounded fresh upstream discovery; record selected source file/commit/licence, compatible tests and expected engineering benefit. No wholesale clone or new authority. For living-world work, check the original M-series module/ledger before reauthoring its content or behaviour.
 2. Identify exact source files, relevant authority boundary, approved holds, current tests and cross-repo API contracts.
 3. Specify expected user behaviour and *negative* acceptance cases before implementation.
 4. Build complete backend–frontend vertical slices with role/source provenance. Python remains the state owner.
