@@ -29,6 +29,18 @@ An AI controls narrative decisions and proposes actions; the **deterministic Pyt
 
 ## 3. Evidence Grades: Avoid False Completion
 
+## 2A. Standing Development Policy — Reuse Before Reinvention and M-Series Integration
+
+**Continuous harvesting is mandatory for significant new features.** Before building weather, travel, NPC cognition, faction politics, rules tools, scheduling, news, rumours, maps, UI tools or any other substantial subsystem, compare the current VadAllFate implementation with properly licensed upstream code **and tests**. Search our pinned `HARVEST_REGISTER.md` first, then discover relevant GitHub MIT implementations beyond D&D-specific repositories where useful. Decide COPY / ADAPT / PORT / TEST-HARVEST / REFERENCE ONLY / REJECT, record exact upstream commit/file/licence, preserve notices, and integrate **small compatible units** into the existing R1 and React architecture. Do not copy unclear-licence code, third-party game assets or a rival runtime/database. Harvesting continues throughout V2 and future development, not just HARVEST-02.
+
+**M03–M16/M16P and supplements are an active primary source for a living world, not merely optional notes or a late CPP-05 packaging job.** The Waterdeep programme's weather, calendars, locations, mapped routes, visitors, businesses, factions, rumours, news/press, law/guilds, NPC schedules, quests, conditional events and Save overlays are to be inventoried, preserved and mapped into **generic, deterministic Python simulation processors**. Treat actual original source artifacts and their provenance as the authority for what each M-number contains; do not invent module contents. Existing M-series source-stage PASS does not prove active V2 features.
+
+**Parallel workstream M-SIM-00..04:** begin source inventory and code-harvest discovery while B1D security work continues; map domain contracts, implement only missing generic processors after authority gates, demonstrate connected real-world behaviour, then activate properly licensed campaign data through CPP-04/05. Campaign-specific data configures the reusable engine; only R1 commits events and consequences. Weather/visitors/travel/faction reputation/rumours/news must cause demonstrable, replay-safe changes, not just richer generated narration.
+
+**Normative implementation and acceptance plan:** [V2 Continuous Harvest and M-Series Simulation Plan](V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md). This policy is *approved direction*, not a claim of M-series migration, source harvest or user acceptance.
+
+
+
 **IMPLEMENTED / SOURCE REVIEWED:** files and executable paths exist; does not prove correct behaviour.  
 **AUTOMATED VERIFIED:** tests meaningfully cover success, rejection, roles, crash/restart, race conditions, determinism, no secret leaks.  
 **REAL APPLICATION VERIFIED:** authenticated Windows app and relevant phone/tablet/browser interactions tested, rather than fixture-only success.  
@@ -73,6 +85,8 @@ Python Master World Clock and deterministic scheduler own travel/rest, appointme
 
 **Acceptance:** 14 named Starlit Revels participants and a configurable crowd can be scheduled, move, interact, witness or miss incidents, form restricted memories and respond appropriately to actions; restart leaves coherent world and NPC beliefs. Conditional future events remain inactive until approved triggers.
 
+**M-series living-world acceptance:** use actual source-backed M03–M16/M16P configurations to drive weather and seasonal conditions, route/travel times, scheduled visitors and services, personal rumours, faction responses and delayed news, all linked to the one Master World Clock. Prove cause-and-effect across several systems with committed R1 events, role-specific observations, Save isolation and restart. Generic Python processors must run a second unrelated campaign without Waterdeep-specific code changes.
+
 ### Goal 4 — Playable and accessible integrated UI/UX (**P1 in parallel with backend**)
 
 One authoritative state must drive narrative/dialogue, real player inputs, quest log, journal/notes, character sheets/progression, inventory, skills, spell slots, HP, combat tracker, dice provenance, initiative, VTT fog/maps/tokens, DM adjudications, rules lookup, and AI Director. Clear connecting/connected/auth required/disconnected/explicit demo truth; no hidden demo fallbacks or misleading save successes.
@@ -90,6 +104,8 @@ Complete `.vadpack` lifecycle: safe read/dry run, DM review of pinned conflicts,
 DM PLANNING has native Markdown files, structured graph and Canvas, with proposed/confirmed campaign planning semantics. HOMEBREW WORKSHOP has draft/validated/implemented/deprecated versions with actual, testable rules effects where supported and explicit publication. Players can write personal/party notes without gaining DM truth. External Obsidian vault import/export is optional; SQLite remains state authority.
 
 **Acceptance:** an independent imported adventure runs through real travel, scenes, dialogue, rules and Save; interrupted imports recover without falsely claiming completed or overwriting player consequences.
+
+**M-series sequence:** M-SIM-00/01 inventory and executable-behaviour reconciliation start **before CPP-05**; CPP-03/04 pack approval and UI then enable M16/M16P source-backed conversion/activation at CPP-05. Preserve original M content, source IDs, migrations, maps, W-series identity/link proofs where available, original Save overlays and legal source provenance. Imported future plans must not auto-trigger gameplay.
 
 ### Goal 6 — Real gameplay and persistence acceptance (**continuous acceptance track**)
 
@@ -131,6 +147,8 @@ Native Chatterbox Nano renders narration/NPC speech within VadAllFate; VadAllVox
 
 **Campaign pipeline:** continue CPP-04/05 and original Dragon Heist integration without bypassing import licences, step holds or abandoning other modules.
 
+**Early living-world M-series track:** M-SIM-00 inventory and HARVEST-03-MSIM MIT discovery begin now, parallel to B1D corrections and frontend development. M-SIM-01 covers source-to-runtime gap mapping; M-SIM-02 builds reusable Python weather/calendar/travel/visitor/faction/rumour/press processors incrementally through R1; M-SIM-03 verifies cross-system gameplay and replay; M-SIM-04 runs M16/M16P through actual CPP-05 activation and an independent imported campaign. Do not wait until CPP-05 to learn what the M-series requires or defer usable UI while simulating whole cities.
+
 **Future, not blockers now:** annotated VTT map import (`.uvtt`/`.dd2vtt`), CPU wall/room/door detection, optional AI vision, smart DM-approved geometry editing; distributed local-model workers; broader rules/source coverage beyond independently verified SRD; richer settlements/economy beyond the initial vertical slice. Keep these in tracked backlog. See [Automatic Map Ingestion](FUTURE-AUTOMATED-SPATIAL-MAP-INGESTION.md).
 
 ## 6. Development Discipline and Reporting
@@ -138,6 +156,7 @@ Native Chatterbox Nano renders narration/NPC speech within VadAllFate; VadAllVox
 For every checkpoint:
 
 1. Fetch and inspect current backend/frontend heads and contracts; preserve local uncommitted work. Do not duplicate or replace working subsystems.
+1a. **Reuse-before-reinvent gate:** compare the requested feature against the current pinned MIT harvest queue and conduct bounded fresh upstream discovery; record selected source file/commit/licence, compatible tests and expected engineering benefit. No wholesale clone or new authority. For living-world work, check the original M-series module/ledger before reauthoring its content or behaviour.
 2. Identify exact source files, relevant authority boundary, approved holds, current tests and cross-repo API contracts.
 3. Specify expected user behaviour and *negative* acceptance cases before implementation.
 4. Build complete backend–frontend vertical slices with role/source provenance. Python remains the state owner.
@@ -157,5 +176,7 @@ For every checkpoint:
 - `docs/FUTURE-AUTOMATED-SPATIAL-MAP-INGESTION.md` — deferred annotated-map import and automatic geometry proposal.
 - `docs/V2-PORTABLE-CAMPAIGN-PACKS-AND-OBSIDIAN-INTEROP.md` (backend) — import/notes/campaign pack lifecycle.
 - `docs/V2-IMPLEMENTATION-REGISTER.md` — evidence-based milestone implementation status.
+- `docs/V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md` — **standing** MIT reuse requirements, M-SIM-00..04 source/simulation workstream, HARVEST-03-MSIM, and acceptance.
+- `provenance/HARVEST_REGISTER.md` and `THIRD_PARTY_NOTICES.md` (backend) — exact code origin, licence and incorporation accounting.
 
 **Governing success condition:** A human can open VadAllFate, run a real D&D campaign with either physical or digital dice, see NPCs act and move in a persistent world under the correct rules and permissions, save and resume without continuity loss, and switch to a different campaign without changing the engine. *Passing tests is necessary but not a substitute for that outcome.*
