@@ -2,7 +2,8 @@
 
 > **Governing charter (28 October 2026):** [VadAllFate V2 Master Development Goals and Acceptance Charter](V2-MASTER-DEVELOPMENT-GOALS.md). Current milestone reports and this document are evidence registers, not proof that the complete product or known trust gates have passed.
 
-**Status:** Architectural instructions; UI/transport implementation is not claimed.  
+**Status:** Architectural instructions; UI/transport implementation is not claimed.
+**Active workflow (2026-10-29):** [Continuous MIT Harvest and M-Series Living-World Integration](V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md) governs feature reuse and early M-SIM work alongside frontend/CPP delivery. Legacy notes about future implementation must be reconciled against current commits before new work is started.  
 **Canonical architecture:** https://github.com/Minilaz-code/VadAllFate/blob/v2/srd51-rules-browser/docs/V2-ARCHITECTURE-INSTRUCTIONS-HARNESS-KNOWLEDGE-GRAPH.md
 
 These frontend instructions consume the master contract. They do **not** create a competing architecture or permit local AI Studio mock state to act as authoritative Python game state.
@@ -73,6 +74,18 @@ Product goal: the same VadAllFate engine must support any properly licensed, com
 - **Export correctness:** the current HomebrewWorkshopView local JSON export uses a random placeholder value under sha256; it is NOT a verified SHA-256 checksum or installable campaign pack. Label it demo/legacy until a real SHA-256 content hash and Python validation/provenance pipeline exist. Never claim an export is securely validated just because it has a hash-shaped field.
 - **Frontend implementation status (2026-10-27):** existing Knowledge Explorer, notes, plan and homebrew UI are foundations; no verified production Obsidian/CSV round-trip importer, Pack Manager, arbitrary campaign installer or executable extension host. Basic JSON export is not a validated portable pack.
 - Coordinate with backend gates CPP-00 through CPP-06; until backend DTOs and validation APIs exist, use clearly labelled design previews only, not demo writes presented as canonical.
+
+## Continuous Harvest & M-SIM in the frontend (effective 2026-10-29)
+
+**Reuse-before-reinvent is mandatory:** Before implementing significant interface features (map importer/calibration, event timelines, calendar/weather forecasts, travel planning, news/rumour feeds, faction relations, visitor schedules, graph/Canvas/Pack Manager), inspect existing frontend source, consult backend `provenance/HARVEST_REGISTER.md`, and assess exact file-level MIT implementations/tests from pinned GitHub commits. Record COPY/ADAPT/PORT/TEST-HARVEST/REFERENCE/REJECT, licence/attribution and regression evidence; never copy entire apps or bypass Python authority. Shared discoveries belong to HARVEST-02-C and HARVEST-03-MSIM.
+
+**M-series is a living-world input, not just lore UI:** M-SIM-00/01 inventories actual M03–M16/M16P sources and defines supported typed projections. The UI must be ready to expose current weather, in-world date/time, map region/route/ETA, visitor arrivals and appointments, faction standing, source-attributed rumours, newspaper issues and conditional world events from the **authorised Python projection**. Present DM-only confidence, sources, schedules and pending plans only to authorised roles; never fabricate world conditions in React or use unreleased campaign secrets to generate player news.
+
+**Connected workflows:** In PLAY/HOST, show a unified time/weather/travel/news/visitors snapshot, notification provenance and actor-specific knowledge without crowding the story/VTT. In DM PLANNING, provide inspectable schedules, world event dependencies and future confirmed plans; in HOMEBREW WORKSHOP, configure allowed domain data and rules without activating them as occurred events. Pack Manager preview clearly distinguishes staged M-series source, installed baseline, pending triggers and committed Save consequences; importing content must not progress time.
+
+**Priorities:** B1D security and working live UI fixes remain first for authoritative mutations; M-SIM source inventory/harvest research happens in parallel; build UI after each verified Python contract, not only after completion of all M modules. Design remains user-governed: dark charcoal/copper/teal, spacious map, all five DM modes, and **no unilateral selection** of Hybrid Cockpit D. Test real Windows UI and phone/tablet role projections rather than relying on headless fixtures.
+
+**Acceptance:** weather affects a travel itinerary, a visitor arrives late, an NPC learns a rumour only from an allowed source, faction reaction follows a committed act, a newspaper subsequently publishes a permitted incomplete account, and all five elements persist after restart. User sees exactly what their character knows. M source mapping, backend events and UI presentation each receive separate evidence status; mock screens are never marked live.
 
 ## Player-reported live UX defects and frontend rebuild delivery
 
