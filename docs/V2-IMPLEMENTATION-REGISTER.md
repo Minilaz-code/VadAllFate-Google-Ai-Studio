@@ -1,5 +1,10 @@
 # VadAllFate V2 — Evidence-Based Implementation Register & Specification Audit
 
+> **CURRENT PROGRAMME PRIORITIES — 2026-10-29 (supersedes old roadmap sequencing, not historical test results):** [V2 Continuous Harvest & M-Series Simulation Plan](V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md) is an active instruction in both repos. **B1D P0 action-role/trusted-roll/recovery/receipt repairs remain OPEN** from [independent B1D QA](V2-HARVEST-02B1D-AUTHORITY-INPUT-AND-REPLAY-QA.md). **M-SIM-00/01** original M03–M16/M16P source inventory/crosswalk and **HARVEST-03-MSIM** MIT module discovery are APPROVED / NOT STARTED IN V2; **M-SIM-02/03** generic weather, travel, visitor, faction, rumour and news runtime integration is PLANNED / NOT ACCEPTED; **M-SIM-04 + CPP-05** lawful M16 convergence activation and portable campaign acceptance are PENDING. HARVEST-02-C map imports remain queued, with frontend UX and pack manager developed in parallel. Do not describe this programme as completed code or source inventory.
+
+> **Standing engineering gate:** Before implementing major new functionality, compare current code with suitable MIT-licensed GitHub implementations and tests, pin exact file/SHA/licence, choose COPY/ADAPT/PORT/TEST-HARVEST/REFERENCE/REJECT, preserve third-party notices, integrate only within existing Python R1/SQLite + React contracts, and run security/replay/Windows tests. Harvest work is continuous, not one-off. Historical rows below may reflect earlier snapshots; the current B1D hold and M-SIM not-started grades control forward reporting.
+
+
 > **Reuse programme (2026-10-28):** [HARVEST-02 MIT Source Reuse Execution Plan](V2-HARVEST-02-MIT-REUSE-EXECUTION-PLAN.md) & [HARVEST-02A Independent QA & Gate Closure](V2-HARVEST-02A-INDEPENDENT-QA-AND-GATE.md). HARVEST-02-A1 correctness and integration closure completed: Blockers A through D and Reviews E through G repaired, verified with 14 dedicated tests in `test_v2_harvest_02a_context_and_validation.py`, 430 total backend tests, and 147 frontend tests. All R1 Single Commit Authority, Step 51, and spatial holds strictly preserved.
 
 > **Governing charter (28 October 2026):** [VadAllFate V2 Master Development Goals and Acceptance Charter](V2-MASTER-DEVELOPMENT-GOALS.md). Current milestone reports and this document are evidence registers, not proof that the complete product or known trust gates have passed.
@@ -633,3 +638,21 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 - **Frontend Production Build:** Clean Vite build (`npm run build`, 0 errors).
 
 
+## 24. Continuous MIT Harvest & M-Series World Simulation (2026-10-29)
+
+**Status: APPROVED DELIVERY TRACK, no runtime implementation yet.** Product goal: M03–M15, M16/M16P and approved supplements must power the generic world engine—time/calendar, weather, travel/routes/maps, visitors/appointments, businesses and services, faction reputation and goals, rumour transmission, newspapers, quest/trigger conditions and NPC knowledge—rather than remain lore or a late source-pack attachment. The precise M-number inventory/mappings must be verified from original artifacts, not inferred.
+
+| Gate | Current evidence grade | Required next deliverable |
+|---|---|---|
+| HARVEST-02-A/B | Adapted source in Python; agent-reported automated tests | Preserve provenance, correct B1D actor/clock/recovery boundary |
+| B1D critical repairs | **OPEN P0 — independent source finding** | DM/system-only world actions, trusted skill outcomes, authenticated recovery, immutable receipts |
+| HARVEST-02-C map/UVTT | QUEUED | Pin tested MIT parser, adapt to current spatial engine and no-crop map calibration |
+| HARVEST-03-MSIM | **NOT STARTED** | MIT simulation source discovery/pinned file/test matrix, not wholesale applications |
+| M-SIM-00 / 01 | **NOT STARTED** | Inventory real original M03–M16/M16P and supplements/Save overlays, source-to-Python domain matrix |
+| M-SIM-02 / 03 | **PLANNED / NOT ACCEPTED** | Generic Python world processors + R1 cross-system live Windows scenario and replay |
+| CPP-04/05 + M-SIM-04 | **PARTIAL FOUNDATIONS / MIGRATION NOT ACCEPTED** | User-facing Pack Manager; actual lawful M-series activation and unrelated adventure portability |
+| Step 51 monsters / CP017B | **HOLD unchanged** | Explicit separate source/rules review and authorised future gates |
+
+**Mandatory demonstration:** one source-backed region and active Save in which weather affects travel, time delays a scheduled visitor, an NPC learns a rumour only when told, a faction reacts to a committed event, and a scheduled newspaper publishes only information the publisher could know. Verify Windows Play/Host, DM/player views, genuine CommitReceipts, restart/replay, source provenance, licensing, no hidden future plot activation, and ability to move the engine to an unrelated campaign without code edits. Then expand to named original Dragon Heist content and Starlit Revels once content rights and imports are verified.
+
+**Important scope distinction:** Integrating original M-series content, even with working weather/factions/travel/news, closes much of the **living-world and campaign-data gap**, not the entire product: complex 5e mechanics/Step 51, polished UI and character workflows, full portable pack lifecycle, secure LAN/mobile multiplayer, and model/voice performance remain separate acceptance gates. Historical PASS reports and automated test counts are not human play approval.
