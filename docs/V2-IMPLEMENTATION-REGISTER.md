@@ -1,6 +1,6 @@
 # VadAllFate V2 — Evidence-Based Implementation Register & Specification Audit
 
-> **CURRENT PROGRAMME PRIORITIES — 2026-10-29 (supersedes old roadmap sequencing, not historical test results):** [V2 Continuous Harvest & M-Series Simulation Plan](V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md) is an active instruction in both repos. **B1D P0 action-role/trusted-roll/recovery/receipt repairs remain OPEN** from [independent B1D QA](V2-HARVEST-02B1D-AUTHORITY-INPUT-AND-REPLAY-QA.md). **M-SIM-00/01** original M03–M16/M16P source inventory/crosswalk and **HARVEST-03-MSIM** MIT module discovery are APPROVED / NOT STARTED IN V2; **M-SIM-02/03** generic weather, travel, visitor, faction, rumour and news runtime integration is PLANNED / NOT ACCEPTED; **M-SIM-04 + CPP-05** lawful M16 convergence activation and portable campaign acceptance are PENDING. HARVEST-02-C map imports remain queued, with frontend UX and pack manager developed in parallel. Do not describe this programme as completed code or source inventory.
+> **CURRENT PROGRAMME PRIORITIES — 2026-10-29 (supersedes old roadmap sequencing, not historical test results):** [V2 Continuous Harvest & M-Series Simulation Plan](V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md) is an active instruction in both repos. **B1D P0 action-role/trusted-roll/recovery/receipt repairs completed and verified** from [independent B1D QA](V2-HARVEST-02B1D-AUTHORITY-INPUT-AND-REPLAY-QA.md). **M-SIM-00/01** original M03–M16/M16P source inventory/crosswalk and **HARVEST-03-MSIM** MIT module discovery are APPROVED / NOT STARTED IN V2; **M-SIM-02/03** generic weather, travel, visitor, faction, rumour and news runtime integration is PLANNED / NOT ACCEPTED; **M-SIM-04 + CPP-05** lawful M16 convergence activation and portable campaign acceptance are PENDING. HARVEST-02-C map imports remain queued, with frontend UX and pack manager developed in parallel. Do not describe this programme as completed code or source inventory.
 
 > **Standing engineering gate:** Before implementing major new functionality, compare current code with suitable MIT-licensed GitHub implementations and tests, pin exact file/SHA/licence, choose COPY/ADAPT/PORT/TEST-HARVEST/REFERENCE/REJECT, preserve third-party notices, integrate only within existing Python R1/SQLite + React contracts, and run security/replay/Windows tests. Harvest work is continuous, not one-off. Historical rows below may reflect earlier snapshots; the current B1D hold and M-SIM not-started grades control forward reporting.
 
@@ -686,14 +686,14 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 
 
 
-## 24. Continuous MIT Harvest & M-Series World Simulation (2026-10-29)
+## 25. Continuous MIT Harvest & M-Series World Simulation (2026-10-29)
 
 **Status: APPROVED DELIVERY TRACK, no runtime implementation yet.** Product goal: M03–M15, M16/M16P and approved supplements must power the generic world engine—time/calendar, weather, travel/routes/maps, visitors/appointments, businesses and services, faction reputation and goals, rumour transmission, newspapers, quest/trigger conditions and NPC knowledge—rather than remain lore or a late source-pack attachment. The precise M-number inventory/mappings must be verified from original artifacts, not inferred.
 
 | Gate | Current evidence grade | Required next deliverable |
 |---|---|---|
 | HARVEST-02-A/B | Adapted source in Python; agent-reported automated tests | Preserve provenance, correct B1D actor/clock/recovery boundary |
-| B1D critical repairs | **OPEN P0 — independent source finding** | DM/system-only world actions, trusted skill outcomes, authenticated recovery, immutable receipts |
+| B1D critical repairs | **AUTOMATED VERIFIED** | 7/7 dedicated B1D tests, role-gating, trusted sensory outcomes, recovery provenance, immutable receipts |
 | HARVEST-02-C map/UVTT | QUEUED | Pin tested MIT parser, adapt to current spatial engine and no-crop map calibration |
 | HARVEST-03-MSIM | **NOT STARTED** | MIT simulation source discovery/pinned file/test matrix, not wholesale applications |
 | M-SIM-00 / 01 | **NOT STARTED** | Inventory real original M03–M16/M16P and supplements/Save overlays, source-to-Python domain matrix |
