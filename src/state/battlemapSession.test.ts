@@ -252,3 +252,13 @@ describe('Battlemap Session Lifecycle & Workspace Persistence (AIUI-CP002B1)', (
     assert.equal(newMap.grid.originX, 4);
   });
 });
+
+
+it('hydrates the authoritative active source map and campaign location',()=>{
+  const session=new BattlemapSessionManager();
+  session.hydrateFromBackendProjection({activeMapId:'map-source-fixture',mapConfigs:{'map-source-fixture':{
+    name:'Original test grid',locationId:'loc-source-fixture',gridDimensions:{width:20,height:20,cellSizePx:40,originX:3,originY:4}}}});
+  assert.equal(session.getActiveMapId(),'map-source-fixture');
+  assert.equal(session.getActiveMap().locationId,'loc-source-fixture');
+  assert.equal(session.getActiveMap().grid.originX,3);
+});

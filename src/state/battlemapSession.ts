@@ -467,7 +467,7 @@ export class BattlemapSessionManager {
         const newMap: BattlemapDefinition = {
           id: mapId,
           name: cfg.name || cfg.mapName || mapId,
-          locationId: `loc-${mapId}`,
+          locationId: cfg.locationId || `loc-${mapId}`,
           sceneSummary: cfg.sceneSummary || 'Synchronized tactical battlemap from server projection.',
           grid: {
             width: cfg.gridDimensions?.width || 20,
@@ -526,6 +526,7 @@ export class BattlemapSessionManager {
     if (battlemapState.activeMapId) {
       const active = this.maps.find((m) => m.id === battlemapState.activeMapId);
       if (active) {
+        if(this.activeMapId!==active.id){this.activeMapId=active.id;hasChanged=true;}
         if (battlemapState.revealedCells && Array.isArray(battlemapState.revealedCells)) {
           active.fog.revealedCells = [...battlemapState.revealedCells];
           hasChanged = true;

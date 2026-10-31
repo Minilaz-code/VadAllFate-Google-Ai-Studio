@@ -2,14 +2,14 @@ import React,{useEffect,useState} from 'react';
 import {resolveV2ApiBaseUrl,v2BackendClient} from '../../services/v2BackendClient.ts';
 import {saveSession,v2SessionHeaders,getV2CampaignId} from '../../services/v2Session.ts';
 
-export function CampaignManager({onRefresh}:{onRefresh:()=>Promise<unknown>}) {
+export function CampaignManager({onRefresh,onBusyChange}:{onRefresh:()=>Promise<unknown>;onBusyChange?:(busy:boolean)=>void}) {
   const [campaigns,setCampaigns]=useState<any[]>([]);const [saves,setSaves]=useState<any[]>([]);
   const [saveId,setSaveId]=useState('');const [checkpoint,setCheckpoint]=useState<any>(null);
   const [name,setName]=useState('');const [selected,setSelected]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false);
   const api=async(path:string,body?:any)=>{const r=await fetch(`${resolveV2ApiBaseUrl()}/campaigns${path}`,{method:body?'POST':'GET',headers:{...v2SessionHeaders('dm'),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.message||d.error);return d;};
   const load=async()=>{setCampaigns((await api('')).campaigns);setSaves((await api('/saves')).saves);};
   useEffect(()=>{void load().catch(e=>setError(e.message));},[]);
-  const run=async(fn:()=>Promise<unknown>)=>{setBusy(true);setError('');setNotice('');try{await fn();}catch(e:any){setError(e.message);}finally{setBusy(false);}};
+  const run=async(fn:()=>Promise<unknown>)=>{setBusy(true);onBusyChange?.(true);setError('');setNotice('');try{await fn();}catch(e:any){setError(e.message);}finally{setBusy(false);onBusyChange?.(false);}};
   const activate=async(result:any)=>{saveSession(result.sessions);v2BackendClient.clearAssetBlobCache();await onRefresh();await load();setNotice('Campaign session changed. Content versions and world state were loaded from Python.');};
   const button='px-3 py-2 border border-neutral-600 rounded disabled:opacity-40';
   return <details className="border border-neutral-700 rounded p-3"><summary>Campaigns and Save branches</summary><div className="flex flex-wrap gap-2 mt-3">

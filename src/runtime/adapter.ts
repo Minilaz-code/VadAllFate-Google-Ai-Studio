@@ -1074,6 +1074,7 @@ export class DemoCampaignClient implements CampaignClient {
 export class PythonRuntimeGateway implements CampaignClient {
   private endpoint: string;
   private connected: boolean = false;
+  private connectGeneration = 0;
   private cachedSnapshot: DemoSnapshotRef = {
     campaignId: 'DISCONNECTED',
     commitSequence: 0,
@@ -1113,6 +1114,7 @@ export class PythonRuntimeGateway implements CampaignClient {
   }
 
   public async connectToLiveBackend(): Promise<boolean> {
+    const generation=++this.connectGeneration;
     try {
       if (!hasV2Session()) {
         this.connected = false;
@@ -1120,7 +1122,7 @@ export class PythonRuntimeGateway implements CampaignClient {
         return false;
       }
       const [statusResp, dmResp, playerResp] = await Promise.all([
-        fetch(`${this.endpoint}/status?campaign_id=${encodeURIComponent(getV2CampaignId())}`),
+        fetch(`${this.endpoint}/status?campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders()}),
         fetch(`${this.endpoint}/projection?role=dm_host&campaign_id=${encodeURIComponent(getV2CampaignId())}`, { headers: v2SessionHeaders('dm') }),
         fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01&campaign_id=${encodeURIComponent(getV2CampaignId())}`, {
           headers: v2SessionHeaders('player'),
@@ -1134,6 +1136,7 @@ export class PythonRuntimeGateway implements CampaignClient {
       const dmData = await dmResp.json();
       const playerData = await playerResp.json();
 
+      if(generation!==this.connectGeneration)return this.connected;
       this.connected = true;
       this.cachedSnapshot = {
         campaignId: dmData.campaignId || 'aethelgard-vault-001',
@@ -1159,6 +1162,7 @@ export class PythonRuntimeGateway implements CampaignClient {
       this.notify();
       return true;
     } catch {
+      if(generation!==this.connectGeneration)return this.connected;
       this.connected = false;
       return false;
     }

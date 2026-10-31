@@ -2348,6 +2348,8 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
                 return (
                   <div
                     key={npc.id}
+                    role="button" tabIndex={0} aria-label={`NPC token ${npc.name}`}
+                    onKeyDown={e=>{if(e.key==='Enter')onSelectEntity?.(npc.id,'npc');}}
                     onMouseDown={(e) => {
                       if (activeTool === 'token') {
                         e.stopPropagation();

@@ -109,6 +109,7 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
   const mapList = battlemapSessionManager.getMaps();
   const activeMap = battlemapSessionManager.getActiveMap();
   const activeMapId = battlemapSessionManager.getActiveMapId();
+  const [mapSelectionError,setMapSelectionError]=useState('');const [selectingMap,setSelectingMap]=useState(false);
 
   // Active Tool selection (restricted strictly by role, independent of hosting)
   const isDm = identity ? canAccessDmWorkspaces(identity) : userRole === 'dm_host';
@@ -659,16 +660,22 @@ export const BattlemapView: React.FC<BattlemapViewProps> = ({
             </div>
           )}
 
+          {mapSelectionError&&<p role="alert" className="text-red-300">{mapSelectionError}</p>}
           {/* Map Selector */}
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase font-mono text-neutral-400 hidden md:inline">
               Active Map:
             </span>
             <select
-              value={activeMapId}
+              aria-label="Active battlemap" value={activeMapId} disabled={selectingMap}
               onChange={(e) => {
-                battlemapSessionManager.setActiveMapId(e.target.value);
-                setSelectedGeometry(null);
+                const mapId=e.target.value;setMapSelectionError('');
+                if(!isDm||!onSubmitAction){battlemapSessionManager.setActiveMapId(mapId);setSelectedGeometry(null);return;}
+                setSelectingMap(true);
+                void onSubmitAction({actionId:crypto.randomUUID(),actorId:'dm-1',actorRole:userRole,
+                  actionType:'UPDATE_BATTLEMAP_STATE',snapshotRef:currentSnapshot,payload:{activeMapId:mapId}})
+                  .then(result=>{if(result?.receipt?.status!=='COMMITTED')throw new Error(result?.receipt?.error||'Map selection was not committed');battlemapSessionManager.setActiveMapId(mapId);setSelectedGeometry(null);})
+                  .catch(e=>setMapSelectionError(e.message)).finally(()=>setSelectingMap(false));
               }}
               className="bg-neutral-950 border border-neutral-700 rounded px-2.5 py-1 text-xs text-neutral-200 focus:outline-none focus:border-amber-500 font-medium cursor-pointer max-w-[220px] truncate"
             >
