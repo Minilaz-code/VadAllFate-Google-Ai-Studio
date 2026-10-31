@@ -1,6 +1,6 @@
 # Living world integration handoff — 2026-10-31
 
-Both repositories: `codex/v2-living-world`, based on the published `codex/v2-persistent-world` branches. Exact paired implementation commits are recorded in the publication document. Historical evidence in earlier handoffs remains historical.
+Both repositories: `codex/v2-living-world`, based on the published `codex/v2-persistent-world` branches. Exact paired implementation commits are recorded in [the publication document](V2-LIVING-WORLD-PUBLICATION.md). Historical evidence in earlier handoffs remains historical.
 
 ## Implemented contracts
 
