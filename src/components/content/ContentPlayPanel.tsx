@@ -1,3 +1,4 @@
+import {AdventurePreparation} from './AdventurePreparation.tsx';
 import {LivingWorldPanel} from './LivingWorldPanel.tsx';
 import React,{useEffect,useState,useRef} from 'react';
 import {contentRequest,contentMutation,selectContentClosure,type ContentPack,type ContentRecord,type ContentDefinition} from '../../services/v2ContentClient.ts';
@@ -67,7 +68,7 @@ export function ContentPlayPanel({role,snapshot,characters,isLive,onRefresh,isPr
     {error&&<p role="alert" className="text-red-300 mt-2">{error} <button onClick={()=>void run(load)}>Retry</button></p>}
     {isPreview&&<p className="text-amber-300">Player preview is read only.</p>}{expanded&&<fieldset disabled={busy||!play.snapshotRef} className="space-y-3 mt-3">
       {isDm&&<>
-        <button className={button} disabled={busy} onClick={()=>void run(async()=>{catalogueLoaded.current=false;loadedPins.current='';await load();})}>Refresh installed content</button><CampaignManager onRefresh={onRefresh} onBusyChange={value=>value?beginOperation():endOperation()}/><LivingWorldPanel characters={characters} play={play} location={location} action={action}/>
+        <button className={button} disabled={busy} onClick={()=>void run(async()=>{catalogueLoaded.current=false;loadedPins.current='';await load();})}>Refresh installed content</button><CampaignManager onRefresh={onRefresh} onBusyChange={value=>value?beginOperation():endOperation()}/><AdventurePreparation records={records} action={action}/><LivingWorldPanel characters={characters} play={play} location={location} action={action}/>
         <div className="flex flex-wrap gap-2 items-end">
           <label>World <select aria-label="World pack" className={field} value={world} onChange={e=>setWorld(e.target.value)}><option value="">Choose world</option>{packs.filter(p=>p.kind==='world').map(p=><option key={p.pin.manifest_sha256} value={p.pin.manifest_sha256}>{p.title} · {p.pin.pack_version}</option>)}</select></label>
           <label>Adventure <select aria-label="Adventure pack" className={field} value={adventure} onChange={e=>setAdventure(e.target.value)}><option value="">Choose adventure</option>{packs.filter(p=>p.kind==='adventure_campaign').map(p=><option key={p.pin.manifest_sha256} value={p.pin.manifest_sha256}>{p.title} · {p.pin.pack_version}</option>)}</select></label>

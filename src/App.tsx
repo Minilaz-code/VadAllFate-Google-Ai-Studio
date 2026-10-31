@@ -27,6 +27,7 @@ import { PlayerCharacterView } from './components/player/PlayerCharacterView.tsx
 import { PlayerJournalView } from './components/player/PlayerJournalView.tsx';
 import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
+import {AdventurePlayPanel} from './components/play/AdventurePlayPanel.tsx';
 import { ContentPlayPanel } from './components/content/ContentPlayPanel.tsx';
 import { ShieldAlert } from 'lucide-react';
 import { consumeHostKeyFromUrlFragment, hasV2Session } from './services/v2Session.ts';
@@ -34,6 +35,7 @@ import { v2BackendClient } from './services/v2BackendClient.ts';
 import { battlemapSessionManager } from './state/battlemapSession.ts';
 
 export default function App() {
+  const [hasAdventure,setHasAdventure]=useState(false);
   const [currentTab, setCurrentTab] = useState<ApplicationTab>('play');
   const [identity, setIdentity] = useState<UserIdentityContext>({
     gameRole: 'dm',
@@ -335,8 +337,9 @@ export default function App() {
           <div className="flex-1 flex flex-col min-h-0">
             {/* WORKSPACE 1: PLAY (Shared) */}
             {currentTab === 'play' && (
-              <><ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />
-              <NarrativePlayView
+              <>{(!hasAdventure||effectiveRole==='dm'||effectiveRole==='dm_host')&&<ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />}
+              <AdventurePlayPanel refreshKey={JSON.stringify(activeClient.getCurrentSnapshot())} role={effectiveRole} characters={projection.characters} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onAvailable={setHasAdventure} onRefresh={()=>clientManager.connectPythonGateway()}/>
+              {!hasAdventure&&<NarrativePlayView
                 characters={projection.characters}
                 npcs={projection.npcs}
                 quests={projection.quests}
@@ -371,7 +374,7 @@ export default function App() {
                   }
                 }}
                 onNavigateToBattlemap={() => setCurrentTab('battlemap')}
-              />
+              />}
               </>
             )}
 
