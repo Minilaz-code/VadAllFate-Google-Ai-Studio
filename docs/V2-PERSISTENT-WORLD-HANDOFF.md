@@ -1,6 +1,6 @@
 # Persistent world integration handoff — 2026-10-31
 
-Both repositories use `codex/v2-persistent-world`, based on the published `codex/v2-app-integration` branches. Exact paired implementation SHAs are recorded in the publication document added after implementation commits. The initial independently working actor milestones are backend `9c6fea7` and frontend `2041d78`.
+Both repositories use `codex/v2-persistent-world`, based on the published `codex/v2-app-integration` branches. Exact paired implementation SHAs are recorded in [the publication document](V2-PERSISTENT-WORLD-PUBLICATION.md). The initial independently working actor milestones are backend `9c6fea7` and frontend `2041d78`.
 
 ## Acceptance and implementation
 
