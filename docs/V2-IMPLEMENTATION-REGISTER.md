@@ -709,3 +709,8 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 ## 2026-10-31 — Codex application integration evidence
 
 PASS: authenticated source-pack selection, protected artwork, explicit party release, committed Lyra/Durnan dialogue, human DM replies, Windows restart persistence, separate campaign selection and SQLite Save branching. Backend 532 passed/2 skipped; final security regressions 25 passed; frontend 150 passed, TypeScript and production build passed. PARTIAL/HOLD: AI replies, source NPC combat/spatial materialization, arbitrary pack upload/export and full combat acceptance. See [application handoff](V2-APP-INTEGRATION-HANDOFF.md) for commands, scope and limits. Historical evidence above remains unchanged.
+
+
+## 2026-10-31 — Persistent source NPC world milestone
+
+PASS: exact-pinned Durnan instance/location, witnessed unverified interaction memory, real local Qwen reply through shared Harness and R1, complete process restart, checkpoint inspection/branching and independent timeline play. Full backend 542 passed/2 skipped; targeted API/Harness/auth tests 38 passed; frontend 150 passed with TypeScript/build PASS. PARTIAL: configured-grid token contract covered, but private browser scene currently has no configured grid. HOLD: source combat mechanics, unrestricted private-belief ingestion and portable single-campaign export. See [persistent world handoff](V2-PERSISTENT-WORLD-HANDOFF.md) for exact evidence, launch instructions and limits. Earlier evidence remains historical.

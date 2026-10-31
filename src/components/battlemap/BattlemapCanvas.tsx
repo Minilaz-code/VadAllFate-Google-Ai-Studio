@@ -1299,7 +1299,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     const onMap = mapDefinition.tokens.some((t) => t.entityId === npc.id);
     // Or belongs to this location
     const atLocation = npc.currentLocationId === mapDefinition.locationId;
-    return onMap || atLocation;
+    return onMap || atLocation || ((npc.token as any).placed === true && (npc.token as any).sceneId === mapDefinition.id);
   });
 
   // Observable DEMO-ONLY Intent Queue (AIUI-CP002C1-R2)

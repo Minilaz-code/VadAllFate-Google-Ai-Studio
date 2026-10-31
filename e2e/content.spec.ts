@@ -38,7 +38,7 @@ test('real Waterdeep content, protected artwork and committed interaction',async
   await panel.getByLabel('Message to NPC').fill(message);
   await panel.getByRole('button',{name:'Speak and record'}).click();
   await expect(panel.getByText(/Lyra Vance addresses Durnan:/)).toContainText(message);
-  await expect(panel.getByText(/AI NPC replies are unavailable/)).toBeVisible();
+  await expect(panel.getByText(/AI requests require a real configured model/)).toBeVisible();
   expect(errors).toEqual([]);
   // Verify durability after browser reload with the same server-backed session.
   await page.reload();await panel.getByRole('button',{name:/Campaign content/}).click();
