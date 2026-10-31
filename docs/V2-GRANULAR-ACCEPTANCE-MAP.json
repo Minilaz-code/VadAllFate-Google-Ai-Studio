@@ -1,0 +1,200 @@
+{
+  "review_sha256": "01183daeb7f6d35d6da51d8a14a54b17f2dc681df057712878e4cd754051a4d6",
+  "cases": {
+    "G01": {
+      "increments": [
+        "I1",
+        "I2"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G02": {
+      "increments": [
+        "I1",
+        "I2"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G03": {
+      "increments": [
+        "I1",
+        "I2"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G04": {
+      "increments": [
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G05": {
+      "increments": [
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G06": {
+      "increments": [
+        "I3"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G07": {
+      "increments": [
+        "I3"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G08": {
+      "increments": [
+        "I1",
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G09": {
+      "increments": [
+        "I4",
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G10": {
+      "increments": [
+        "I3",
+        "I7"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G11": {
+      "increments": [
+        "I3",
+        "I7"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G12": {
+      "increments": [
+        "I7"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G13": {
+      "increments": [
+        "I7"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G14": {
+      "increments": [
+        "I3",
+        "I7"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G15": {
+      "increments": [
+        "I3",
+        "I7"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G16": {
+      "increments": [
+        "I4",
+        "I8"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G17": {
+      "increments": [
+        "I4"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G18": {
+      "increments": [
+        "I6",
+        "I8"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G19": {
+      "increments": [
+        "I8"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G20": {
+      "increments": [
+        "I6",
+        "I8"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G21": {
+      "increments": [
+        "I6",
+        "I8"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G22": {
+      "increments": [
+        "I4",
+        "I7",
+        "I8"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G23": {
+      "increments": [
+        "I2",
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G24": {
+      "increments": [
+        "I1",
+        "I5",
+        "I6"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G25": {
+      "increments": [
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G26": {
+      "increments": [
+        "I7"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G27": {
+      "increments": [
+        "I1",
+        "I2",
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G28": {
+      "increments": [
+        "I1",
+        "I5"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    },
+    "G29": {
+      "increments": [
+        "I8"
+      ],
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+    }
+  }
+}
