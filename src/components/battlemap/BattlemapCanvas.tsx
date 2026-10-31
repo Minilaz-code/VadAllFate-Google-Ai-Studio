@@ -227,6 +227,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
     }
 
     let isMounted = true;
+    setResolvedArtworkUrl('');
     setIsArtworkLoading(true);
     setArtworkError(null);
 
@@ -584,7 +585,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
       const result = await onSubmitAction({
         actionId: `act-calib-${Date.now()}`,
         clientNonce: `nonce-calib-${Date.now()}`,
-        actorId: isEffectiveDm ? 'dm-1' : (identity?.actorId || 'dm-1'),
+        actorId: isEffectiveDm ? 'dm-1' : (identity?.assignedCharacterId || 'dm-1'),
         actorRole: userRole,
         actionType: 'UPDATE_BATTLEMAP_STATE',
         snapshotRef: snap,
@@ -648,6 +649,35 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
   };
 
   // Canvas Mouse Down
+    const handleDispatchMove = async (
+    entityId: string,
+    targetX: number,
+    targetY: number,
+    entityType: 'character' | 'npc'
+  ) => {
+    if (!onMoveToken) return;
+    try {
+      const res: any = await onMoveToken(entityId, targetX, targetY, entityType);
+      if (res && res.receipt) {
+        if (
+          res.receipt.status === 'REJECTED_VALIDATION_FAILURE' ||
+          res.receipt.status === 'REJECTED_UNAUTHORIZED_ROLE' ||
+          res.receipt.status === 'REJECTED_STALE_SNAPSHOT'
+        ) {
+          const reason =
+            res.receipt.error ||
+            res.receipt.rejectionReason ||
+            'Movement rejected by Python authoritative rules.';
+          setCanvasNotice(`Movement Rejected: ${reason}`);
+          setTimeout(() => setCanvasNotice(null), 4500);
+        }
+      }
+    } catch (err: any) {
+      setCanvasNotice(`Movement Failed: ${err?.message || 'Server error'}`);
+      setTimeout(() => setCanvasNotice(null), 4500);
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     // Middle click, Space+click, Shift+click, or 'pan' tool triggers viewport pan
     if (e.button === 1 || e.shiftKey || activeTool === 'pan') {
@@ -778,34 +808,6 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
       return;
     }
 
-    const handleDispatchMove = async (
-    entityId: string,
-    targetX: number,
-    targetY: number,
-    entityType: 'character' | 'npc'
-  ) => {
-    if (!onMoveToken) return;
-    try {
-      const res: any = await onMoveToken(entityId, targetX, targetY, entityType);
-      if (res && res.receipt) {
-        if (
-          res.receipt.status === 'REJECTED_VALIDATION_FAILURE' ||
-          res.receipt.status === 'REJECTED_UNAUTHORIZED_ROLE' ||
-          res.receipt.status === 'REJECTED_STALE_SNAPSHOT'
-        ) {
-          const reason =
-            res.receipt.error ||
-            res.receipt.rejectionReason ||
-            'Movement rejected by Python authoritative rules.';
-          setCanvasNotice(`Movement Rejected: ${reason}`);
-          setTimeout(() => setCanvasNotice(null), 4500);
-        }
-      }
-    } catch (err: any) {
-      setCanvasNotice(`Movement Failed: ${err?.message || 'Server error'}`);
-      setTimeout(() => setCanvasNotice(null), 4500);
-    }
-  };
 
   if (activeTool === 'token') {
     // If user clicks on empty cell while an entity is selected, move it there

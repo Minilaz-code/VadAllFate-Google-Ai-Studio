@@ -8,3 +8,6 @@ coverage/
 !.env.example
 .playwright-cli/
 bun.lock
+# Private browser artifacts may contain licensed content and must remain local
+/test-results/
+/playwright-report/

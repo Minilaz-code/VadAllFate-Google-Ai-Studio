@@ -14,6 +14,7 @@ const STORAGE_KEY = 'vadallfate.v2.session';
 const FRAGMENT_PARAM = 'vf_host_key';
 
 export interface V2SessionTokens {
+  campaignId?: string;
   /** Token whose signed role is `dm` (Host DM). */
   dm?: string;
   /** Token whose signed role is `player` or `observer`. */
@@ -48,7 +49,7 @@ export function getStoredSession(): V2SessionTokens {
   }
 }
 
-function saveSession(tokens: V2SessionTokens): void {
+export function saveSession(tokens: V2SessionTokens): void {
   memoryTokens = tokens;
   const s = storage();
   if (s) s.setItem(STORAGE_KEY, JSON.stringify(tokens));
@@ -108,6 +109,7 @@ export async function loginWithHostKey(
     player: player.sessionToken,
     displayName: dm.displayName,
     isHost: true,
+    campaignId: dm.campaignId || 'aethelgard-vault-001',
   };
   saveSession(tokens);
   return tokens;
@@ -116,7 +118,7 @@ export async function loginWithHostKey(
 /** Redeem a Host-provisioned single-use invite; the backend decides the role, not the client. */
 export async function loginWithInvite(inviteCode: string): Promise<V2SessionTokens> {
   const res = await postSession({ inviteCode });
-  const tokens: V2SessionTokens = { displayName: res.displayName, isHost: Boolean(res.isHost) };
+  const tokens: V2SessionTokens = { displayName: res.displayName, isHost: Boolean(res.isHost), campaignId: res.campaignId };
   if (res.role === 'dm') tokens.dm = res.sessionToken;
   else tokens.player = res.sessionToken;
   saveSession(tokens);
@@ -178,3 +180,7 @@ export async function provisionInvite(input: {
   if (!resp.ok) throw new Error(data?.message || `Provision failed (HTTP ${resp.status})`);
   return data;
 }
+
+export function getV2CampaignId(): string { return getStoredSession().campaignId || 'aethelgard-vault-001'; }
+
+export { apiBase as resolveSessionApiBaseUrl };

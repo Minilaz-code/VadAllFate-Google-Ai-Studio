@@ -265,6 +265,7 @@ export interface DemoSnapshotRef {
 }
 
 export type DemoActionType =
+  | 'SET_DICE_POLICY' | 'APPROVE_ADJUDICATION' | 'REJECT_ADJUDICATION'
   | 'MOVE_TOKEN'
   | 'ATTACK_ACTION'
   | 'CAST_SPELL'
@@ -339,7 +340,7 @@ export interface DemoCausalEvent {
   eventId: string;
   commitSequence: number;
   worldMinute: number;
-  category: 'COMBAT' | 'DIALOGUE' | 'WORLD' | 'REST' | 'RULES_QUERY' | 'DM_NOTE';
+  category: 'COMBAT' | 'DIALOGUE' | 'WORLD' | 'REST' | 'RULES_QUERY' | 'DM_NOTE' | 'MAGIC';
   summary: string;
   details?: string;
   actorName: string;

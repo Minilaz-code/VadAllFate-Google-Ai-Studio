@@ -202,7 +202,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
     let active = true;
     const aud = {
       actor_id: selectedCharacterId || 'char-lyra-01',
-      role: (userRole === 'dm' || userRole === 'dm_host') ? ('dm' as const) : ('player' as const),
+      role: (userRole === 'dm_host') ? ('dm' as const) : ('player' as const),
       campaign_id: currentSnapshot?.campaignId || 'aethelgard-vault-001',
       save_id: 'save-main',
     };
@@ -277,7 +277,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
     try {
       const aud = {
         actor_id: selectedCharacterId || 'char-lyra-01',
-        role: (userRole === 'dm' || userRole === 'dm_host') ? ('dm' as const) : ('player' as const),
+        role: (userRole === 'dm_host') ? ('dm' as const) : ('player' as const),
         campaign_id: currentSnapshot?.campaignId || 'aethelgard-vault-001',
         save_id: 'save-main',
       };
@@ -790,7 +790,7 @@ export const NarrativePlayView: React.FC<NarrativePlayViewProps> = ({
                         <option value="private_player">Private (Player Only)</option>
                         <option value="party_shared">Party Shared</option>
                         <option value="shared_with_dm">Shared With DM</option>
-                        {(userRole === 'dm' || userRole === 'dm_host') && (
+                        {(userRole === 'dm_host') && (
                           <option value="dm_private">DM Secret Note</option>
                         )}
                       </select>

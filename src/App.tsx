@@ -27,6 +27,7 @@ import { PlayerCharacterView } from './components/player/PlayerCharacterView.tsx
 import { PlayerJournalView } from './components/player/PlayerJournalView.tsx';
 import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
+import { ContentPlayPanel } from './components/content/ContentPlayPanel.tsx';
 import { ShieldAlert } from 'lucide-react';
 import { consumeHostKeyFromUrlFragment, hasV2Session } from './services/v2Session.ts';
 import { v2BackendClient } from './services/v2BackendClient.ts';
@@ -136,12 +137,12 @@ export default function App() {
   // to prevent DM-only cached blob URLs from leaking into player views
   useEffect(() => {
     v2BackendClient.clearAssetBlobCache();
-  }, [effectiveRole, identity.actorId, identity.campaignId, identity.assignedCharacterId]);
+  }, [effectiveRole, identity.gameRole, projection?.campaignId, identity.assignedCharacterId, identity.previewMode?.isActive]);
 
   // Handlers for switching identity preset
   const handleSelectIdentity = (newIdentity: UserIdentityContext) => {
     setIdentity(newIdentity);
-    if (newIdentity.role === 'player' || newIdentity.role === 'observer') {
+    if (newIdentity.gameRole === 'player' || newIdentity.gameRole === 'observer') {
       battlemapSessionManager.clearPrivilegedCache();
     }
     // Sanitize active tab to prevent invalid DM workspace access
@@ -287,7 +288,8 @@ export default function App() {
                     const tok = await clientManager.getPythonGateway().authenticateSession(hostKeyInput.trim());
                     setAuthMessage(tok ? null : clientManager.getPythonGateway().lastAuthError);
                     setHostKeyInput('');
-                    await clientManager.connectPythonGateway();
+                    const ok = await clientManager.connectPythonGateway();
+                    setConnectionState(ok ? 'CONNECTED' : (hasV2Session() ? 'DISCONNECTED' : 'AUTH REQUIRED'));
                   }}
                   className="px-3 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold"
                 >
@@ -333,6 +335,7 @@ export default function App() {
           <div className="flex-1 flex flex-col min-h-0">
             {/* WORKSPACE 1: PLAY (Shared) */}
             {currentTab === 'play' && (
+              <><ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />
               <NarrativePlayView
                 characters={projection.characters}
                 npcs={projection.npcs}
@@ -369,6 +372,7 @@ export default function App() {
                 }}
                 onNavigateToBattlemap={() => setCurrentTab('battlemap')}
               />
+              </>
             )}
 
             {/* WORKSPACE 2: BATTLEMAP (Shared, Role-Filtered) */}

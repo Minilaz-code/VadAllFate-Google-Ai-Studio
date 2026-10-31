@@ -74,7 +74,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   onOpenCharacterSheet,
   onSubmitAction,
 }) => {
-  const isDm = userRole === 'dm' || userRole === 'dm_host';
+  const isDm = userRole === 'dm_host';
 
   // Modal / Action states
   const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);

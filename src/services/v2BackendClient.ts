@@ -858,12 +858,15 @@ export class V2BackendClient {
   }
 
   private _blobUrlCache: Map<string, string> = new Map();
+  private _assetGeneration = 0;
+  private _assetSession = '';
 
   /**
    * Stage W0: Clear and revoke all cached object URLs.
    * Crucial during role/identity/campaign switches to prevent DM-only images leaking into player sessions.
    */
   public clearAssetBlobCache(): void {
+    this._assetGeneration += 1;
     for (const blobUrl of this._blobUrlCache.values()) {
       try {
         if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function' && blobUrl.startsWith('blob:')) {
@@ -907,19 +910,32 @@ export class V2BackendClient {
 
     // Stage W0 Security: Key cache by effective role to prevent DM-only images from leaking to player views!
     const effectiveRole = role || 'player';
+    const sessionKey = `${effectiveRole}:${getV2Token(effectiveRole) || ''}`;
+    if (this._assetSession !== sessionKey) {
+      this.clearAssetBlobCache();
+      this._assetSession = sessionKey;
+    }
+    const generation = this._assetGeneration;
     const cacheKey = `${effectiveRole}:${url}`;
     if (this._blobUrlCache.has(cacheKey)) {
       return this._blobUrlCache.get(cacheKey)!;
     }
 
-    const fullUrl = url.startsWith('http') ? url : `${this.baseUrl.replace(/\/api\/v2\/?$/, '')}${url}`;
+    const backend = new URL(this.baseUrl);
+    const target = new URL(url, backend.origin);
+    if (!['http:', 'https:'].includes(target.protocol)) throw new Error('Unsupported artwork URL');
+    const isProtected = target.pathname.startsWith('/api/v2/');
+    if (isProtected && target.origin !== backend.origin) throw new Error('Protected artwork must use the configured backend');
+    const fullUrl = target.href;
     try {
       const resp = await fetch(fullUrl, {
         method: 'GET',
-        headers: v2SessionHeaders(effectiveRole),
+        headers: isProtected ? v2SessionHeaders(effectiveRole) : {},
+        cache: isProtected ? 'no-store' : 'default',
       });
       if (resp.ok) {
         const blob = await resp.blob();
+        if (generation !== this._assetGeneration) throw new Error('Artwork session changed; retry the request');
         const blobUrl = typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
           ? URL.createObjectURL(blob)
           : url;
@@ -937,7 +953,7 @@ export class V2BackendClient {
       if (err?.message?.startsWith('HTTP')) {
         throw err;
       }
-      if (!this.allowOfflineFallback) {
+      if (isProtected || !this.allowOfflineFallback) {
         throw err;
       }
     }

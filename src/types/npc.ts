@@ -80,6 +80,7 @@ export interface NonPlayerCharacter {
 
   // Combat Statblock (if engaged in combat)
   statBlock?: {
+    dexterity?: number;
     challengeRating: number;
     armorClass: number;
     hitPoints: number;

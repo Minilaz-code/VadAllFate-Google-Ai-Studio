@@ -132,7 +132,7 @@ describe('Milestone 12B — Trust, Physical Dice & Spatial Secrecy Frontend Gate
       ],
       fog: {
         enabled: true,
-        defaultState: 'unexplored',
+        defaultState: 'hidden',
         revealedCells: [],
         hiddenCells: [],
         exploredCells: [],

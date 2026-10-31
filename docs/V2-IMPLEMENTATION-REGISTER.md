@@ -10,8 +10,8 @@
 > **Governing charter (28 October 2026):** [VadAllFate V2 Master Development Goals and Acceptance Charter](V2-MASTER-DEVELOPMENT-GOALS.md). Current milestone reports and this document are evidence registers, not proof that the complete product or known trust gates have passed.
 
 **Audit & Execution Date:** 2026-10-27 (Milestone 10A Critical Authority Recovery, Co-DM Forward Compensation, and Pack Staging Security QA)  
-**Active Backend Worktree / Branch:** `d:\Development\VadAllFate-v2-srd` (`v2/srd51-rules-browser`)  
-**Active Frontend Worktree / Branch:** `d:\Development\VadAllFate-Google-Ai-Studio` (`v2/srd51-rules-browser`)  
+**Active Backend Worktree / Branch:** `<backend-checkout>` (`v2/srd51-rules-browser`)
+**Active Frontend Worktree / Branch:** `<frontend-checkout>` (`v2/srd51-rules-browser`)
 **Canonical Instructions:**
 - `docs/V2-PORTABLE-CAMPAIGN-PACKS-AND-OBSIDIAN-INTEROP.md`
 - `docs/CPP-00-INVENTORY-MAPPING-AND-THREAT-MODEL.md`
@@ -26,7 +26,7 @@
 
 ## 1. Existing SRD 5.1 SQLite Verification Record
 
-- **File Path:** `D:\Development\VadAllFate\vadallfate_srd51.sqlite` (reused directly; never rebuilt or replaced)
+- **File Path:** `<existing-SRD-database>` (reused directly; never rebuilt or replaced)
 - **File Size:** `2,670,592` bytes
 - **SHA-256 Digest:** `919857e19f0cc6bf0255045e8cc3d56f5c9c9e24da3921e07940a1749caf77a2` (matches `reference-manifests/srd51-0.1.0.json` before and after all test suites)
 - **Integrity Checks (Read-Only URI `mode=ro` + `PRAGMA query_only=ON`):**
@@ -704,3 +704,8 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 **Mandatory demonstration:** one source-backed region and active Save in which weather affects travel, time delays a scheduled visitor, an NPC learns a rumour only when told, a faction reacts to a committed event, and a scheduled newspaper publishes only information the publisher could know. Verify Windows Play/Host, DM/player views, genuine CommitReceipts, restart/replay, source provenance, licensing, no hidden future plot activation, and ability to move the engine to an unrelated campaign without code edits. Then expand to named original Dragon Heist content and Starlit Revels once content rights and imports are verified.
 
 **Important scope distinction:** Integrating original M-series content, even with working weather/factions/travel/news, closes much of the **living-world and campaign-data gap**, not the entire product: complex 5e mechanics/Step 51, polished UI and character workflows, full portable pack lifecycle, secure LAN/mobile multiplayer, and model/voice performance remain separate acceptance gates. Historical PASS reports and automated test counts are not human play approval.
+
+
+## 2026-10-31 — Codex application integration evidence
+
+PASS: authenticated source-pack selection, protected artwork, explicit party release, committed Lyra/Durnan dialogue, human DM replies, Windows restart persistence, separate campaign selection and SQLite Save branching. Backend 532 passed/2 skipped; final security regressions 25 passed; frontend 150 passed, TypeScript and production build passed. PARTIAL/HOLD: AI replies, source NPC combat/spatial materialization, arbitrary pack upload/export and full combat acceptance. See [application handoff](V2-APP-INTEGRATION-HANDOFF.md) for commands, scope and limits. Historical evidence above remains unchanged.

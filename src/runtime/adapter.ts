@@ -11,7 +11,7 @@
  * - Server-side role projection boundaries are explicitly distinguished.
  */
 
-import { getV2Token, hasV2Session, loginWithHostKey, v2SessionHeaders } from '../services/v2Session.ts';
+import { resolveSessionApiBaseUrl, getV2CampaignId, getV2Token, hasV2Session, loginWithHostKey, v2SessionHeaders } from '../services/v2Session.ts';
 import type {
   DemoActionEnvelope,
   DemoCommitReceipt,
@@ -99,6 +99,7 @@ interface DemoClientInternalState {
   recommendations: DirectorRecommendation[];
   spotlightMetrics: PlayerSpotlightMetric[];
   sourcePacks: SourcePack[];
+  combatState?: { isActive: boolean; round: number; activeTurnIndex: number; combatants: {entityId:string;name:string;entityType:string;roll:number;initiativeBonus:number;initiative:number;isVisibleToPlayers:boolean}[] };
   processedNonces: Set<string>;
 }
 
@@ -1084,7 +1085,7 @@ export class PythonRuntimeGateway implements CampaignClient {
   private cachedPlayerProjection: PlayerSafeCampaignProjection | null = null;
   private listeners: Set<() => void> = new Set();
 
-  constructor(endpoint: string = 'http://127.0.0.1:8765/api/v2') {
+  constructor(endpoint: string = resolveSessionApiBaseUrl()) {
     this.endpoint = endpoint.replace(/\/$/, '');
   }
 
@@ -1119,9 +1120,9 @@ export class PythonRuntimeGateway implements CampaignClient {
         return false;
       }
       const [statusResp, dmResp, playerResp] = await Promise.all([
-        fetch(`${this.endpoint}/status`),
-        fetch(`${this.endpoint}/projection?role=dm_host`, { headers: v2SessionHeaders('dm') }),
-        fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01`, {
+        fetch(`${this.endpoint}/status?campaign_id=${encodeURIComponent(getV2CampaignId())}`),
+        fetch(`${this.endpoint}/projection?role=dm_host&campaign_id=${encodeURIComponent(getV2CampaignId())}`, { headers: v2SessionHeaders('dm') }),
+        fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01&campaign_id=${encodeURIComponent(getV2CampaignId())}`, {
           headers: v2SessionHeaders('player'),
         }),
       ]);
