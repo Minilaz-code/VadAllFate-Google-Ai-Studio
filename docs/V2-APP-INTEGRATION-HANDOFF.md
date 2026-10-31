@@ -2,7 +2,7 @@
 
 Backend: `Minilaz-code/VadAllFate`, branch `codex/v2-app-integration`.
 Frontend: `Minilaz-code/VadAllFate-Google-Ai-Studio`, branch `codex/v2-app-integration`.
-Exact tested implementation commits are recorded in the companion publication document.
+Exact tested implementation commits are recorded in the [publication document](V2-APP-PUBLICATION.md).
 
 ## Delivered and verified
 
@@ -25,7 +25,7 @@ Backend (Windows Python 3.14.7 virtual environment):
 # 25 passed in 51.14s (including final reply authorization and unsupported-ruleset regressions)
 ```
 
-The full suite preceded the final reply guard and receipt-display repair; the targeted security suite verified the final backend logic. No frozen authority/schema code was changed.
+The full suite preceded the final reply guard and receipt-display repair; the targeted API/security suite verified the final backend logic. No frozen authority/schema code was changed.
 
 Frontend (Node 24.22.1): `npm test` — 150 passed; `npm run lint` — PASS; `npm run build` — PASS. Build retains a bundle-size warning above 500 kB. Public tests use original redistributable CC0 fixtures. The three private browser journeys passed separately (content, restart/campaigns, Save branch); they are deliberately sequential and require a configured private library and dedicated runtime, not a shared production Save. Browser output and private proofs remain ignored locally.
 
