@@ -111,3 +111,8 @@ Existing Saves and Antigravity's active V2 code run unchanged: production source
 Concrete SQL review unit: [GRANULAR-001-ENTITY-CORE.sql](proposals/GRANULAR-001-ENTITY-CORE.sql), covering bindings/heads, typed identity/catalog, NPC memories, relationships and ordered relationship evidence. It preserves the existing NPCRelationship ranges and does not store source definitions or growing history arrays. The SQL was not executed or installed.
 
 Next requested protected unit: **I2 only** -- approve implementation of the additive typed entity-core schema and disabled connection-bound storage driver for NPC identities, memories and relationships, limited to newly created disposable test fixtures. Keep the default gateway/legacy driver unchanged; no existing Save conversion, production registration, frozen R1 schema edit or runnable alternate commit entrypoint. Typed staging/authority integration (I3-I5) and any copied-Save conversion (I8) require their own explicit review/approval. The Option C target selection alone does not grant these permissions.
+
+
+## I2 limited approval follow-up
+
+The subsequent I2-only approval is implemented on codex/v2-granular-i2; see [I2 handoff](V2-GRANULAR-I2-HANDOFF.md). Earlier approval-status wording above records the preparation baseline. Only disposable physical schema and a disabled PREPARED fixture driver are now implemented. I3 typed staging/recovery, I4 production hashing, I5 authority integration and I8 conversion remain separately gated. The review and 29-case mapping are unchanged.

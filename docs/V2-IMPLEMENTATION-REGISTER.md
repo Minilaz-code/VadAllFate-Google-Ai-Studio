@@ -734,3 +734,10 @@ PASS: exact 64 KiB boundary measurement, safe preflight, equivalent UTF-8 state 
 ## 2026-10-31 - Option C safe preparation
 
 Option C selected; no paged intermediate format. Original docs-only review branches published at backend ec08ffc718644872a6cfda068d0afd7714bd87f6 and frontend c18634f736436e49de69ab0df47a42bf9b519800, with unchanged 29-case matrix. Safe preparation on codex/v2-granular-preparation adds only offline tools/tests/docs: locked-schema fixture validation, deterministic original worlds, read-only legacy comparison and fault-result oracles. Verification: 87 passed (23 preparation checks, 64 existing R1/recovery/JCS checks). Generated datasets: 22,402 and 124,002 records; no SQL persistence/performance PASS implied. Schema/driver, typed staging, hash profile, authority integration and conversion remain explicit gates. See docs/V2-GRANULAR-IMPLEMENTATION-READINESS.md and its machine-readable 29-case map. Production source/frontend and frozen schemas unchanged.
+
+
+## 2026-10-31 - I2 limited fixture implementation
+
+Implemented only the approved PREPARED entity-core SQL asset and disabled connection-bound fixture driver on codex/v2-granular-i2. Original CC0 disposable tests cover campaign ownership, evidence, row CAS/hash, bounded values, rollback, reopen and affected-row-only writes. No live imports, writer capability, migration dispatch, frozen schema change or gameplay activation. See [I2 handoff](V2-GRANULAR-I2-HANDOFF.md) for actual results and exact next I3 approval gate. The original 29-case review remains unchanged; this is not full granular gameplay acceptance.
+
+Verification: I2 38 passed; final combined preparation/R1/recovery/JCS 125 passed; full backend regression 624 passed, 2 skipped (737.40s). Privacy/content audit clean; no existing Save conversion or live route.
