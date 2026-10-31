@@ -30,6 +30,7 @@ export function ContentPlayPanel({role,snapshot,characters,isLive,onRefresh,isPr
   const [packs,setPacks]=useState<ContentPack[]>([]);const [records,setRecords]=useState<ContentRecord[]>([]);
   const [world,setWorld]=useState('');const [adventure,setAdventure]=useState('');const [scene,setScene]=useState('');const [location,setLocation]=useState('');
   const [definition,setDefinition]=useState<ContentDefinition|null>(null);const [play,setPlay]=useState<any>({});
+  const [brief,setBrief]=useState('');const [placeOnMap,setPlaceOnMap]=useState(false);const [cellX,setCellX]=useState(0);const [cellY,setCellY]=useState(0);
   const [npc,setNpc]=useState('');const [character,setCharacter]=useState('');const [message,setMessage]=useState('');const [reply,setReply]=useState('');
   const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [receipt,setReceipt]=useState('');const [expanded,setExpanded]=useState(false);
   const load=async()=>{
@@ -67,6 +68,10 @@ export function ContentPlayPanel({role,snapshot,characters,isLive,onRefresh,isPr
         <div className="flex flex-wrap gap-2"><select aria-label="NPC definition" className={field} value={npc} onChange={e=>setNpc(e.target.value)}><option value="">Choose NPC</option>{records.filter(r=>r.kind==='npc').map(r=><option key={r.ref} value={r.ref}>{r.name} {r.ref.endsWith('-template')?'(template)':''}</option>)}</select>
           <button className={button} disabled={!npc||busy} onClick={()=>void run(()=>inspect(npc))}>Inspect NPC</button>
           <button className={button} disabled={!npc||!play.selection?.activeScene||busy} onClick={()=>void run(()=>action('release',{npcRefs:[npc],readAloudIndexes:[]}))}>Introduce NPC to party</button>
+        </div><div className="flex flex-wrap gap-2"><input aria-label="Player-safe NPC characterization" className={field} value={brief} maxLength={1200} onChange={e=>setBrief(e.target.value)} placeholder="DM-approved player-safe NPC characterization"/>
+          <label><input type="checkbox" checked={placeOnMap} onChange={e=>setPlaceOnMap(e.target.checked)}/>Place token on configured active battlemap</label>
+          {placeOnMap&&<><input aria-label="NPC cell X" type="number" value={cellX} onChange={e=>setCellX(Number(e.target.value))}/><input aria-label="NPC cell Y" type="number" value={cellY} onChange={e=>setCellY(Number(e.target.value))}/></>}
+          <button className={button} disabled={!npc||!location||busy} onClick={()=>void run(()=>action('place',{npcRef:npc,locationRef:location,dialogueBrief:brief,...(placeOnMap?{targetCell:{x:cellX,y:cellY}}:{})}))}>Create or place source NPC</button>
         </div></>}
         {definition&&<article className="rounded border border-amber-800 p-4 bg-neutral-950"><h3 className="font-semibold text-lg">{definition.name} · DM only</h3><p className="text-xs text-neutral-500">Source material; not instructions for the runtime.</p><SourceBody value={definition.body}/>
           {definition.kind==='scene'&&play.selection?.activeScene===definition.ref&&<div className="flex gap-2 flex-wrap">{(()=>{let i=0;const buttons:React.ReactNode[]=[];const walk=(v:any)=>{if(!v||typeof v!=='object')return;if(v.type==='insetReadaloud'){const index=i++;buttons.push(<button key={index} className={button} disabled={busy} onClick={()=>void run(()=>action('release',{npcRefs:play.released?.npcs?.map((n:any)=>n.ref)||[],readAloudIndexes:[index]}))}>Release read-aloud {index+1}</button>);}for(const child of Object.values(v))if(typeof child==='object')Array.isArray(child)?child.forEach(walk):walk(child);};walk(definition.body);return buttons;})()}</div>}
@@ -74,6 +79,7 @@ export function ContentPlayPanel({role,snapshot,characters,isLive,onRefresh,isPr
           <details className="text-xs text-neutral-400"><summary>Source and rights</summary>{definition.sourceRefs.map((s:any,i:number)=><p key={i}>{s.path} {s.pointer} · {s.rights}</p>)}<p>{definition.references?.filter((r:any)=>r.status==='unresolved').length||0} unresolved source references</p></details>
         </article>}
       </>}
+      {isDm&&play.instances?.map((n:any)=><p key={n.id}>Persistent NPC: {n.name} · {n.id} · location {n.sourceLocationRef} · {n.token?.placed?'token placed':'location association only'} · noncombat · observed memories {n.cognition?.memories?.length||0}</p>)}
       {play.released?.location&&<article aria-label="Party scene"><h3 className="text-teal-200 font-semibold">{play.released.location.name}</h3>{play.released.readAloud?.map((s:string,i:number)=><p key={i} className="my-2">{text(s)}</p>)}
         <p>Introduced: {play.released.npcs?.map((n:any)=>n.name).join(', ')||'No NPCs yet'}</p></article>}
       {play.released?.npcs?.length>0&&<div className="flex flex-wrap gap-2 items-center"><select aria-label="Speaking character" value={character} onChange={e=>setCharacter(e.target.value)} className={field}><option value="">Choose character</option>{characters.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select>

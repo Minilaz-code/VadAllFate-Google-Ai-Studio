@@ -1294,6 +1294,7 @@ export const BattlemapCanvas: React.FC<BattlemapCanvasProps> = ({
 
   // Filter NPCs specific to this active map scene
   const sceneNpcs = npcs.filter((npc) => {
+    if ((npc.token as any).placed === false) return false;
     // Check if explicitly placed on this map
     const onMap = mapDefinition.tokens.some((t) => t.entityId === npc.id);
     // Or belongs to this location
