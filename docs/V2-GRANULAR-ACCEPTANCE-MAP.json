@@ -8,7 +8,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "100 NPC /10,000 memories; no full quest/edge population."
     },
     "G02": {
       "increments": [
@@ -17,7 +23,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "1,000 NPC /20,000 memories; no 100,000-event world coverage."
     },
     "G03": {
       "increments": [
@@ -26,7 +38,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "11,377/11,378 fully framed bytes, independent of population except bounded identifiers/counts."
     },
     "G04": {
       "increments": [
@@ -34,7 +52,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "HELD",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Only five material actions per large run; 10,000-action endurance remains."
     },
     "G05": {
       "increments": [
@@ -42,7 +66,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Real atomic memory plus relationship; objectives/schedules outside slice."
     },
     "G06": {
       "increments": [
@@ -50,7 +80,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Oversize/unknown/ref violations preflight; no automatic action splitting."
     },
     "G07": {
       "increments": [
@@ -58,7 +94,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Legacy and I3 exact boundary regressions retained; valid exact-64KiB I5 candidate not claimed."
     },
     "G08": {
       "increments": [
@@ -67,7 +109,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Independent session/owner/module/source/clock/I2/I4/approved-byte validation."
     },
     "G09": {
       "increments": [
@@ -80,7 +128,13 @@
         "tests/test_granular_i4.py::test_duplicate_collision_stale_and_cross_campaign",
         "tests/test_granular_i4.py::test_snapshot_cross_save_stale_dependencies_and_noop"
       ],
-      "i4_remaining_gate": "Only hash/row CAS and stale-snapshot prerequisites proved. Real concurrent authority commits/fencing remain I5; no full G09 PASS."
+      "i4_remaining_gate": "Only hash/row CAS and stale-snapshot prerequisites proved. Real concurrent authority commits/fencing remain I5; no full G09 PASS.",
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Actual FIFO/fencing/stale disposition tested; no competing multiwriter stress."
     },
     "G10": {
       "increments": [
@@ -89,7 +143,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Exact approved input survives pre-stage close/reopen; no result regeneration."
     },
     "G11": {
       "increments": [
@@ -98,7 +158,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Durable staged bytes recover into actual material commit."
     },
     "G12": {
       "increments": [
@@ -106,7 +172,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "All material precommit fault points and real midwrite process death roll back."
     },
     "G13": {
       "increments": [
@@ -114,7 +186,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Post-COMMIT process death/lost response recovers once; no HTTP acknowledgement claim."
     },
     "G14": {
       "increments": [
@@ -123,7 +201,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Corrupt codec/module/evidence/cache fail closed; explicit stale disposition only."
     },
     "G15": {
       "increments": [
@@ -132,7 +216,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Nonce retries/conflicts plus global request-ID preadmission reservation."
     },
     "G16": {
       "increments": [
@@ -146,7 +236,13 @@
         "tests/test_granular_i4.py::test_persisted_corruption_rejected_on_reopen",
         "tests/test_granular_i4.py::test_evidence_order_duplicates_and_no_receipt_cycle"
       ],
-      "i4_remaining_gate": "Real authority/branch/migration acceptance requires the other mapped increments; no full canonical PASS."
+      "i4_remaining_gate": "Real authority/branch/migration acceptance requires the other mapped increments; no full canonical PASS.",
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Independent full source/cache/evidence/receipt rebuild; corruption rejected."
     },
     "G17": {
       "increments": [
@@ -162,7 +258,13 @@
         "docs/evidence/V2-GRANULAR-I4-1000-MEASUREMENTS.json",
         "tests/test_granular_i4.py::test_path_budget_incremental_and_rebuild_agree_at_exact_boundary"
       ],
-      "i4_remaining_gate": "Real authority/branch/migration acceptance requires the other mapped increments; no full canonical PASS."
+      "i4_remaining_gate": "Real authority/branch/migration acceptance requires the other mapped increments; no full canonical PASS.",
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "I4 vectors plus real restart independent root equality; not all gameplay domains."
     },
     "G18": {
       "increments": [
@@ -171,7 +273,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Native mixed campaign commits; unchanged legacy hashes/codecs/DTOs/Store and normative schemas."
     },
     "G19": {
       "increments": [
@@ -179,7 +287,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "HELD",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "I8 existing Save migration not authorised."
     },
     "G20": {
       "increments": [
@@ -188,7 +302,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Configured legacy route and sentinel fences; old-executable preopen refusal remains I6/I8."
     },
     "G21": {
       "increments": [
@@ -197,7 +317,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "HELD",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "No granular Windows/Edge or real content/model gameplay activation."
     },
     "G22": {
       "increments": [
@@ -211,7 +337,13 @@
         "tests/test_granular_i4.py::test_divergent_branches_independent_roots",
         "tests/test_granular_i4.py::test_snapshot_cross_save_stale_dependencies_and_noop"
       ],
-      "i4_remaining_gate": "Only isolated Save-bound identity and divergent persistent-tree proofs. Full-file runtime branch sessions/replay/migration remain I7/I8 and I5/I6; no full G22 PASS."
+      "i4_remaining_gate": "Only isolated Save-bound identity and divergent persistent-tree proofs. Full-file runtime branch sessions/replay/migration remain I7/I8 and I5/I6; no full G22 PASS.",
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Independent newly created campaigns/Saves; no production full-file branch integration."
     },
     "G23": {
       "increments": [
@@ -220,7 +352,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PASS_SLICE",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Same entity/action/nonce IDs commit in distinct campaigns; R1 request IDs globally reserved."
     },
     "G24": {
       "increments": [
@@ -230,7 +368,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "DM/player/own-NPC bounded projections tested; general notes/dialogue not mapped."
     },
     "G25": {
       "increments": [
@@ -238,7 +382,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "HELD",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Plans/homebrew outside approved slice."
     },
     "G26": {
       "increments": [
@@ -246,7 +396,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PARTIAL",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Real process death/WAL frames/FULL/checkpoint; long readers/busy-writer budgets remain."
     },
     "G27": {
       "increments": [
@@ -256,7 +412,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "HELD",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Inventory/resources/spatial outside approved slice."
     },
     "G28": {
       "increments": [
@@ -265,7 +427,13 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "PRESERVED_HELD",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Source-combat and private-secret AI holds remain; no AI provider PASS."
     },
     "G29": {
       "increments": [
@@ -273,10 +441,18 @@
       ],
       "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
       "i4_fixture_status": "NOT_IN_I4_SCOPE",
-      "i4_evidence_refs": []
+      "i4_evidence_refs": [],
+      "i5_fixture_status": "HELD",
+      "i5_evidence_refs": [
+        "tests/test_granular_i5.py",
+        "docs/V2-GRANULAR-I5-HANDOFF.md"
+      ],
+      "i5_remaining_gate": "Portable export/import and I8 migration not authorised."
     }
   },
   "i4_profile_ref": "I4.PREPARED.hash.v1",
   "i4_evidence_scope": "Isolated fixture hashing/snapshot evidence only; original full canonical acceptance remains held. No active format or real typed commits.",
-  "i4_evidence_repository": "Minilaz-code/VadAllFate"
+  "i4_evidence_repository": "Minilaz-code/VadAllFate",
+  "i5_profile_ref": "I5.PREPARED.atomic.v1",
+  "i5_evidence_scope": "Actual sole-authority atomic commits in new disposable PREPARED fixtures only. Original full acceptance grades and I4 evidence retained; no gameplay migration."
 }

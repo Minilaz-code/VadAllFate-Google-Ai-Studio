@@ -126,3 +126,14 @@ The subsequent I3-only approval is implemented on codex/v2-granular-i3; see [I3 
 ## I4 limited approval follow-up
 
 The subsequent I4-only approval is implemented on codex/v2-granular-i4; see [I4 hash specification](V2-GRANULAR-I4-HASH-SPEC.md) and [handoff](V2-GRANULAR-I4-HANDOFF.md). Only disabled fixture hashing, derived roots, revision/snapshot identity and evidence-chain proofs are implemented. No production profile, deployed SnapshotRef, active format, driver/authority integration or Save migration is enabled. I5/I6/I8 remain explicit gates. The review/29 cases are preserved; the mapping adds isolated I4 evidence.
+
+
+## I5 controlled authority integration — 2026-11-01
+
+Review branch: `codex/v2-granular-i5`. [Handoff](V2-GRANULAR-I5-HANDOFF.md), [exact adapter/schema specification](V2-GRANULAR-I5-ATOMIC-SPEC.md), and [unchanged original G01–G29 with separate I5 evidence](V2-GRANULAR-ACCEPTANCE-MAP.json).
+
+Actual R1-owned atomic memory/relationship commits, incremental authenticated paths, native event/ledger/outbox/receipt/admission effects, real process-death recovery and exactly-once retries are implemented ONLY in new disposable PREPARED fixtures. Normal gameplay/startup/gateway, legacy CampaignStore, frozen schemas and existing Saves are unchanged. Source identities and session/module registrations are original fixture implementations, not real pack/game activation. Frontend executable code is unchanged.
+
+Final targeted verification: 307 passed, including 59 I5 cases. Broad final backend verification: 812 passed, 2 skipped in 882.06s after final code corrections. Frontend 152 tests, TypeScript check and production build passed. Fresh 100/1,000-NPC fixtures with 10,000/20,000 memories retain history and stage ~11.4KiB requests; measured material medians ~0.32s, full reopen audit ~20/40s. Performance and coverage limits are explicit in the handoff. No full application storage acceptance or legacy capacity fix claimed.
+
+STOP after I5. I6 live negotiation/real content-session adapters and I8 migration/rollback/export require separate explicit approval. Combat/private-secret model holds remain. No production Saves, Antigravity checkout, CP149/CP150, protected branches or main merge.

@@ -755,3 +755,14 @@ Full final-tree backend verification: 709 passed, 2 skipped in 772.44s. Privacy/
 Implemented only PREPARED hash/revision/Save-snapshot profile, persistent derived Cartesian tree, independent sorted rebuild, bounded canonical records and immutable evidence chain on codex/v2-granular-i4. Original CC0 tests/fixtures and two actual large-world SQLite/reopen measurements demonstrate affected-path updates with equal full roots. Final targeted suite: 248 passed, including 44 I4 checks (exact depth boundary corrected). Exact spec, numerical costs, full-suite result and remaining I5 gates are in [I4 handoff](V2-GRANULAR-I4-HANDOFF.md). Original 29-case review unchanged; acceptance map adds partial I4 evidence only. No live authority, schema, codec, I2/I3 activation or existing Save change.
 
 Broad backend verification: 752 passed, 2 skipped (813.70s); final corrected targeted suite 248 passed. Privacy/content audit clean, no existing Save conversion or live hash-profile activation.
+
+
+## I5 controlled authority integration — 2026-11-01
+
+Review branch: `codex/v2-granular-i5`. [Handoff](V2-GRANULAR-I5-HANDOFF.md), [exact adapter/schema specification](V2-GRANULAR-I5-ATOMIC-SPEC.md), and [unchanged original G01–G29 with separate I5 evidence](V2-GRANULAR-ACCEPTANCE-MAP.json).
+
+Actual R1-owned atomic memory/relationship commits, incremental authenticated paths, native event/ledger/outbox/receipt/admission effects, real process-death recovery and exactly-once retries are implemented ONLY in new disposable PREPARED fixtures. Normal gameplay/startup/gateway, legacy CampaignStore, frozen schemas and existing Saves are unchanged. Source identities and session/module registrations are original fixture implementations, not real pack/game activation. Frontend executable code is unchanged.
+
+Final targeted verification: 307 passed, including 59 I5 cases. Broad final backend verification: 812 passed, 2 skipped in 882.06s after final code corrections. Frontend 152 tests, TypeScript check and production build passed. Fresh 100/1,000-NPC fixtures with 10,000/20,000 memories retain history and stage ~11.4KiB requests; measured material medians ~0.32s, full reopen audit ~20/40s. Performance and coverage limits are explicit in the handoff. No full application storage acceptance or legacy capacity fix claimed.
+
+STOP after I5. I6 live negotiation/real content-session adapters and I8 migration/rollback/export require separate explicit approval. Combat/private-secret model holds remain. No production Saves, Antigravity checkout, CP149/CP150, protected branches or main merge.
