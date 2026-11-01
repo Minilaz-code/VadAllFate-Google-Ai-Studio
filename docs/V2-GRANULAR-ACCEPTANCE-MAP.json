@@ -122,12 +122,12 @@
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
       "i7_remaining_gate": "10,000-action attempt: final measured status/count in handoff; no PASS from the 100-action profiling samples.",
-      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_status": "PARTIAL_9101_VERIFIED_CONTINUATION_PENDING",
       "i7r_evidence_refs": [
-        "docs/V2-GRANULAR-I7R-HANDOFF.md",
-        "docs/V2-GRANULAR-I7R-SPEC.md"
+        "docs/evidence/V2-GRANULAR-I7R-ENDURANCE-100.json",
+        "docs/V2-GRANULAR-I7R-HANDOFF.md"
       ],
-      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
+      "i7r_remaining_gate": "9,101 verified native actions after a 14,400-second loop budget; same-fixture continuation pending. Original I7 evidence remains immutable; full campaign/identity gates remain held."
     },
     "G05": {
       "increments": [

@@ -42,17 +42,17 @@ Each row uses the exact same snapshot for native full audit and five prefix read
 
 Evidence: backend `docs/evidence/V2-GRANULAR-I7R-COMPARE-100.json` and `COMPARE-1000.json`. Both assert exact snapshot equality and unchanged old audit markers. Raw commit rows/request sizes and process CPU/RAM remain in those files. At 100/1,000 NPCs, frames were 11,421-11,429 /11,422-11,430 bytes; SQL rows/action 29-52 /38-60; median commit-with-stamp plus post-commit diagnostics 0.331 /0.363s; process peak working set 47,542,272 /114,233,344 bytes. These medians include the explicit diagnostics call and are not isolated SQL transaction times. Prefix time omits historical/untouched reconstruction; full metadata scan is O(history); native reconstruction is at least linear and includes sorting/tree rebuild and SQL/receipt checks.
 
-`V2-GRANULAR-I7R-OFFLINE-PROBES.json` records actual five-class review outcomes and fork proposal/child-inspection denials, with no private raw review bodies or credentials. Signed raw reviews and generated files remain local.
+`V2-GRANULAR-I7R-OFFLINE-PROBES.json` records five actual fault probes (four classifications, including invalid UTF-8) and fork proposal/child-inspection denials; the fifth classification, stale input, is verified separately in the automated fixture tests, with no private raw review bodies or credentials. Signed raw reviews and generated files remain local.
 
 ## Verification and endurance
 
-Final broad backend: **896 passed, 2 skipped in 1050.63s (17m30s)** after the final runtime/test changes. Focused final I7R/JCS: **31 passed in 127.35s**, including real Windows abrupt-exit cases. The wider targeted set before the final missing/empty capture case passed **390 tests in 480.94s**; the final broad run includes that added case. Frontend: **157 passed**, TypeScript check and production build passed. Existing Vite native-config/large-chunk warnings remain.
+Final broad backend: **897 passed, 2 skipped in 973.96s (16m13s)** after all runtime/test changes, including the continuation test. Focused I7R/JCS/continuation: **32 passed in 153.68s**, with a final standalone continuation check **1 passed in 7.88s**. Real Windows abrupt-exit cases are included. The two skips were confirmed separately: private source archive is opt-in; Windows symlink creation privilege is unavailable. Frontend: **157 passed**, TypeScript check and production build passed. Existing Vite native-config/large-chunk warnings remain.
 
-The sustained run is still in progress at this review increment. Its final measurements will be appended after execution; no RUNNING artifact is published or treated as a completion claim. The original I7 artifact remains immutable at **1,401/10,000**, with its original declared 1,800-second budget.
+The first new attempt finished **INCOMPLETE_TIME_BUDGET at 9,101/10,000**, with clean final verification. Its report is retained unchanged. A same-fixture continuation with an additional 7,200-second loop budget is in progress; the 10,000-action target is still pending. No RUNNING artifact is published or treated as completion evidence. The original I7 artifact remains immutable at **1,401/10,000**, with its original declared 1,800-second budget.
 
-The new attempt uses the unchanged `granular_i7_endurance.py`, the same original 100-NPC/1,000-memory genesis, rotating observer/nonces and memory/relationship actions, with an explicitly longer **14,400-second action-admission budget**. It does **not** use the signed-prefix prototype. Native full audits remain every 100 revisions, checkpoint/full-audit every 500, plus final independent full audit/checkpoint/reopen and exact-once retry. WAL, synchronous FULL, foreign keys, hash/replay and all history remain intact. Budget exhaustion would be INCOMPLETE, not an engine capacity ceiling.
+The new attempt uses the unchanged `granular_i7_endurance.py`, the same original 100-NPC/1,000-memory genesis, rotating observer/nonces and memory/relationship actions, with an explicitly longer **14,400-second loop-start wall budget**. The budget is checked before an iteration's periodic audit; that audit/current action and mandatory final verification can extend total elapsed time. It does **not** use the signed-prefix prototype. Native full audits remain every 100 revisions, checkpoint/full-audit every 500, plus final independent full audit/checkpoint/reopen and exact-once retry. WAL, synchronous FULL, foreign keys, hash/replay and all history remain intact. Budget exhaustion would be INCOMPLETE, not an engine capacity ceiling.
 
-If the four-hour attempt ends INCOMPLETE_TIME_BUDGET with clean final verification, the separately tested `granular_i7r_resume_endurance.py` can continue the SAME owned temporary fixture. It requires the local ticket, exact final snapshot and receipt count, read-only marker/cookie checks before writer open, mandatory full reopen audit, the next original nonce and the same 100/500-revision policy. It refuses RUNNING/failed reports, a different/stale fixture and output over the prior report/ticket. The first report remains immutable; a new combined report retains every original action and binds the prior report SHA256. Its additional budget and extra full audits are separately disclosed. Combined elapsed time sums executed phases, excluding any operator pause between them. No overlap is counted.
+If the four-hour attempt ends INCOMPLETE_TIME_BUDGET with clean final verification, the separately tested `granular_i7r_resume_endurance.py` can continue the SAME owned temporary fixture. It requires the local ticket, exact final snapshot and receipt count, read-only marker/cookie checks before writer open, mandatory full reopen audit and an additional existing authority checkpoint restoring connection-local WAL auto-checkpoint zero, the next original nonce and the same 100/500-revision policy. It refuses RUNNING/failed reports, a different/stale fixture and output over the prior report/ticket. The first report remains immutable; a new combined report retains every original action and binds the prior report SHA256. Its additional budget and extra full audits are separately disclosed. Combined elapsed time sums executed phases, excluding any operator pause between them. No overlap is counted.
 
 ```powershell
 python tools/granular_i7r_resume_endurance.py --ticket <owned-temporary-local-only-recovery.json> --prior-report <completed-I7R-partial-report.json> --output <new-combined-numerical-output.json> --max-seconds 7200
@@ -61,6 +61,26 @@ python tools/granular_i7r_resume_endurance.py --ticket <owned-temporary-local-on
 The continuation test uses two actual native commits and a clearly scripted four-action resume-input fixture, then verifies four unique receipts, unchanged prior bytes/ticket and stale re-entry refusal. That small case is not measured 10,000-action evidence. No production Save path or original I7 fixture is used.
 
 This workload has a fixed genesis NPC population and fixed clock. It grows memories, relationship evidence and immutable native history; it is not dynamic NPC creation, full quests/routines or a complete migrating campaign.
+
+## Verified first I7R phase (continuation pending)
+
+First report: backend `docs/evidence/V2-GRANULAR-I7R-ENDURANCE-100.json`, SHA256 `6a108d577df65fcea9fcee2cec51f8d944a800324e7f8742dc26c823eb8067eb`. The continuation binds these exact retained bytes and does not overwrite them.
+
+| Actual first-phase result | Value |
+| --- | ---: |
+| Verified material actions | 9,101 /10,000 |
+| Loop budget /total execution seconds | 14,400 /15,120.947 |
+| Process CPU seconds /peak working-set bytes | 11,955.828 /106,422,272 |
+| Fully framed request range, bytes | 11,465-11,491 |
+| Final SQLite bytes /peak observed WAL bytes | 454,729,728 /238,148,392 |
+| Final WAL after audited truncate | 0 |
+| Final full audit /checkpoint /reopen seconds | 180.963 /184.151 /176.633 |
+| Receipts /ledger /outbox /admissions | 9,101 each |
+| Applied intents /native events /memories | 18,202 /9,201 /10,101 |
+
+All admissions were APPLIED; exact-once retry before and after mandatory full reopen matched the same receipt and snapshot. The last iteration began just before the loop deadline and included its scheduled full audit; it committed action 9,101 before the next budget check stopped admission. This is a verified budget-limited result, not an engine failure or proof of 10,000 actions. No history was removed.
+
+Material-commit nearest-rank p50/p95/p99/max: 0.138 /0.550 /1.182 /5.189s excluding three traced samples; all raw observations remain. Concurrent regression/tool load and report serialization are included in total process measurements; no latency SLA is claimed. Full-history work is still a practical production blocker. The actual SQLite/ticket are indexed locally under ignored `private-content/i7r-local-recovery/`; no credentials or paths are published.
 
 ## Reproduction
 

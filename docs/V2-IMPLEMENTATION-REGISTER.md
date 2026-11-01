@@ -801,3 +801,5 @@ Implemented a disabled signed checkpoint/transition diagnostic on injected autho
 Actual measured comparisons, final suites, Windows process-death tests and sustained-run outcome are in the handoff and numerical artifacts. The new endurance attempt uses a disclosed 14,400-second budget with the existing full policy, never a prefix shortcut. Frontend executable code is unchanged.
 
 STOP at FORK-1 (real lineage/auth boundary), ADMISSION-REPAIR-1 (reviewed queue lifecycle) and any new production integrity policy. No I8, production Save opening/conversion, live typed activation, frozen-schema change, second authority, protected merge or Antigravity checkout mutation. Original I6 unsupported owner/schema/validator/adapters remain blockers.
+
+I7R verification update: final backend 897 passed, 2 skipped (973.96s); frontend 157/TypeScript/build passed. First I7R phase verified 9,101 actions with full audit/checkpoint/restart; additional same-fixture continuation is pending. I7 remains INCOMPLETE and every protected migration/authority gate remains held.
