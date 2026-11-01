@@ -42,13 +42,13 @@ Each row uses the exact same snapshot for native full audit and five prefix read
 
 Evidence: backend `docs/evidence/V2-GRANULAR-I7R-COMPARE-100.json` and `COMPARE-1000.json`. Both assert exact snapshot equality and unchanged old audit markers. Raw commit rows/request sizes and process CPU/RAM remain in those files. At 100/1,000 NPCs, frames were 11,421-11,429 /11,422-11,430 bytes; SQL rows/action 29-52 /38-60; median commit-with-stamp plus post-commit diagnostics 0.331 /0.363s; process peak working set 47,542,272 /114,233,344 bytes. These medians include the explicit diagnostics call and are not isolated SQL transaction times. Prefix time omits historical/untouched reconstruction; full metadata scan is O(history); native reconstruction is at least linear and includes sorting/tree rebuild and SQL/receipt checks.
 
-`V2-GRANULAR-I7R-OFFLINE-PROBES.json` records five actual fault probes (four classifications, including invalid UTF-8) and fork proposal/child-inspection denials; the fifth classification, stale input, is verified separately in the automated fixture tests, with no private raw review bodies or credentials. Signed raw reviews and generated files remain local.
+`V2-GRANULAR-I7R-OFFLINE-PROBES.json` records five actual fault probes, including invalid UTF-8, covering four classifications and fork proposal/child-inspection denials; the fifth classification, stale input, is verified separately in the automated fixture tests, with no private raw review bodies or credentials. Signed raw reviews and generated files remain local.
 
 ## Verification and endurance
 
 Final broad backend: **897 passed, 2 skipped in 973.96s (16m13s)** after all runtime/test changes, including the continuation test. Focused I7R/JCS/continuation: **32 passed in 153.68s**, with a final standalone continuation check **1 passed in 7.88s**. Real Windows abrupt-exit cases are included. The two skips were confirmed separately: private source archive is opt-in; Windows symlink creation privilege is unavailable. Frontend: **157 passed**, TypeScript check and production build passed. Existing Vite native-config/large-chunk warnings remain.
 
-The first new attempt finished **INCOMPLETE_TIME_BUDGET at 9,101/10,000**, with clean final verification. Its report is retained unchanged. A same-fixture continuation with an additional 7,200-second loop budget is in progress; the 10,000-action target is still pending. No RUNNING artifact is published or treated as completion evidence. The original I7 artifact remains immutable at **1,401/10,000**, with its original declared 1,800-second budget.
+The first new attempt finished **INCOMPLETE_TIME_BUDGET at 9,101/10,000**, with clean final verification. Its report is retained unchanged. The same-fixture continuation completed the remaining **899 actions**, and final integrity/restart/exact-once verification succeeded. The combined result is **PASS_FIRST_SLICE_ENDURANCE: 10,000/10,000**. This does not promote overall I7 or production readiness. The original I7 artifact remains immutable at **1,401/10,000**, with its original declared 1,800-second budget.
 
 The new attempt uses the unchanged `granular_i7_endurance.py`, the same original 100-NPC/1,000-memory genesis, rotating observer/nonces and memory/relationship actions, with an explicitly longer **14,400-second loop-start wall budget**. The budget is checked before an iteration's periodic audit; that audit/current action and mandatory final verification can extend total elapsed time. It does **not** use the signed-prefix prototype. Native full audits remain every 100 revisions, checkpoint/full-audit every 500, plus final independent full audit/checkpoint/reopen and exact-once retry. WAL, synchronous FULL, foreign keys, hash/replay and all history remain intact. Budget exhaustion would be INCOMPLETE, not an engine capacity ceiling.
 
@@ -62,7 +62,7 @@ The continuation test uses two actual native commits and a clearly scripted four
 
 This workload has a fixed genesis NPC population and fixed clock. It grows memories, relationship evidence and immutable native history; it is not dynamic NPC creation, full quests/routines or a complete migrating campaign.
 
-## Verified first I7R phase (continuation pending)
+## Verified first I7R phase (retained unchanged)
 
 First report: backend `docs/evidence/V2-GRANULAR-I7R-ENDURANCE-100.json`, SHA256 `6a108d577df65fcea9fcee2cec51f8d944a800324e7f8742dc26c823eb8067eb`. The continuation binds these exact retained bytes and does not overwrite them.
 
@@ -81,6 +81,42 @@ First report: backend `docs/evidence/V2-GRANULAR-I7R-ENDURANCE-100.json`, SHA256
 All admissions were APPLIED; exact-once retry before and after mandatory full reopen matched the same receipt and snapshot. The last iteration began just before the loop deadline and included its scheduled full audit; it committed action 9,101 before the next budget check stopped admission. This is a verified budget-limited result, not an engine failure or proof of 10,000 actions. No history was removed.
 
 Material-commit nearest-rank p50/p95/p99/max: 0.138 /0.550 /1.182 /5.189s excluding three traced samples; all raw observations remain. Concurrent regression/tool load and report serialization are included in total process measurements; no latency SLA is claimed. Full-history work is still a practical production blocker. The actual SQLite/ticket are indexed locally under ignored `private-content/i7r-local-recovery/`; no credentials or paths are published.
+
+## Completed 10,000-action same-fixture result
+
+**PASS_FIRST_SLICE_ENDURANCE**, from the actual original disposable SQLite, not aggregated independent samples. Backend numerical artifacts: `docs/evidence/V2-GRANULAR-I7R-ENDURANCE-10000.json` (combined), the unchanged 9,101-action report above, and `V2-GRANULAR-I7R-VERIFICATION.json` (cold SQL, preservation and regression evidence). The combined report retains the first 9,101 observations exactly as parsed, adds 899 subsequent native actions, and binds the original partial file SHA256. Its SHA256 is `c069d48d26d5ac31ce21c76b845d9616d5acda47f73dd061749619e2204c4dab`.
+
+| Final actual measurement | Result |
+| --- | ---: |
+| Unique native material actions /receipts | 10,000 /10,000 |
+| First loop budget /continuation loop budget | 14,400s /7,200s |
+| First execution /continuation execution /combined | 15,120.947s /3,255.042s /18,375.989s |
+| Combined CPU seconds /maximum process working-set bytes | 15,011.328 /151,711,744 |
+| Framed request range | 11,465-11,492 bytes |
+| Admission p50/p95/p99/max | 0.0925 /0.4732 /1.0026 /4.0694s |
+| Dispatch p50/p95/p99/max | 0.0036 /0.0111 /0.4879 /3.8719s |
+| Staging p50/p95/p99/max | 0.1007 /0.3624 /0.6953 /3.6661s |
+| Material commit p50/p95/p99/max | 0.1350 /0.5364 /1.1779 /5.1894s |
+| SQL rows/action, first 50 /last 50 | 31-52 /38-61 |
+| WAL frames/action, first 50 /last 50 | 63-91 /80-114 |
+| Final SQLite /peak observed WAL /final WAL | 499,408,896 /239,709,872 /0 bytes |
+| Final independent full audit /checkpoint /full reopen | 205.453 /206.666 /207.819s |
+| Native events /memories /applied intents | 10,100 /11,000 /20,000 |
+
+Ledger, outbox and admissions each contain 10,000 rows, with zero non-APPLIED/pending admissions. Cold read-only `PRAGMA integrity_check` returned `ok`; foreign-key check returned no violations. Exact current snapshot equals the tool's independent rebuilt final snapshot. Entity-catalog revisions confirm every NPC identity remains revision zero and each of the 100 relationships is revision 100 (sum 10,000). No `p7r_*` tables exist in the actual endurance database: this run never used prefix verification. The binding remains `granular.v1` /PREPARED and every staged codec is `I5.PREPARED.atomic.v1`.
+
+Quantiles are nearest-rank, excluding four explicitly traced commits; all 10,000 raw records remain. The maximum material latency over ALL samples was 5.1894s. Process memory includes measurement/report data. Combined elapsed/CPU sum the two executed phases; the operator pause between them is excluded. Startup continuation full audit/checkpoint costs (186.050 /183.857s), periodic audits, 500-revision checkpoints, final verification and report I/O remain included. Concurrent earlier regression load is disclosed; these measurements are not a latency SLA.
+
+Original I7 entity roots equal the new run at every common recorded revision: 100, 200, 300, 400, 600, 700, 800, 900, 1100, 1200, 1300, 1400. The original 1,401-action artifact is byte-identical (SHA256 `e7ae1c8c3e38244a5a6f30a58ad5692af04c0ab5b116f7c554a7da6220bcd877`). Canonical bytes/domains, pins and the full verification policy are preserved. **The target is now demonstrated for this first slice; full-history audits around 205 seconds at 10,000 actions remain an operational blocker.** No general playable-campaign latency/capacity or full typed-owner claim is made.
+
+| I7R acceptance area | Final disposition |
+| --- | --- |
+| B disabled prototype, hashes, touched validation, corruption/crash/version cases | PASS scoped fixture evidence; prefix REJECTED as production full-audit/eligibility replacement. |
+| A authenticated parent manifest/child inspection demonstration | PASS offline proposal/demo; real canonical fork BLOCKED at FORK-1. |
+| C exact damaged-byte/operator HOLD classification | PASS offline fixture evidence; real queue disposition BLOCKED at ADMISSION-REPAIR-1. |
+| 10,000 native actions, retained history, restart and idempotency | PASS FIRST SLICE, under the disclosed original full policy and two phase budgets. |
+| R1/frontend regressions and preservation | PASS with the two named environment skips; no new UI/AI-provider PASS claimed. |
+| Overall I7 /I8 /normal granular gameplay | INCOMPLETE /HELD /DISABLED. |
 
 ## Reproduction
 
