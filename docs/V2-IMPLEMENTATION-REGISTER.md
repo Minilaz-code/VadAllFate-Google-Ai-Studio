@@ -790,3 +790,14 @@ Only runtime change removes duplicate decoding of already validated exact bytes 
 STOP after I7 work; no I8 execution, normal typed gateway, production registration, partial-campaign conversion or protected merge. Review logical fork/session lineage, integrity cost/disposition policy and complete I6 owner coverage before any playable copied-Save migration test. Production Saves, CP149/CP150, private source packs and Antigravity checkouts preserved.
 
 I7 final evidence: 360 targeted passed; 865 broad passed, 2 skipped. The 10,000-action attempt committed and recovered 1,401 within its 1,800-second admission budget (1,924.155s including mandatory final verification). Requests 11,465-11,491 bytes; no pending head/history loss. I7 acceptance INCOMPLETE: endurance target and independent logical Save identity remain unfulfilled. All results and precise next approval gates are in the paired handoff.
+
+
+## I7R limited disposable-fixture remediation - 2026-11-01
+
+Review branch `codex/v2-granular-i7r`; [handoff](V2-GRANULAR-I7R-HANDOFF.md) and [exact protocol/approval specification](V2-GRANULAR-I7R-SPEC.md). I7 remains INCOMPLETE; all original I7 evidence and G01-G29 fields are retained, with additive I7R dispositions only.
+
+Implemented a disabled signed checkpoint/transition diagnostic on injected authority connections, read-only authenticated fork proposals with an independent offline inspection realm, and exact-byte authenticated pending HOLD reviews. The prefix cannot detect later corruption in old untouched rows; it is rejected as a replacement for mandatory full audits and grants no eligibility. Existing audit markers/gates, I4 meanings, native codec/recovery and source validation remain. The independent native-ASCII JCS validation fast path preserves canonical bytes and subclass behavior.
+
+Actual measured comparisons, final suites, Windows process-death tests and sustained-run outcome are in the handoff and numerical artifacts. The new endurance attempt uses a disclosed 14,400-second budget with the existing full policy, never a prefix shortcut. Frontend executable code is unchanged.
+
+STOP at FORK-1 (real lineage/auth boundary), ADMISSION-REPAIR-1 (reviewed queue lifecycle) and any new production integrity policy. No I8, production Save opening/conversion, live typed activation, frozen-schema change, second authority, protected merge or Antigravity checkout mutation. Original I6 unsupported owner/schema/validator/adapters remain blockers.

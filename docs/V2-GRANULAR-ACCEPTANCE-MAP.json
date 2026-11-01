@@ -26,7 +26,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "100-NPC first-slice growing-memory/history run only; quest/event full-world coverage remains held."
+      "i7_remaining_gate": "100-NPC first-slice growing-memory/history run only; quest/event full-world coverage remains held.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "100 NPC /1,000 initial memories comparison and sustained first-slice evidence; full quest/world ownership held."
     },
     "G02": {
       "increments": [
@@ -53,7 +60,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "1,000 NPC/10,000 initial memories plus 100 real commits; not 100,000 native events or all relationships."
+      "i7_remaining_gate": "1,000 NPC/10,000 initial memories plus 100 real commits; not 100,000 native events or all relationships.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "1,000 NPC /10,000 initial memories /80 native actions; full large-world case held."
     },
     "G03": {
       "increments": [
@@ -77,7 +91,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Actual fully framed beginning/end sizes recorded in endurance artifact; no whole-world frame."
+      "i7_remaining_gate": "Actual fully framed beginning/end sizes recorded in endurance artifact; no whole-world frame.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Bounded native frames measured; no codec size-limit change or prefix bypass."
     },
     "G04": {
       "increments": [
@@ -100,7 +121,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "10,000-action attempt: final measured status/count in handoff; no PASS from the 100-action profiling samples."
+      "i7_remaining_gate": "10,000-action attempt: final measured status/count in handoff; no PASS from the 100-action profiling samples.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G05": {
       "increments": [
@@ -123,7 +150,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Real memory/relationship atomic action; objective/schedule fields remain unsupported."
+      "i7_remaining_gate": "Real memory/relationship atomic action; objective/schedule fields remain unsupported.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Every native touched-record/dependency validation remains; atomic signed stamp follows validation."
     },
     "G06": {
       "increments": [
@@ -143,7 +177,13 @@
       "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
       "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
       "i7_evidence_refs": [],
-      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G07": {
       "increments": [
@@ -163,7 +203,14 @@
       "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
       "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
       "i7_evidence_refs": [],
-      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Existing exact codec-boundary tests retained; no limit or codec change."
     },
     "G08": {
       "increments": [
@@ -187,7 +234,13 @@
       "i6_remaining_gate": "Read-only persisted profile/source/module checks plus real session, role, campaign and Save isolation. No new mutation authority.",
       "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
       "i7_evidence_refs": [],
-      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G09": {
       "increments": [
@@ -215,7 +268,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Dispatch/stale/fencing regressions, external lock rejection and one authority writer; not arbitrary multiwriter support."
+      "i7_remaining_gate": "Dispatch/stale/fencing regressions, external lock rejection and one authority writer; not arbitrary multiwriter support.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G10": {
       "increments": [
@@ -239,7 +298,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Actual process exit after admission/dispatch, exact approved frame recovered, no new generation."
+      "i7_remaining_gate": "Actual process exit after admission/dispatch, exact approved frame recovered, no new generation.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G11": {
       "increments": [
@@ -263,7 +328,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Actual staged process death resumes into real material commit and stable receipt."
+      "i7_remaining_gate": "Actual staged process death resumes into real material commit and stable receipt.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G12": {
       "increments": [
@@ -286,7 +357,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Actual abrupt exits at every I5 stage plus validation, partial hash-node and partial applied-intent writes; rollback/once verified."
+      "i7_remaining_gate": "Actual abrupt exits at every I5 stage plus validation, partial hash-node and partial applied-intent writes; rollback/once verified.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "tests/test_granular_i7r.py",
+        "docs/V2-GRANULAR-I7R-HANDOFF.md"
+      ],
+      "i7r_remaining_gate": "New atomic stamp/checkpoint rollback, Windows abrupt-exit and exactly-once tests; full typed owners remain held."
     },
     "G13": {
       "increments": [
@@ -309,7 +386,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Post-COMMIT exit resolves exact prior receipt without another consequence; no HTTP gameplay activation."
+      "i7_remaining_gate": "Post-COMMIT exit resolves exact prior receipt without another consequence; no HTTP gameplay activation.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "tests/test_granular_i7r.py",
+        "docs/V2-GRANULAR-I7R-HANDOFF.md"
+      ],
+      "i7r_remaining_gate": "New atomic stamp/checkpoint rollback, Windows abrupt-exit and exactly-once tests; full typed owners remain held."
     },
     "G14": {
       "increments": [
@@ -336,7 +419,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Corrupt/unknown staged input remains explicit review hold, no silent skip; operational repair workflow still missing."
+      "i7_remaining_gate": "Corrupt/unknown staged input remains explicit review hold, no silent skip; operational repair workflow still missing.",
+      "i7r_status": "PARTIAL_OFFLINE_HOLD",
+      "i7r_evidence_refs": [
+        "tests/test_granular_i7r.py",
+        "docs/evidence/V2-GRANULAR-I7R-OFFLINE-PROBES.json"
+      ],
+      "i7r_remaining_gate": "Authenticated five-class offline HOLD retains damaged raw bytes; actual lifecycle disposition requires ADMISSION-REPAIR-1 approval."
     },
     "G15": {
       "increments": [
@@ -360,7 +449,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Exactly-once and nonce conflicts preserved; copied Save identity limitation explicitly exposed."
+      "i7_remaining_gate": "Exactly-once and nonce conflicts preserved; copied Save identity limitation explicitly exposed.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "tests/test_granular_i7r.py",
+        "docs/V2-GRANULAR-I7R-HANDOFF.md"
+      ],
+      "i7r_remaining_gate": "New atomic stamp/checkpoint rollback, Windows abrupt-exit and exactly-once tests; full typed owners remain held."
     },
     "G16": {
       "increments": [
@@ -392,7 +487,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Independent full audit preserved; duplicate decode removed after exact byte validation; untouched corruption still requires full audit."
+      "i7_remaining_gate": "Independent full audit preserved; duplicate decode removed after exact byte validation; untouched corruption still requires full audit.",
+      "i7r_status": "PARTIAL_DIAGNOSTIC_ONLY",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Signed checkpoint/prefix and independent full rebuild; prefix is not present-tense old-row integrity."
     },
     "G17": {
       "increments": [
@@ -423,7 +525,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Same baseline/optimised snapshot and existing I4 differential vectors; no hash/domain change."
+      "i7_remaining_gate": "Same baseline/optimised snapshot and existing I4 differential vectors; no hash/domain change.",
+      "i7r_status": "PARTIAL_DIAGNOSTIC_ONLY",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Old untouched corruption may evade prefix; full native/metadata audit rejects it. No eligibility grant."
     },
     "G18": {
       "increments": [
@@ -450,7 +559,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Native legacy and I2-I6/R1 regressions retained; no conversion."
+      "i7_remaining_gate": "Native legacy and I2-I6/R1 regressions retained; no conversion.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G19": {
       "increments": [
@@ -470,7 +585,13 @@
       "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
       "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
       "i7_evidence_refs": [],
-      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G20": {
       "increments": [
@@ -497,7 +618,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Actual old I4 gateway on sealed disposable fixture; canonical unchanged; exact operational table/bootstrap deltas recorded."
+      "i7_remaining_gate": "Actual old I4 gateway on sealed disposable fixture; canonical unchanged; exact operational table/bootstrap deltas recorded.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G21": {
       "increments": [
@@ -524,7 +651,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Windows process termination/restart and existing UI checks only; no full granular playable/private-pack journey."
+      "i7_remaining_gate": "Windows process termination/restart and existing UI checks only; no full granular playable/private-pack journey.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Mandatory full reopen plus Windows process tests retained; no full application activation."
     },
     "G22": {
       "increments": [
@@ -556,7 +690,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "BLOCKED for independent logical Save identity: backup copies Save ID/credentials; pre-divergence frame accepted in both. Physical divergence works; no rebinding contract."
+      "i7_remaining_gate": "BLOCKED for independent logical Save identity: backup copies Save ID/credentials; pre-divergence frame accepted in both. Physical divergence works; no rebinding contract.",
+      "i7r_status": "BLOCKED_CANONICAL_FORK",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Read-only signed fork proposal and independent offline inspection credential; FORK-1 approval required."
     },
     "G23": {
       "increments": [
@@ -583,7 +724,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Wrong campaign/Save labels rejected, existing I5 campaign isolation retained; copied auth realms are not independent Saves."
+      "i7_remaining_gate": "Wrong campaign/Save labels rejected, existing I5 campaign isolation retained; copied auth realms are not independent Saves.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "Save/realm/key/version-bound diagnostics; real child canonical auth still held."
     },
     "G24": {
       "increments": [
@@ -611,7 +759,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "DM/player/observer/preview/wrong-character denial across newly backed-up fixtures/reopens; copied-session limitation retained."
+      "i7_remaining_gate": "DM/player/observer/preview/wrong-character denial across newly backed-up fixtures/reopens; copied-session limitation retained.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "DM-only prefix/offline review; player/NPC and copied-parent demo credential rejected."
     },
     "G25": {
       "increments": [
@@ -631,7 +786,13 @@
       "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
       "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
       "i7_evidence_refs": [],
-      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G26": {
       "increments": [
@@ -657,7 +818,14 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "Pinned WAL readers, busy checkpoint/lock, checkpoint process death/release and exact recovery measured; no durability weakening."
+      "i7_remaining_gate": "Pinned WAL readers, busy checkpoint/lock, checkpoint process death/release and exact recovery measured; no durability weakening.",
+      "i7r_status": "PARTIAL_FIRST_SLICE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md",
+        "tests/test_granular_i7r.py"
+      ],
+      "i7r_remaining_gate": "I7 WAL/checkpoint/crash evidence retained; new run keeps full policy. No production latency SLA."
     },
     "G27": {
       "increments": [
@@ -679,7 +847,13 @@
       "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
       "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
       "i7_evidence_refs": [],
-      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G28": {
       "increments": [
@@ -703,7 +877,13 @@
         "tests/test_granular_i7.py",
         "docs/V2-GRANULAR-I7-HANDOFF.md"
       ],
-      "i7_remaining_gate": "All source-combat/private-secret model holds preserved. No provider/model PASS."
+      "i7_remaining_gate": "All source-combat/private-secret model holds preserved. No provider/model PASS.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     },
     "G29": {
       "increments": [
@@ -723,7 +903,13 @@
       "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
       "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
       "i7_evidence_refs": [],
-      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration.",
+      "i7r_status": "PRESERVED_PRIOR_GATE",
+      "i7r_evidence_refs": [
+        "docs/V2-GRANULAR-I7R-HANDOFF.md",
+        "docs/V2-GRANULAR-I7R-SPEC.md"
+      ],
+      "i7r_remaining_gate": "No full-world, production or migration promotion; original I7 disposition retained."
     }
   },
   "i4_profile_ref": "I4.PREPARED.hash.v1",
