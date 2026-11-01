@@ -52,6 +52,14 @@ The sustained run is still in progress at this review increment. Its final measu
 
 The new attempt uses the unchanged `granular_i7_endurance.py`, the same original 100-NPC/1,000-memory genesis, rotating observer/nonces and memory/relationship actions, with an explicitly longer **14,400-second action-admission budget**. It does **not** use the signed-prefix prototype. Native full audits remain every 100 revisions, checkpoint/full-audit every 500, plus final independent full audit/checkpoint/reopen and exact-once retry. WAL, synchronous FULL, foreign keys, hash/replay and all history remain intact. Budget exhaustion would be INCOMPLETE, not an engine capacity ceiling.
 
+If the four-hour attempt ends INCOMPLETE_TIME_BUDGET with clean final verification, the separately tested `granular_i7r_resume_endurance.py` can continue the SAME owned temporary fixture. It requires the local ticket, exact final snapshot and receipt count, read-only marker/cookie checks before writer open, mandatory full reopen audit, the next original nonce and the same 100/500-revision policy. It refuses RUNNING/failed reports, a different/stale fixture and output over the prior report/ticket. The first report remains immutable; a new combined report retains every original action and binds the prior report SHA256. Its additional budget and extra full audits are separately disclosed. Combined elapsed time sums executed phases, excluding any operator pause between them. No overlap is counted.
+
+```powershell
+python tools/granular_i7r_resume_endurance.py --ticket <owned-temporary-local-only-recovery.json> --prior-report <completed-I7R-partial-report.json> --output <new-combined-numerical-output.json> --max-seconds 7200
+```
+
+The continuation test uses two actual native commits and a clearly scripted four-action resume-input fixture, then verifies four unique receipts, unchanged prior bytes/ticket and stale re-entry refusal. That small case is not measured 10,000-action evidence. No production Save path or original I7 fixture is used.
+
 This workload has a fixed genesis NPC population and fixed clock. It grows memories, relationship evidence and immutable native history; it is not dynamic NPC creation, full quests/routines or a complete migrating campaign.
 
 ## Reproduction
