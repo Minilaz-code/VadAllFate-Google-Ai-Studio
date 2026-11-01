@@ -748,3 +748,10 @@ Verification: I2 38 passed; final combined preparation/R1/recovery/JCS 125 passe
 Implemented only PREPARED closed normative typed requests, deterministic <=65,536-byte codec and explicit discriminator/context checks on codex/v2-granular-i3. Original disposable fixtures prove durable staging, abrupt-process recovery, dispatch fencing, corruption rejection and exactly-once delivery of recovered bytes. This does not commit typed world state or activate I2. Final combined I3/I2/preparation/R1/recovery/JCS verification: 204 passed (79 I3). Full-suite and publication evidence is in [I3 handoff](V2-GRANULAR-I3-HANDOFF.md). Existing authority, store, live codecs, normative schemas and 29-case review/map remain unchanged. I4/I5/I6/I8 require separate approval.
 
 Full final-tree backend verification: 709 passed, 2 skipped in 772.44s. Privacy/content audit clean; no existing Save conversion or live typed route.
+
+
+## 2026-11-01 - I4 isolated authenticated hashing
+
+Implemented only PREPARED hash/revision/Save-snapshot profile, persistent derived Cartesian tree, independent sorted rebuild, bounded canonical records and immutable evidence chain on codex/v2-granular-i4. Original CC0 tests/fixtures and two actual large-world SQLite/reopen measurements demonstrate affected-path updates with equal full roots. Final targeted suite: 248 passed, including 44 I4 checks (exact depth boundary corrected). Exact spec, numerical costs, full-suite result and remaining I5 gates are in [I4 handoff](V2-GRANULAR-I4-HANDOFF.md). Original 29-case review unchanged; acceptance map adds partial I4 evidence only. No live authority, schema, codec, I2/I3 activation or existing Save change.
+
+Broad backend verification: 752 passed, 2 skipped (813.70s); final corrected targeted suite 248 passed. Privacy/content audit clean, no existing Save conversion or live hash-profile activation.

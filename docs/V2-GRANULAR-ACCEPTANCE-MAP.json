@@ -6,139 +6,198 @@
         "I1",
         "I2"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G02": {
       "increments": [
         "I1",
         "I2"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G03": {
       "increments": [
         "I1",
         "I2"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G04": {
       "increments": [
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G05": {
       "increments": [
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G06": {
       "increments": [
         "I3"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G07": {
       "increments": [
         "I3"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G08": {
       "increments": [
         "I1",
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G09": {
       "increments": [
         "I4",
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "PASS_ISOLATED_PART_ONLY",
+      "i4_evidence_refs": [
+        "tests/test_granular_i4.py::test_duplicate_collision_stale_and_cross_campaign",
+        "tests/test_granular_i4.py::test_snapshot_cross_save_stale_dependencies_and_noop"
+      ],
+      "i4_remaining_gate": "Only hash/row CAS and stale-snapshot prerequisites proved. Real concurrent authority commits/fencing remain I5; no full G09 PASS."
     },
     "G10": {
       "increments": [
         "I3",
         "I7"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G11": {
       "increments": [
         "I3",
         "I7"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G12": {
       "increments": [
         "I7"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G13": {
       "increments": [
         "I7"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G14": {
       "increments": [
         "I3",
         "I7"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G15": {
       "increments": [
         "I3",
         "I7"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G16": {
       "increments": [
         "I4",
         "I8"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "PASS_ISOLATED_PART_ONLY",
+      "i4_evidence_refs": [
+        "tests/test_granular_i4.py::test_hash_record_and_node_corruption",
+        "tests/test_granular_i4.py::test_persisted_corruption_rejected_on_reopen",
+        "tests/test_granular_i4.py::test_evidence_order_duplicates_and_no_receipt_cycle"
+      ],
+      "i4_remaining_gate": "Real authority/branch/migration acceptance requires the other mapped increments; no full canonical PASS."
     },
     "G17": {
       "increments": [
         "I4"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "PASS_ISOLATED_PART_ONLY",
+      "i4_evidence_refs": [
+        "tests/test_granular_i4.py::test_golden_vectors_and_empty",
+        "tests/test_granular_i4.py::test_insertion_orders_match_independent_rebuild",
+        "tests/test_granular_i4.py::test_random_differential_changes_and_interruption",
+        "tests/test_granular_i4.py::test_sqlite_atomic_path_rollback_reopen",
+        "docs/evidence/V2-GRANULAR-I4-1000-MEASUREMENTS.json",
+        "tests/test_granular_i4.py::test_path_budget_incremental_and_rebuild_agree_at_exact_boundary"
+      ],
+      "i4_remaining_gate": "Real authority/branch/migration acceptance requires the other mapped increments; no full canonical PASS."
     },
     "G18": {
       "increments": [
         "I6",
         "I8"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G19": {
       "increments": [
         "I8"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G20": {
       "increments": [
         "I6",
         "I8"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G21": {
       "increments": [
         "I6",
         "I8"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G22": {
       "increments": [
@@ -146,14 +205,22 @@
         "I7",
         "I8"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "PASS_ISOLATED_PART_ONLY",
+      "i4_evidence_refs": [
+        "tests/test_granular_i4.py::test_divergent_branches_independent_roots",
+        "tests/test_granular_i4.py::test_snapshot_cross_save_stale_dependencies_and_noop"
+      ],
+      "i4_remaining_gate": "Only isolated Save-bound identity and divergent persistent-tree proofs. Full-file runtime branch sessions/replay/migration remain I7/I8 and I5/I6; no full G22 PASS."
     },
     "G23": {
       "increments": [
         "I2",
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G24": {
       "increments": [
@@ -161,19 +228,25 @@
         "I5",
         "I6"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G25": {
       "increments": [
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G26": {
       "increments": [
         "I7"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G27": {
       "increments": [
@@ -181,20 +254,29 @@
         "I2",
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G28": {
       "increments": [
         "I1",
         "I5"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     },
     "G29": {
       "increments": [
         "I8"
       ],
-      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED"
+      "granular_acceptance_status": "NOT_IMPLEMENTED_OR_AUTHORISED",
+      "i4_fixture_status": "NOT_IN_I4_SCOPE",
+      "i4_evidence_refs": []
     }
-  }
+  },
+  "i4_profile_ref": "I4.PREPARED.hash.v1",
+  "i4_evidence_scope": "Isolated fixture hashing/snapshot evidence only; original full canonical acceptance remains held. No active format or real typed commits.",
+  "i4_evidence_repository": "Minilaz-code/VadAllFate"
 }

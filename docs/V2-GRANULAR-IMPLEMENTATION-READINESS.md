@@ -121,3 +121,8 @@ The subsequent I2-only approval is implemented on codex/v2-granular-i2; see [I2 
 ## I3 limited approval follow-up
 
 The subsequent I3-only approval is implemented on codex/v2-granular-i3; see [I3 handoff](V2-GRANULAR-I3-HANDOFF.md). I3 adds a PREPARED isolated typed protocol and disposable staging/recovery evidence. No live typed dispatch, existing Save discriminator migration, production hash profile, I2 activation or canonical typed commit is enabled. Earlier status wording records prior baselines. I4/I5/I6/I8 remain explicit gates and the 29-case review/map remain unchanged.
+
+
+## I4 limited approval follow-up
+
+The subsequent I4-only approval is implemented on codex/v2-granular-i4; see [I4 hash specification](V2-GRANULAR-I4-HASH-SPEC.md) and [handoff](V2-GRANULAR-I4-HANDOFF.md). Only disabled fixture hashing, derived roots, revision/snapshot identity and evidence-chain proofs are implemented. No production profile, deployed SnapshotRef, active format, driver/authority integration or Save migration is enabled. I5/I6/I8 remain explicit gates. The review/29 cases are preserved; the mapping adds isolated I4 evidence.
