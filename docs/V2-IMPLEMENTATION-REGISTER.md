@@ -766,3 +766,14 @@ Actual R1-owned atomic memory/relationship commits, incremental authenticated pa
 Final targeted verification: 307 passed, including 59 I5 cases. Broad final backend verification: 812 passed, 2 skipped in 882.06s after final code corrections. Frontend 152 tests, TypeScript check and production build passed. Fresh 100/1,000-NPC fixtures with 10,000/20,000 memories retain history and stage ~11.4KiB requests; measured material medians ~0.32s, full reopen audit ~20/40s. Performance and coverage limits are explicit in the handoff. No full application storage acceptance or legacy capacity fix claimed.
 
 STOP after I5. I6 live negotiation/real content-session adapters and I8 migration/rollback/export require separate explicit approval. Combat/private-secret model holds remain. No production Saves, Antigravity checkout, CP149/CP150, protected branches or main merge.
+
+
+## I6 limited read-only negotiation - 2026-11-01
+
+Review branch `codex/v2-granular-i6`; [paired handoff](V2-GRANULAR-I6-HANDOFF.md), [field coverage/integrity policy](V2-GRANULAR-I6-COVERAGE-AND-INTEGRITY.md), [exact field inventory](V2-GRANULAR-I6-FIELD-INVENTORY.json). All 23 seed roots/282 seed paths and 37 literal runtime state roots are inventoried, with proposed owners, permissions, provenance, missing schema/validator work and migration gates. No production registration/conversion.
+
+Read-only persisted-format resolution and authenticated native legacy/prepared inspection implemented; capability HTTP reads precede gateway writer construction. New launcher/gateway preflight refuses prepared/corrupt/unknown writable startup. Actual old I4 executable and full old gateway are canonically fenced in newly sealed disposable I6 fixtures; operational schema/auth/bootstrap writes remain possible before refusal. React distinguishes prepared/unavailable versus native legacy, times out safely and retains a labelled fallback to actual old backends.
+
+Three real Edge cases passed across isolated prepared and actual archived old-backend runs; 157 frontend tests, TypeScript check and Vite build passed. Final backend: 328 targeted passed; 833 broad passed, 2 skipped in 1063.42s after final integration corrections. Measured capability medians 15-18ms, bounded NPC reads 131-224ms, full audits 20-42 seconds; routine reads never imply whole-world integrity. I5 write/reopen/checkpoint policy, authority, legacy bytes and frozen contracts remain unchanged. Only audit's explicit read-only report option is added.
+
+STOP AFTER I6. No live typed gameplay, ACTIVE binding, existing Save conversion or I8 migration/rollback/export. Antigravity checkouts, production Saves, CP149/CP150 and protected branches remain preserved. Source-combat/private-secret model reasoning holds unchanged; the legacy campaign capacity limit remains unresolved.

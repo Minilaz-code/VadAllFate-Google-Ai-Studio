@@ -1,0 +1,718 @@
+{
+  "contract": "I6.legacy-field-inventory.v1",
+  "production_ready": false,
+  "seed_roots": [
+    "activeDirectorProfileId",
+    "activeRollRequests",
+    "battlemapState",
+    "campaignId",
+    "characterDicePreferences",
+    "characters",
+    "combatState",
+    "dicePolicy",
+    "directorProfiles",
+    "directorState",
+    "events",
+    "factions",
+    "locations",
+    "name",
+    "npcRoutines",
+    "npcs",
+    "operatingMode",
+    "pendingAdjudications",
+    "quests",
+    "recommendations",
+    "sourcePacks",
+    "spotlightMetrics",
+    "worldClock"
+  ],
+  "areas": [
+    {
+      "future_owner": "campaign.configuration",
+      "legacy_root_fields": [
+        "campaignId",
+        "name",
+        "operatingMode",
+        "dicePolicy",
+        "characterDicePreferences",
+        "sourcePacks"
+      ],
+      "exact_seed_field_paths": [
+        "campaignId",
+        "characterDicePreferences",
+        "dicePolicy",
+        "name",
+        "operatingMode",
+        "sourcePacks[].id",
+        "sourcePacks[].isEnabled",
+        "sourcePacks[].name",
+        "sourcePacks[].recordCount",
+        "sourcePacks[].type",
+        "sourcePacks[].version"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "npc.identity",
+      "legacy_root_fields": [
+        "npcs"
+      ],
+      "exact_seed_field_paths": [
+        "npcs[].appearanceDescription",
+        "npcs[].cognition.activeGoal",
+        "npcs[].cognition.beliefs[]",
+        "npcs[].cognition.cooperativeGoal",
+        "npcs[].cognition.dispositionLabel",
+        "npcs[].cognition.dispositionScore",
+        "npcs[].cognition.fallbackGoal",
+        "npcs[].cognition.rumorsHeard[]",
+        "npcs[].cognition.suspicionScore",
+        "npcs[].cognition.trustScore",
+        "npcs[].currentLocationId",
+        "npcs[].factionId",
+        "npcs[].guardedSecrets[]",
+        "npcs[].id",
+        "npcs[].isAlive",
+        "npcs[].knowledgeBoundary.falseBeliefs[]",
+        "npcs[].knowledgeBoundary.suspicions[]",
+        "npcs[].knowledgeBoundary.verifiedFacts[]",
+        "npcs[].motivationsAndGoals[]",
+        "npcs[].name",
+        "npcs[].occupation",
+        "npcs[].race",
+        "npcs[].routinesAndCommitments[]",
+        "npcs[].statBlock.armorClass",
+        "npcs[].statBlock.challengeRating",
+        "npcs[].statBlock.conditions[]",
+        "npcs[].statBlock.hitPoints",
+        "npcs[].statBlock.initiativeBonus",
+        "npcs[].statBlock.maxHitPoints",
+        "npcs[].statBlock.speedFeet",
+        "npcs[].title",
+        "npcs[].token.color",
+        "npcs[].token.isVisibleToPlayers",
+        "npcs[].token.size",
+        "npcs[].token.tokenLabel",
+        "npcs[].token.x",
+        "npcs[].token.y",
+        "npcs[].voiceProfile.cadence",
+        "npcs[].voiceProfile.pitch",
+        "npcs[].voiceProfile.voicePresetId"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "IMMUTABLE_FIXTURE_IDENTITY_AND_TWO_DELTAS_ONLY",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "character.state",
+      "legacy_root_fields": [
+        "characters"
+      ],
+      "exact_seed_field_paths": [
+        "characters[].abilities.CHA.modifier",
+        "characters[].abilities.CHA.saveProficient",
+        "characters[].abilities.CHA.score",
+        "characters[].abilities.CON.modifier",
+        "characters[].abilities.CON.saveProficient",
+        "characters[].abilities.CON.score",
+        "characters[].abilities.DEX.modifier",
+        "characters[].abilities.DEX.saveProficient",
+        "characters[].abilities.DEX.score",
+        "characters[].abilities.INT.modifier",
+        "characters[].abilities.INT.saveProficient",
+        "characters[].abilities.INT.score",
+        "characters[].abilities.STR.modifier",
+        "characters[].abilities.STR.saveProficient",
+        "characters[].abilities.STR.score",
+        "characters[].abilities.WIS.modifier",
+        "characters[].abilities.WIS.saveProficient",
+        "characters[].abilities.WIS.score",
+        "characters[].abilities.cha",
+        "characters[].abilities.con",
+        "characters[].abilities.dex",
+        "characters[].abilities.int",
+        "characters[].abilities.str",
+        "characters[].abilities.wis",
+        "characters[].alignment",
+        "characters[].armorClass",
+        "characters[].background",
+        "characters[].bonds",
+        "characters[].campaignId",
+        "characters[].characterClass",
+        "characters[].conditions[]",
+        "characters[].currentHp",
+        "characters[].deathSaves.failures",
+        "characters[].deathSaves.successes",
+        "characters[].experiencePoints",
+        "characters[].features[]",
+        "characters[].flaws",
+        "characters[].hitDice.current",
+        "characters[].hitDice.dieType",
+        "characters[].hitDice.total",
+        "characters[].id",
+        "characters[].ideals",
+        "characters[].initiativeBonus",
+        "characters[].inventory[].category",
+        "characters[].inventory[].costGp",
+        "characters[].inventory[].damage",
+        "characters[].inventory[].damageType",
+        "characters[].inventory[].description",
+        "characters[].inventory[].id",
+        "characters[].inventory[].isEquipped",
+        "characters[].inventory[].name",
+        "characters[].inventory[].quantity",
+        "characters[].inventory[].rarity",
+        "characters[].inventory[].type",
+        "characters[].inventory[].weightLb",
+        "characters[].inventory[].weightLbs",
+        "characters[].level",
+        "characters[].maxHp",
+        "characters[].name",
+        "characters[].notes",
+        "characters[].passiveInsight",
+        "characters[].passiveInvestigation",
+        "characters[].passivePerception",
+        "characters[].personalityTraits",
+        "characters[].playerName",
+        "characters[].proficiencyBonus",
+        "characters[].race",
+        "characters[].savingThrowProficiencies[]",
+        "characters[].skills[].ability",
+        "characters[].skills[].name",
+        "characters[].skills[].proficient",
+        "characters[].speedFeet",
+        "characters[].speedFt",
+        "characters[].spellSlots.1.max",
+        "characters[].spellSlots.1.used",
+        "characters[].spellSlots.2.max",
+        "characters[].spellSlots.2.used",
+        "characters[].spellSlots.3.max",
+        "characters[].spellSlots.3.used",
+        "characters[].spellcasting.knownSpells[].castingTime",
+        "characters[].spellcasting.knownSpells[].components",
+        "characters[].spellcasting.knownSpells[].concentration",
+        "characters[].spellcasting.knownSpells[].description",
+        "characters[].spellcasting.knownSpells[].duration",
+        "characters[].spellcasting.knownSpells[].id",
+        "characters[].spellcasting.knownSpells[].level",
+        "characters[].spellcasting.knownSpells[].name",
+        "characters[].spellcasting.knownSpells[].range",
+        "characters[].spellcasting.knownSpells[].school",
+        "characters[].spellcasting.slots.1.current",
+        "characters[].spellcasting.slots.1.max",
+        "characters[].spellcasting.slots.2.current",
+        "characters[].spellcasting.slots.2.max",
+        "characters[].spellcasting.slots.3.current",
+        "characters[].spellcasting.slots.3.max",
+        "characters[].spellcasting.spellAttackBonus",
+        "characters[].spellcasting.spellSaveDc",
+        "characters[].spellcasting.spellcastingAbility",
+        "characters[].spells[]",
+        "characters[].spells[].castingTime",
+        "characters[].spells[].components.material",
+        "characters[].spells[].components.somatic",
+        "characters[].spells[].components.verbal",
+        "characters[].spells[].concentration",
+        "characters[].spells[].description",
+        "characters[].spells[].duration",
+        "characters[].spells[].id",
+        "characters[].spells[].level",
+        "characters[].spells[].name",
+        "characters[].spells[].range",
+        "characters[].spells[].ritual",
+        "characters[].spells[].school",
+        "characters[].subclass",
+        "characters[].tempHp",
+        "characters[].token.color",
+        "characters[].token.currentSpeedFt",
+        "characters[].token.size",
+        "characters[].token.tokenLabel",
+        "characters[].token.x",
+        "characters[].token.y"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "quest.progress",
+      "legacy_root_fields": [
+        "quests"
+      ],
+      "exact_seed_field_paths": [
+        "quests[].dmSecretTwist",
+        "quests[].giverName",
+        "quests[].giverNpcId",
+        "quests[].id",
+        "quests[].objectives[].description",
+        "quests[].objectives[].id",
+        "quests[].objectives[].isCompleted",
+        "quests[].rewardsDescription",
+        "quests[].status",
+        "quests[].title",
+        "quests[].urgency"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "clock",
+      "legacy_root_fields": [
+        "worldClock"
+      ],
+      "exact_seed_field_paths": [
+        "worldClock.calendar.dayOfMonth",
+        "worldClock.calendar.hour",
+        "worldClock.calendar.minute",
+        "worldClock.calendar.monthName",
+        "worldClock.calendar.timeOfDay",
+        "worldClock.calendar.timeString",
+        "worldClock.calendar.weatherCondition",
+        "worldClock.calendar.year",
+        "worldClock.isPaused",
+        "worldClock.totalWorldMinutes"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "location",
+      "legacy_root_fields": [
+        "locations"
+      ],
+      "exact_seed_field_paths": [
+        "locations[].connectedRouteIds[]",
+        "locations[].coordinates.x",
+        "locations[].coordinates.y",
+        "locations[].dmNotes",
+        "locations[].id",
+        "locations[].isDiscoveredByParty",
+        "locations[].name",
+        "locations[].publicDescription",
+        "locations[].region",
+        "locations[].travelHazardLevel",
+        "locations[].travelTimeHoursFromParty",
+        "locations[].type"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "schedule",
+      "legacy_root_fields": [
+        "npcRoutines"
+      ],
+      "exact_seed_field_paths": [
+        "npcRoutines.routines.npc-duessa-starflower[].cell[]",
+        "npcRoutines.routines.npc-duessa-starflower[].end",
+        "npcRoutines.routines.npc-duessa-starflower[].goal",
+        "npcRoutines.routines.npc-duessa-starflower[].start",
+        "npcRoutines.routines.npc-jorren-vale[].cell[]",
+        "npcRoutines.routines.npc-jorren-vale[].end",
+        "npcRoutines.routines.npc-jorren-vale[].goal",
+        "npcRoutines.routines.npc-jorren-vale[].start",
+        "npcRoutines.version"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "event.projection",
+      "legacy_root_fields": [
+        "events"
+      ],
+      "exact_seed_field_paths": [
+        "events[].actorId",
+        "events[].actorName",
+        "events[].category",
+        "events[].commitSequence",
+        "events[].eventId",
+        "events[].isDmOnly",
+        "events[].summary",
+        "events[].timestampUtc",
+        "events[].worldMinute"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "spatial",
+      "legacy_root_fields": [
+        "battlemapState"
+      ],
+      "exact_seed_field_paths": [
+        "battlemapState.activeMapId",
+        "battlemapState.doors[].dmNotes",
+        "battlemapState.doors[].id",
+        "battlemapState.doors[].isLocked",
+        "battlemapState.doors[].isOpen",
+        "battlemapState.doors[].isSecret",
+        "battlemapState.doors[].label",
+        "battlemapState.doors[].x",
+        "battlemapState.doors[].y",
+        "battlemapState.fogEnabled",
+        "battlemapState.gridHeight",
+        "battlemapState.gridWidth",
+        "battlemapState.mapName",
+        "battlemapState.revealedCells[]",
+        "battlemapState.windows[].id",
+        "battlemapState.windows[].label",
+        "battlemapState.windows[].state",
+        "battlemapState.windows[].x",
+        "battlemapState.windows[].y"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "combat",
+      "legacy_root_fields": [
+        "combatState"
+      ],
+      "exact_seed_field_paths": [
+        "combatState.activeTurnIndex",
+        "combatState.combatants[]",
+        "combatState.isActive",
+        "combatState.round"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "faction",
+      "legacy_root_fields": [
+        "factions"
+      ],
+      "exact_seed_field_paths": [
+        "factions[].dispositionToParty",
+        "factions[].dmSecrets",
+        "factions[].id",
+        "factions[].influenceScore",
+        "factions[].name",
+        "factions[].publicAgenda"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "director",
+      "legacy_root_fields": [
+        "activeDirectorProfileId",
+        "directorProfiles",
+        "directorState",
+        "recommendations",
+        "spotlightMetrics",
+        "pendingAdjudications"
+      ],
+      "exact_seed_field_paths": [
+        "activeDirectorProfileId",
+        "directorProfiles[].description",
+        "directorProfiles[].id",
+        "directorProfiles[].name",
+        "directorProfiles[].spotlightBalanceWeight",
+        "directorProfiles[].targetTensionCurve",
+        "directorState.lastPacingEvaluationSummary",
+        "directorState.pacingPhase",
+        "directorState.tensionLevel",
+        "directorState.tensionScore",
+        "directorState.turnsInCurrentPhase",
+        "pendingAdjudications[]",
+        "recommendations[].category",
+        "recommendations[].id",
+        "recommendations[].reasoning",
+        "recommendations[].status",
+        "recommendations[].summary",
+        "recommendations[].title",
+        "recommendations[].urgency",
+        "spotlightMetrics[].characterId",
+        "spotlightMetrics[].characterName",
+        "spotlightMetrics[].combatActionsCount",
+        "spotlightMetrics[].dialogueTurnsCount",
+        "spotlightMetrics[].engagementStatus",
+        "spotlightMetrics[].playerName",
+        "spotlightMetrics[].recentActionsCount",
+        "spotlightMetrics[].recommendedPrompt",
+        "spotlightMetrics[].sharePercentage",
+        "spotlightMetrics[].skillChecksCount",
+        "spotlightMetrics[].spotlightSharePercent"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    },
+    {
+      "future_owner": "dice.requests",
+      "legacy_root_fields": [
+        "activeRollRequests"
+      ],
+      "exact_seed_field_paths": [
+        "activeRollRequests[]"
+      ],
+      "current_source": "campaign_state.state_json.campaign_doc_json (R1 whole-document StatePatch)",
+      "i5_support": "NOT_PRODUCTION_MAPPED",
+      "migration_status": "PROPOSED_OWNER_ONLY_NOT_REGISTERED; field-complete versioned schemas/validators/import evidence required; no conversion implemented"
+    }
+  ],
+  "optional_runtime_fields": {
+    "contentSelection": "campaign.configuration: exact pins and activeScene/location references",
+    "contentRelease": "knowledge.release: DM-approved audience release records",
+    "contentInteractions": "dialogue.history: exact reply origin/mode/model/approval and per-character ACL",
+    "contentAdventure": "adventure.configuration: quest/appointment/pin/approval references",
+    "npcs[].sourceBinding": "npc.identity: exact ref/pin/definitionHash, immutable source remains outside Save",
+    "npcs[].sourceLocationRef": "spatial.placement: current approved location ref",
+    "npcs[].cognition.personality/pressure/goals/current_routine/location_id": "npc.cognition: independently versioned components, legacy duplicated fields require reconciliation",
+    "npcs[].cognition.memories[]": "npc.memory: acquisition/witness/actor/event/minute/private flags/provenance",
+    "npcs[].cognition.beliefs.admittedKnowledge[]": "npc.knowledge: categories, status/disclosure/per-character/source/evidence/approval",
+    "npcs[].cognition.relationships[target]": "npc.relationship: all axes/history_notes plus causal linkage",
+    "npcs[].knowledgeBoundary/guardedSecrets/memoryEntries/relationships/routinesAndCommitments": "npc.legacy-mirrors: reconcile exact values and ownership; do not discard or infer equality",
+    "npcs[].adventurePresent,characters[].sourceLocationRef": "spatial.presence: event/routine-derived membership and source location",
+    "npcRoutines.routines[npcId][]": "schedule: conditions/location/windows/repeat/consumption and approval lineage",
+    "quests[].objectives[].condition": "quest.objective: typed dependency on committed action/event, not narrative implication",
+    "battlemapState.mapConfigs[mapId],npcs[].token,characters[].token": "spatial: calibrated grid/geometry/assets/footprint/visibility and collision dependencies",
+    "npcs[].dialogueBrief": "npc.characterisation: bounded DM-approved characterisation",
+    "npcs[].cognition.beliefs.approvedConsequences[]": "npc.relationship-evidence: actionId/memoryId/deltas/reason, exactly-once adjudication marker",
+    "contentAdventure.occurredEvents[]": "schedule.evidence: exactly-once occurrence keys; verify against native events, never regenerate"
+  },
+  "legacy_authority_scalars": [
+    "world_minute",
+    "commit_sequence",
+    "last_action_id",
+    "last_action_type",
+    "confirmed_plans_count",
+    "last_confirmed_plan_id",
+    "last_confirmed_plan_hash",
+    "implemented_homebrew_count",
+    "last_implemented_homebrew_id"
+  ],
+  "unknown_field_policy": "BLOCK migration/activation until explicitly owned, schema-versioned and losslessly round-trip validated; never silently omit unknown keys.",
+  "additional_runtime_roots": {
+    "consumedFactionTriggers": {
+      "future_owner": "faction.evidence",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "deliveredReports": {
+      "future_owner": "quest.progress",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "dmRumourSparks": {
+      "future_owner": "npc.knowledge-proposal",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "escalationClocks": {
+      "future_owner": "schedule.clock",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "factionRules": {
+      "future_owner": "faction.configuration",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "factionState": {
+      "future_owner": "faction.state",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "occurredTags": {
+      "future_owner": "schedule.evidence",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "publishedBroadsheets": {
+      "future_owner": "knowledge.release",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "scheduledBroadsheets": {
+      "future_owner": "schedule",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    },
+    "scheduledVisitors": {
+      "future_owner": "schedule",
+      "current_source": "campaign_doc_json",
+      "i5_support": "NONE",
+      "required": "Preserve all nested values, origin/source rights, audience restrictions and consumed-event identity; exact schema, validators, event linkage and lossless migration review still required."
+    }
+  },
+  "static_runtime_key_evidence": {
+    "activeDirectorProfileId": [
+      "v2_campaign_gateway.py"
+    ],
+    "activeRollRequests": [
+      "v2_campaign_gateway.py"
+    ],
+    "battlemapState": [
+      "game_content.py",
+      "game_npc_knowledge.py",
+      "game_npcs.py",
+      "game_source_map.py",
+      "v2_campaign_gateway.py"
+    ],
+    "campaignId": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_dialogue.py",
+      "game_npc_knowledge.py",
+      "game_npcs.py",
+      "game_source_map.py",
+      "v2_campaign_gateway.py"
+    ],
+    "characterDicePreferences": [
+      "v2_campaign_gateway.py"
+    ],
+    "characters": [
+      "game_adventure.py",
+      "game_campaigns.py",
+      "game_content.py",
+      "game_npc_dialogue.py",
+      "game_npc_knowledge.py",
+      "game_npcs.py",
+      "v2_campaign_gateway.py"
+    ],
+    "combatState": [
+      "v2_campaign_gateway.py"
+    ],
+    "consumedFactionTriggers": [
+      "v2_campaign_gateway.py"
+    ],
+    "contentAdventure": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_dialogue.py"
+    ],
+    "contentInteractions": [
+      "game_content.py",
+      "game_npc_dialogue.py"
+    ],
+    "contentRelease": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_dialogue.py",
+      "game_npcs.py",
+      "v2_campaign_gateway.py"
+    ],
+    "contentSelection": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_dialogue.py"
+    ],
+    "deliveredReports": [
+      "v2_campaign_gateway.py"
+    ],
+    "dicePolicy": [
+      "v2_campaign_gateway.py"
+    ],
+    "directorProfiles": [
+      "v2_campaign_gateway.py"
+    ],
+    "directorState": [
+      "v2_campaign_gateway.py"
+    ],
+    "dmRumourSparks": [
+      "v2_campaign_gateway.py"
+    ],
+    "escalationClocks": [
+      "v2_campaign_gateway.py"
+    ],
+    "events": [
+      "game_adventure.py",
+      "v2_campaign_gateway.py"
+    ],
+    "factionRules": [
+      "v2_campaign_gateway.py"
+    ],
+    "factionState": [
+      "v2_campaign_gateway.py"
+    ],
+    "factions": [
+      "v2_campaign_gateway.py"
+    ],
+    "locations": [
+      "game_npcs.py",
+      "v2_campaign_gateway.py"
+    ],
+    "name": [
+      "v2_campaign_gateway.py"
+    ],
+    "npcRoutines": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_knowledge.py",
+      "v2_campaign_gateway.py"
+    ],
+    "npcs": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_dialogue.py",
+      "game_npc_knowledge.py",
+      "game_npcs.py",
+      "game_source_map.py",
+      "v2_campaign_gateway.py"
+    ],
+    "occurredTags": [
+      "v2_campaign_gateway.py"
+    ],
+    "operatingMode": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_dialogue.py",
+      "v2_campaign_gateway.py"
+    ],
+    "pendingAdjudications": [
+      "v2_campaign_gateway.py"
+    ],
+    "publishedBroadsheets": [
+      "v2_campaign_gateway.py"
+    ],
+    "quests": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_knowledge.py",
+      "v2_campaign_gateway.py"
+    ],
+    "recommendations": [
+      "v2_campaign_gateway.py"
+    ],
+    "scheduledBroadsheets": [
+      "v2_campaign_gateway.py"
+    ],
+    "scheduledVisitors": [
+      "v2_campaign_gateway.py"
+    ],
+    "sourcePacks": [
+      "v2_campaign_gateway.py"
+    ],
+    "spotlightMetrics": [
+      "v2_campaign_gateway.py"
+    ],
+    "worldClock": [
+      "game_adventure.py",
+      "game_content.py",
+      "game_npc_knowledge.py",
+      "v2_campaign_gateway.py"
+    ]
+  }
+}
