@@ -116,3 +116,8 @@ Next requested protected unit: **I2 only** -- approve implementation of the addi
 ## I2 limited approval follow-up
 
 The subsequent I2-only approval is implemented on codex/v2-granular-i2; see [I2 handoff](V2-GRANULAR-I2-HANDOFF.md). Earlier approval-status wording above records the preparation baseline. Only disposable physical schema and a disabled PREPARED fixture driver are now implemented. I3 typed staging/recovery, I4 production hashing, I5 authority integration and I8 conversion remain separately gated. The review and 29-case mapping are unchanged.
+
+
+## I3 limited approval follow-up
+
+The subsequent I3-only approval is implemented on codex/v2-granular-i3; see [I3 handoff](V2-GRANULAR-I3-HANDOFF.md). I3 adds a PREPARED isolated typed protocol and disposable staging/recovery evidence. No live typed dispatch, existing Save discriminator migration, production hash profile, I2 activation or canonical typed commit is enabled. Earlier status wording records prior baselines. I4/I5/I6/I8 remain explicit gates and the 29-case review/map remain unchanged.

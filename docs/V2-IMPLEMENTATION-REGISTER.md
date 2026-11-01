@@ -741,3 +741,10 @@ Option C selected; no paged intermediate format. Original docs-only review branc
 Implemented only the approved PREPARED entity-core SQL asset and disabled connection-bound fixture driver on codex/v2-granular-i2. Original CC0 disposable tests cover campaign ownership, evidence, row CAS/hash, bounded values, rollback, reopen and affected-row-only writes. No live imports, writer capability, migration dispatch, frozen schema change or gameplay activation. See [I2 handoff](V2-GRANULAR-I2-HANDOFF.md) for actual results and exact next I3 approval gate. The original 29-case review remains unchanged; this is not full granular gameplay acceptance.
 
 Verification: I2 38 passed; final combined preparation/R1/recovery/JCS 125 passed; full backend regression 624 passed, 2 skipped (737.40s). Privacy/content audit clean; no existing Save conversion or live route.
+
+
+## 2026-11-01 - I3 bounded typed staging/recovery
+
+Implemented only PREPARED closed normative typed requests, deterministic <=65,536-byte codec and explicit discriminator/context checks on codex/v2-granular-i3. Original disposable fixtures prove durable staging, abrupt-process recovery, dispatch fencing, corruption rejection and exactly-once delivery of recovered bytes. This does not commit typed world state or activate I2. Final combined I3/I2/preparation/R1/recovery/JCS verification: 204 passed (79 I3). Full-suite and publication evidence is in [I3 handoff](V2-GRANULAR-I3-HANDOFF.md). Existing authority, store, live codecs, normative schemas and 29-case review/map remain unchanged. I4/I5/I6/I8 require separate approval.
+
+Full final-tree backend verification: 709 passed, 2 skipped in 772.44s. Privacy/content audit clean; no existing Save conversion or live typed route.
