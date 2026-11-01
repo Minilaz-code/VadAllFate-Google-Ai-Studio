@@ -805,3 +805,8 @@ STOP at FORK-1 (real lineage/auth boundary), ADMISSION-REPAIR-1 (reviewed queue 
 I7R verification update: final backend 897 passed, 2 skipped (973.96s); frontend 157/TypeScript/build passed. First I7R phase verified 9,101 actions with full audit/checkpoint/restart; additional same-fixture continuation is pending. I7 remains INCOMPLETE and every protected migration/authority gate remains held.
 
 I7R final endurance: 10,000 actual native commits in the SAME original fixture, full verification/restart/exact-once PASS. The 9,101-action first report remains immutable; 899 more actions completed under a separate 7,200-second budget. Combined execution 18,375.989s; requests 11,465-11,492 bytes; no pending admissions/history loss; binding PREPARED; no prefix tables in this run. Full audit ~205s remains an operational blocker. I7 INCOMPLETE; FORK-1, ADMISSION-REPAIR-1, production integrity-policy changes and I8 remain explicit gates. See the paired I7R handoff and numerical verification evidence.
+
+
+## I7F / FORK-1 controlled fixture implementation
+
+Review branch `codex/v2-granular-i7f`; [handoff](V2-GRANULAR-I7F-HANDOFF.md). Real R1-controlled child boundary, lineage, independent fixture sessions/receipt namespace, immutable historical bytes, post-fork commits and restart implemented in new original disposable files only. Targeted I2-I7R/R1/JCS set: 408 passed (353.28s); standalone numerical fork proof passed. Broad combined regression will be reported after the separately approved I7Q increment. No 10,000-action rerun. No production format/DTO/startup/integrity change, I8, protected merge or Antigravity checkout modification. Two-segment/single-campaign fixture scope and every unsupported I6 owner remain explicit limitations.
