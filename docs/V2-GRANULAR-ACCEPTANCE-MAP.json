@@ -20,7 +20,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Read-only measurements at 100 NPC/10,000 memories; full quest/event acceptance still held."
+      "i6_remaining_gate": "Read-only measurements at 100 NPC/10,000 memories; full quest/event acceptance still held.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "100-NPC first-slice growing-memory/history run only; quest/event full-world coverage remains held."
     },
     "G02": {
       "increments": [
@@ -41,7 +47,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Read-only measurements at 1,000 NPC/20,000 memories; complete large-world acceptance still held."
+      "i6_remaining_gate": "Read-only measurements at 1,000 NPC/20,000 memories; complete large-world acceptance still held.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "1,000 NPC/10,000 initial memories plus 100 real commits; not 100,000 native events or all relationships."
     },
     "G03": {
       "increments": [
@@ -59,7 +71,13 @@
       "i5_remaining_gate": "11,377/11,378 fully framed bytes, independent of population except bounded identifiers/counts.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Actual fully framed beginning/end sizes recorded in endurance artifact; no whole-world frame."
     },
     "G04": {
       "increments": [
@@ -76,7 +94,13 @@
       "i5_remaining_gate": "Only five material actions per large run; 10,000-action endurance remains.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "INCOMPLETE_1401_OF_10000",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "10,000-action attempt: final measured status/count in handoff; no PASS from the 100-action profiling samples."
     },
     "G05": {
       "increments": [
@@ -93,7 +117,13 @@
       "i5_remaining_gate": "Real atomic memory plus relationship; objectives/schedules outside slice.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Real memory/relationship atomic action; objective/schedule fields remain unsupported."
     },
     "G06": {
       "increments": [
@@ -110,7 +140,10 @@
       "i5_remaining_gate": "Oversize/unknown/ref violations preflight; no automatic action splitting.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
+      "i7_evidence_refs": [],
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
     },
     "G07": {
       "increments": [
@@ -127,7 +160,10 @@
       "i5_remaining_gate": "Legacy and I3 exact boundary regressions retained; valid exact-64KiB I5 candidate not claimed.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
+      "i7_evidence_refs": [],
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
     },
     "G08": {
       "increments": [
@@ -148,7 +184,10 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Read-only persisted profile/source/module checks plus real session, role, campaign and Save isolation. No new mutation authority."
+      "i6_remaining_gate": "Read-only persisted profile/source/module checks plus real session, role, campaign and Save isolation. No new mutation authority.",
+      "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
+      "i7_evidence_refs": [],
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
     },
     "G09": {
       "increments": [
@@ -170,7 +209,13 @@
       "i5_remaining_gate": "Actual FIFO/fencing/stale disposition tested; no competing multiwriter stress.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Dispatch/stale/fencing regressions, external lock rejection and one authority writer; not arbitrary multiwriter support."
     },
     "G10": {
       "increments": [
@@ -188,7 +233,13 @@
       "i5_remaining_gate": "Exact approved input survives pre-stage close/reopen; no result regeneration.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Actual process exit after admission/dispatch, exact approved frame recovered, no new generation."
     },
     "G11": {
       "increments": [
@@ -206,7 +257,13 @@
       "i5_remaining_gate": "Durable staged bytes recover into actual material commit.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Actual staged process death resumes into real material commit and stable receipt."
     },
     "G12": {
       "increments": [
@@ -223,7 +280,13 @@
       "i5_remaining_gate": "All material precommit fault points and real midwrite process death roll back.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Actual abrupt exits at every I5 stage plus validation, partial hash-node and partial applied-intent writes; rollback/once verified."
     },
     "G13": {
       "increments": [
@@ -240,7 +303,13 @@
       "i5_remaining_gate": "Post-COMMIT process death/lost response recovers once; no HTTP acknowledgement claim.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Post-COMMIT exit resolves exact prior receipt without another consequence; no HTTP gameplay activation."
     },
     "G14": {
       "increments": [
@@ -261,7 +330,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Unknown/corrupt/incomplete metadata refuses writable launch and inspection; no repair, conversion or operator skip."
+      "i6_remaining_gate": "Unknown/corrupt/incomplete metadata refuses writable launch and inspection; no repair, conversion or operator skip.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Corrupt/unknown staged input remains explicit review hold, no silent skip; operational repair workflow still missing."
     },
     "G15": {
       "increments": [
@@ -279,7 +354,13 @@
       "i5_remaining_gate": "Nonce retries/conflicts plus global request-ID preadmission reservation.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Exactly-once and nonce conflicts preserved; copied Save identity limitation explicitly exposed."
     },
     "G16": {
       "increments": [
@@ -305,7 +386,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Explicit read-only independent I5 full audit and bounded source/path checks; untouched corruption detected at full audit."
+      "i6_remaining_gate": "Explicit read-only independent I5 full audit and bounded source/path checks; untouched corruption detected at full audit.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Independent full audit preserved; duplicate decode removed after exact byte validation; untouched corruption still requires full audit."
     },
     "G17": {
       "increments": [
@@ -330,7 +417,13 @@
       "i5_remaining_gate": "I4 vectors plus real restart independent root equality; not all gameplay domains.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Same baseline/optimised snapshot and existing I4 differential vectors; no hash/domain change."
     },
     "G18": {
       "increments": [
@@ -351,7 +444,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Native legacy read facade and old frontend requests; actual archived I4 backend with new React/Edge fallback, no conversion."
+      "i6_remaining_gate": "Native legacy read facade and old frontend requests; actual archived I4 backend with new React/Edge fallback, no conversion.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Native legacy and I2-I6/R1 regressions retained; no conversion."
     },
     "G19": {
       "increments": [
@@ -368,7 +467,10 @@
       "i5_remaining_gate": "I8 existing Save migration not authorised.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
+      "i7_evidence_refs": [],
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
     },
     "G20": {
       "increments": [
@@ -389,7 +491,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "New launcher/gateway preflight; actual old I4 store/gateway cannot update/insert canonical worlds in freshly sealed I6 fixtures. Old runtime can still make operational schema/auth writes; unsealed I5 only bound-campaign fences."
+      "i6_remaining_gate": "New launcher/gateway preflight; actual old I4 store/gateway cannot update/insert canonical worlds in freshly sealed I6 fixtures. Old runtime can still make operational schema/auth writes; unsealed I5 only bound-campaign fences.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Actual old I4 gateway on sealed disposable fixture; canonical unchanged; exact operational table/bootstrap deltas recorded."
     },
     "G21": {
       "increments": [
@@ -410,7 +518,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Real Windows Edge prepared inspection/reload/disabled actions and actual old-backend native compatibility. No real granular gameplay, model, private source journey or application migration."
+      "i6_remaining_gate": "Real Windows Edge prepared inspection/reload/disabled actions and actual old-backend native compatibility. No real granular gameplay, model, private source journey or application migration.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Windows process termination/restart and existing UI checks only; no full granular playable/private-pack journey."
     },
     "G22": {
       "increments": [
@@ -436,7 +550,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Exact prepared logical Save binding and wrong-Save denials; native legacy Save has no logical UUID mapping. Full divergent copied-Save migration remains I8."
+      "i6_remaining_gate": "Exact prepared logical Save binding and wrong-Save denials; native legacy Save has no logical UUID mapping. Full divergent copied-Save migration remains I8.",
+      "i7_status": "BLOCKED_LOGICAL_SAVE_REBIND",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "BLOCKED for independent logical Save identity: backup copies Save ID/credentials; pre-divergence frame accepted in both. Physical divergence works; no rebinding contract."
     },
     "G23": {
       "increments": [
@@ -457,7 +577,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Authenticated campaign scope retained; existing I5 independent campaigns and repeated IDs regression preserved."
+      "i6_remaining_gate": "Authenticated campaign scope retained; existing I5 independent campaigns and repeated IDs regression preserved.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Wrong campaign/Save labels rejected, existing I5 campaign isolation retained; copied auth realms are not independent Saves."
     },
     "G24": {
       "increments": [
@@ -479,7 +605,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "DM/player/observer/preview read projections, wrong campaign/Save/credential/revocation and non-DM preview denial. General legacy fields still require future owners."
+      "i6_remaining_gate": "DM/player/observer/preview read projections, wrong campaign/Save/credential/revocation and non-DM preview denial. General legacy fields still require future owners.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "DM/player/observer/preview/wrong-character denial across newly backed-up fixtures/reopens; copied-session limitation retained."
     },
     "G25": {
       "increments": [
@@ -496,7 +628,10 @@
       "i5_remaining_gate": "Plans/homebrew outside approved slice.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
+      "i7_evidence_refs": [],
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
     },
     "G26": {
       "increments": [
@@ -516,7 +651,13 @@
         "tests/test_granular_i6.py",
         "docs/V2-GRANULAR-I6-HANDOFF.md"
       ],
-      "i6_remaining_gate": "Read-only consistent WAL snapshots, durable fresh fixtures and measured full audits; long-reader/busy-writer stress remains."
+      "i6_remaining_gate": "Read-only consistent WAL snapshots, durable fresh fixtures and measured full audits; long-reader/busy-writer stress remains.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "Pinned WAL readers, busy checkpoint/lock, checkpoint process death/release and exact recovery measured; no durability weakening."
     },
     "G27": {
       "increments": [
@@ -535,7 +676,10 @@
       "i5_remaining_gate": "Inventory/resources/spatial outside approved slice.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
+      "i7_evidence_refs": [],
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
     },
     "G28": {
       "increments": [
@@ -553,7 +697,13 @@
       "i5_remaining_gate": "Source-combat and private-secret AI holds remain; no AI provider PASS.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PARTIAL_FIRST_SLICE_EVIDENCE",
+      "i7_evidence_refs": [
+        "tests/test_granular_i7.py",
+        "docs/V2-GRANULAR-I7-HANDOFF.md"
+      ],
+      "i7_remaining_gate": "All source-combat/private-secret model holds preserved. No provider/model PASS."
     },
     "G29": {
       "increments": [
@@ -570,7 +720,10 @@
       "i5_remaining_gate": "Portable export/import and I8 migration not authorised.",
       "i6_read_only_status": "PRESERVED_NOT_IN_I6_SCOPE",
       "i6_evidence_refs": [],
-      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained."
+      "i6_remaining_gate": "I6 adds no mutation/migration acceptance; original and I5 dispositions retained.",
+      "i7_status": "PRESERVED_NOT_IN_I7_SCOPE",
+      "i7_evidence_refs": [],
+      "i7_remaining_gate": "Original full-coverage/migration disposition preserved; I7 does not add this module or migration."
     }
   },
   "i4_profile_ref": "I4.PREPARED.hash.v1",
@@ -578,5 +731,8 @@
   "i4_evidence_repository": "Minilaz-code/VadAllFate",
   "i5_profile_ref": "I5.PREPARED.atomic.v1",
   "i5_evidence_scope": "Actual sole-authority atomic commits in new disposable PREPARED fixtures only. Original full acceptance grades and I4 evidence retained; no gameplay migration.",
-  "i6_scope": "Read-only format/capability/legacy/native projection and new disposable sealed fixture inspection only. No ACTIVE binding, migration or typed gameplay."
+  "i6_scope": "Read-only format/capability/legacy/native projection and new disposable sealed fixture inspection only. No ACTIVE binding, migration or typed gameplay.",
+  "i7_scope": "New disposable first-slice reliability only; full endurance and logical branch identity must not be inferred from unit tests. No I8 or activation.",
+  "i7_evidence_repository": "Minilaz-code/VadAllFate",
+  "i7_acceptance_decision": "INCOMPLETE_ENDURANCE_AND_LOGICAL_SAVE_GATES"
 }

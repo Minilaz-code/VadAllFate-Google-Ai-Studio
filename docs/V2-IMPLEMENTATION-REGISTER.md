@@ -777,3 +777,16 @@ Read-only persisted-format resolution and authenticated native legacy/prepared i
 Three real Edge cases passed across isolated prepared and actual archived old-backend runs; 157 frontend tests, TypeScript check and Vite build passed. Final backend: 328 targeted passed; 833 broad passed, 2 skipped in 1063.42s after final integration corrections. Measured capability medians 15-18ms, bounded NPC reads 131-224ms, full audits 20-42 seconds; routine reads never imply whole-world integrity. I5 write/reopen/checkpoint policy, authority, legacy bytes and frozen contracts remain unchanged. Only audit's explicit read-only report option is added.
 
 STOP AFTER I6. No live typed gameplay, ACTIVE binding, existing Save conversion or I8 migration/rollback/export. Antigravity checkouts, production Saves, CP149/CP150 and protected branches remain preserved. Source-combat/private-secret model reasoning holds unchanged; the legacy campaign capacity limit remains unresolved.
+
+
+## I7 extended reliability evidence - 2026-11-01
+
+Review branch `codex/v2-granular-i7`; [handoff](V2-GRANULAR-I7-HANDOFF.md), [readiness/gates](V2-GRANULAR-I7-READINESS.md), additive original G01-G29 evidence in the preserved acceptance map. Overall I7 acceptance remains INCOMPLETE until its sustained target and independent logical Save gates are satisfied; no unit-test-only PASS.
+
+Actual first-slice process-death/fault recovery, whole-file physical backup/divergence, role/source projection, busy locks, pinned WAL readers and interrupted checkpoint tests implemented in new disposable fixtures. A copied file retains Save identity/auth secrets and accepts a matching pre-divergence frame in both files; no independent logical rebinding contract exists. Corrupt staged heads remain explicit review holds, not silently skipped or falsely applied.
+
+Only runtime change removes duplicate decoding of already validated exact bytes inside verify_receipt. Public codec/fingerprint, JCS/hash meaning, full reconstruction, mandatory 100-revision audit gate and reopen/checkpoint checks remain unchanged. Matching profile samples have equal final snapshots; request decodes per 100-receipt audit reduce 200 to 100. Actual 10,000-action-attempt count, p50/p95/p99/max and partial/completion status are in the handoff/evidence. No history trimming or durability weakening. Frontend executable code unchanged; 157 tests/TypeScript/build pass.
+
+STOP after I7 work; no I8 execution, normal typed gateway, production registration, partial-campaign conversion or protected merge. Review logical fork/session lineage, integrity cost/disposition policy and complete I6 owner coverage before any playable copied-Save migration test. Production Saves, CP149/CP150, private source packs and Antigravity checkouts preserved.
+
+I7 final evidence: 360 targeted passed; 865 broad passed, 2 skipped. The 10,000-action attempt committed and recovered 1,401 within its 1,800-second admission budget (1,924.155s including mandatory final verification). Requests 11,465-11,491 bytes; no pending head/history loss. I7 acceptance INCOMPLETE: endurance target and independent logical Save identity remain unfulfilled. All results and precise next approval gates are in the paired handoff.
