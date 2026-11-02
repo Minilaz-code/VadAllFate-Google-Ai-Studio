@@ -92,3 +92,15 @@ Antigravity: fetch both `codex/v2-granular-i7fq` branches and review against the
 | Preservation/privacy | PASS prepublication tree audit — protected hashes/SQL/legacy authority methods unchanged, all original matrix fields and prior numerical evidence retained, original public fixtures/code only. Final commit-message/file-version audit and published refs accompany delivery. |
 
 No 10,000-action rerun, existing Save conversion, production granular activation, Antigravity checkout change, protected merge or I8 execution occurred. I7FQ first-slice composition PASS does not promote full I7 to PASS. Stop at this boundary.
+
+
+## Verified publication
+
+Both branches were published normally and verified through remote refs and GitHub file retrieval on 2026-11-02. All new commit file versions/messages passed the privacy/content audit. No force push or protected merge was used.
+
+| Repository | Immutable implementation / paired handoff commit |
+| --- | --- |
+| Backend | [`8dc1c548d6cdd5cdb93941808bbbce58457ccc6f`](https://github.com/Minilaz-code/VadAllFate/commit/8dc1c548d6cdd5cdb93941808bbbce58457ccc6f) |
+| Frontend documentation | [`8f6f06753f1a3f157369ffd3d16a87ea85f73c32`](https://github.com/Minilaz-code/VadAllFate-Google-Ai-Studio/commit/8f6f06753f1a3f157369ffd3d16a87ea85f73c32) |
+
+The subsequent paired publication-record commit changes this handoff only; tested implementation bytes and numerical evidence are unchanged. Final branch heads are in the delivery and can be checked with `git ls-remote origin refs/heads/codex/v2-granular-i7fq`. Fetch/review these development branches without activating the profile or merging protected branches. STOP after I7FQ; I8 and live migration remain unapproved.
