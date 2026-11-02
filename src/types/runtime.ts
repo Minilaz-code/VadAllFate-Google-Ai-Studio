@@ -173,6 +173,7 @@ export interface BaseCampaignProjection {
   dicePolicy?: DicePolicy;
   characterDicePreferences?: Record<string, DiceMode>;
   pendingAdjudications?: PendingAdjudication[];
+  activeRollRequests?: {requestId:string;actorId:string;formula:string;status:string;allowedModes:string[];reportedFaces?:number[];resolvedOutcome?:{total:number;rollSource:string}}[];
   isServerVerifiedProjection: boolean; // false in demo mode
   projectionGeneratedAtUtc: string;
 }
@@ -266,6 +267,7 @@ export interface DemoSnapshotRef {
 
 export type DemoActionType =
   | 'SET_DICE_POLICY' | 'APPROVE_ADJUDICATION' | 'REJECT_ADJUDICATION'
+  | 'REQUEST_ROLL' | 'SUBMIT_ROLL'
   | 'MOVE_TOKEN'
   | 'ATTACK_ACTION'
   | 'CAST_SPELL'
@@ -313,6 +315,7 @@ export interface DemoStatePatch {
 
 export type DemoCommitStatus =
   | 'COMMITTED'
+  | 'PENDING_HUMAN_DM_APPROVAL'
   | 'REJECTED_STALE_SNAPSHOT'
   | 'REJECTED_VALIDATION_FAILURE'
   | 'REJECTED_NONEXISTENT_ENTITY'

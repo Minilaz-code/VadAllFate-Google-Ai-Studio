@@ -942,24 +942,7 @@ export const TabletopView: React.FC<TabletopViewProps> = ({
       <DiceRollerModal
         isOpen={showDiceModal}
         onClose={() => setShowDiceModal(false)}
-        onApplyRollToGame={(res, label) => {
-          runtimeService.submitActionEnvelope({
-            actionId: `dice-act-${Date.now()}`,
-            actorId: selectedCharacterId || 'char-kaelen',
-            actorRole: userRole,
-            actionType: 'SKILL_CHECK',
-            payload: {
-              skillName: label,
-              roll: res.rolls[0] || res.baseTotal,
-              modifier: res.modifier,
-              total: res.total,
-              reason: res.details,
-            },
-            snapshotRef: { ...currentSnapshot },
-            timestampUtc: new Date().toISOString(),
-            clientNonce: `nonce-${Date.now()}`,
-          });
-        }}
+
       />
 
       <ActionSubmissionModal

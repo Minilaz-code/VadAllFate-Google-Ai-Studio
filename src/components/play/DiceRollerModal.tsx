@@ -54,7 +54,7 @@ export const DiceRollerModal: React.FC<Props> = ({ isOpen, onClose, onApplyRollT
               <Sparkles className="w-4 h-4" />
             </div>
             <h3 className="font-bold font-cinzel text-amber-100 text-sm tracking-wide">
-              Virtual Tabletop Dice Tray
+              Local practice dice tray (not saved)
             </h3>
           </div>
           <button
@@ -66,6 +66,7 @@ export const DiceRollerModal: React.FC<Props> = ({ isOpen, onClose, onApplyRollT
           </button>
         </div>
 
+        <p className="px-5 text-xs text-amber-300">Practice only. Use Campaign dice for saved authoritative rolls.</p>
         {/* Content */}
         <div className="p-5 space-y-4 text-xs text-neutral-200">
           {/* Roll Mode Selectors */}

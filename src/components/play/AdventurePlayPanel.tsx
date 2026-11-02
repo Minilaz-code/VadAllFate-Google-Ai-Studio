@@ -2,7 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {contentRequest,contentMutation} from '../../services/v2ContentClient.ts';
 import {getStoredSession} from '../../services/v2Session.ts';
 
-export function AdventurePlayPanel({role,characters,isLive,isPreview,refreshKey,onAvailable,onRefresh}:{role:string;characters:{id:string;name:string}[];isLive:boolean;isPreview:boolean;refreshKey:string;onAvailable:(active:boolean)=>void;onRefresh:()=>Promise<unknown>}){
+export function AdventurePlayPanel({role,characters,isLive,isPreview,refreshKey,onAvailable,onRefresh,onBusyChange}:{role:string;characters:{id:string;name:string}[];isLive:boolean;isPreview:boolean;refreshKey:string;onAvailable:(active:boolean)=>void;onRefresh:()=>Promise<unknown>;onBusyChange?:(busy:boolean)=>void}){
  const [view,setView]=useState<any>(null);const [characterId,setCharacterId]=useState('char-lyra-01');const [npcId,setNpcId]=useState('');const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');const current=useRef<any>(null);const epoch=useRef(0);const pending=useRef(false);
  const [older,setOlder]=useState<any[]>([]);const [historyCursor,setHistoryCursor]=useState<number|null|undefined>(undefined);
  const campaign=getStoredSession().campaignId;const dm=role==='dm'||role==='dm_host';
@@ -11,13 +11,13 @@ export function AdventurePlayPanel({role,characters,isLive,isPreview,refreshKey,
  useEffect(()=>{if(!pending.current&&isLive)void load().catch(e=>setError(e.message));},[refreshKey]);
  const loadOlder=async()=>{const e=epoch.current;try{const p=await contentRequest(`history?limit=30${historyCursor?`&before_revision=${historyCursor}`:''}`,role);if(e!==epoch.current)return;setOlder(old=>[...old,...p.events]);setHistoryCursor(p.nextBeforeRevision);}catch(e:any){setError(e.message);}};
  const act=async(path:string,payload:any,reply=false)=>{
-  if(pending.current||isPreview)return;pending.current=true;setBusy(true);setError('');setNotice('');
+  if(pending.current||isPreview)return;pending.current=true;setBusy(true);onBusyChange?.(true);setError('');setNotice('');
   try{const result=await contentMutation(path,{characterId:view.characterId,...payload},current.current,role);await load();
    if(reply&&view?.operatingMode!=='human_sovereign'&&!['human_dm_assist','human_primary_codm'].includes(view?.operatingMode)){
     try{await contentMutation('ai-reply',{interactionId:result.receipt.actionId},current.current,role);await load();}catch(e:any){setError(`Your action was committed. NPC reply unavailable: ${e.message}`);}
    }
    await onRefresh();setNotice(result.schedulerNotice?.notice||'Action recorded in the campaign.');
-  }catch(e:any){setError(e.message);await load().catch(()=>{});}finally{pending.current=false;setBusy(false);}
+  }catch(e:any){setError(e.message);await load().catch(()=>{});}finally{pending.current=false;setBusy(false);onBusyChange?.(false);}
  };
  if(!isLive||!view?.available)return null;
  const button='px-3 py-2 rounded border border-neutral-600 bg-neutral-800 disabled:opacity-40';const field='bg-neutral-950 border border-neutral-700 rounded p-2';

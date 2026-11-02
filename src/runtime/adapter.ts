@@ -1121,28 +1121,31 @@ export class PythonRuntimeGateway implements CampaignClient {
         this.lastAuthError = this.lastAuthError || 'Authentication required: no Host-issued session.';
         return false;
       }
+      const hasDm = Boolean(getV2Token('dm'));
+      const hasPlayer = Boolean(getV2Token('player'));
       const [statusResp, dmResp, playerResp] = await Promise.all([
         fetch(`${this.endpoint}/status?campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders()}),
-        fetch(`${this.endpoint}/projection?role=dm_host&campaign_id=${encodeURIComponent(getV2CampaignId())}`, { headers: v2SessionHeaders('dm') }),
-        fetch(`${this.endpoint}/projection?role=player&character_id=char-lyra-01&campaign_id=${encodeURIComponent(getV2CampaignId())}`, {
-          headers: v2SessionHeaders('player'),
-        }),
+        hasDm ? fetch(`${this.endpoint}/projection?role=dm_host&campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders('dm')}) : Promise.resolve(null),
+        hasPlayer ? fetch(`${this.endpoint}/projection?campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders('player')}) : Promise.resolve(null),
       ]);
-      if (!statusResp.ok || !dmResp.ok || !playerResp.ok) {
+      if (!statusResp.ok || (dmResp && !dmResp.ok) || (playerResp && !playerResp.ok) || (!dmResp && !playerResp)) {
+        const refused=[statusResp,dmResp,playerResp].find(r=>r&&!r.ok);
+        this.lastAuthError = refused?.status===429 ? 'Runtime refresh rate-limited; wait before reconnecting.' : `Runtime projection refresh refused (HTTP ${refused?.status || 'unknown'}).`;
         this.connected = false;
         return false;
       }
       const statusData = await statusResp.json();
-      const dmData = await dmResp.json();
-      const playerData = await playerResp.json();
+      if (statusData.isCurrentlyAuthoritative === false || statusData.canAcceptAuthoritativeActions === false) { this.connected=false; return false; }
+      const dmData = dmResp ? await dmResp.json() : null;
+      const playerData = playerResp ? await playerResp.json() : null;
 
       if(generation!==this.connectGeneration)return this.connected;
       this.connected = true;
       this.cachedSnapshot = {
-        campaignId: dmData.campaignId || 'aethelgard-vault-001',
-        commitSequence: statusData.commitSequence || 1,
+        campaignId: (dmData || playerData).campaignId || getV2CampaignId(),
+        commitSequence: statusData.commitSequence ?? 0,
         stateHash: statusData.stateHash || 'LIVE',
-        worldMinute: statusData.worldMinute || 855,
+        worldMinute: statusData.worldMinute ?? 0,
       };
       this.cachedStatus = {
         isConnectedToLivePython: true,
@@ -1204,18 +1207,20 @@ export class PythonRuntimeGateway implements CampaignClient {
   }
 
   public getProjection(role: UserRole, characterId?: string): CampaignProjection {
-    if (!this.connected || !this.cachedDmProjection || !this.cachedPlayerProjection) {
+    if (!this.connected) {
       throw new Error(
         'Cannot retrieve campaign projection: Python R1 runtime gateway is disconnected. Demo fallback is disabled by architecture policy.'
       );
     }
     if (role === 'player' || role === 'observer') {
+      if (!this.cachedPlayerProjection || !getV2Token('player')) throw new Error('Player projection is not authorised for this session.');
       return {
         ...this.cachedPlayerProjection,
-        projectionRole: role,
-        activeCharacterId: characterId,
+        projectionRole: this.cachedPlayerProjection.projectionRole === 'observer' ? 'observer' : role,
+        activeCharacterId: this.cachedPlayerProjection.activeCharacterId,
       };
     }
+    if (!this.cachedDmProjection || !getV2Token('dm')) throw new Error('DM projection is not authorised for this session.');
     return this.cachedDmProjection;
   }
 

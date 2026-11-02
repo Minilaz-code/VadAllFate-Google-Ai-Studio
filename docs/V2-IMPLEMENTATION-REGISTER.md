@@ -729,3 +729,8 @@ PASS: typed R1 quests, belief revision/history, bounded private policies, multi-
 ## 2026-10-31 - Long-campaign reliability disposition
 
 PASS: exact 64 KiB boundary measurement, safe preflight, equivalent UTF-8 state serialization, retained new memories/interactions/story, campaign-scoped commit IDs, private dialogue projections, read-only capacity/history and structured DM authoring. Broad Python 566 passed/2 skipped; API/Harness/recovery 73 passed; final projection/auth/content 45 passed; focused reliability 10 passed; frontend 152 passed with TypeScript/build PASS. Actual original-world and private Waterdeep Qwen/Edge journeys, primary/child restart and timeline isolation passed. BLOCKED: unlimited/genuinely large application campaign play requires the reviewed Save-format migration; 109 sequential configuration commits succeeded and action 110 safely failed at 65,543 bytes. The >1.29 MB scalar proof is experimental feasibility only, not a deployed format. See [reliability handoff](V2-CAMPAIGN-RELIABILITY-HANDOFF.md) and [migration proposal](V2-CAMPAIGN-STORAGE-MIGRATION-PROPOSAL.md). No conversion, frozen contract change or limit increase performed.
+
+
+## 2026-11-02 - PLAY-00 connected application review
+
+PARTIAL: actual legacy Windows/Edge original-world resource/dice journey, full service restart, invited-player isolation and explicit demo verification. Automatic recall and 64 KiB campaign capacity remain HOLD. Narrow gateway/dice/inventory/auth and frontend connection repairs; no granular activation or migration. See [PLAY-00 handoff](PLAY-00-HANDOFF.md). STOP for review.

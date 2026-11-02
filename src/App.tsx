@@ -27,15 +27,18 @@ import { PlayerCharacterView } from './components/player/PlayerCharacterView.tsx
 import { PlayerJournalView } from './components/player/PlayerJournalView.tsx';
 import { FeatureStatusModal } from './components/common/FeatureStatusModal.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
+import {LiveRollPanel} from './components/play/LiveRollPanel.tsx';
 import {AdventurePlayPanel} from './components/play/AdventurePlayPanel.tsx';
 import { ContentPlayPanel } from './components/content/ContentPlayPanel.tsx';
 import { ShieldAlert } from 'lucide-react';
-import { consumeHostKeyFromUrlFragment, hasV2Session } from './services/v2Session.ts';
+import { consumeHostKeyFromUrlFragment, hasV2Session, loginWithInvite, getV2Token } from './services/v2Session.ts';
 import { v2BackendClient } from './services/v2BackendClient.ts';
 import { battlemapSessionManager } from './state/battlemapSession.ts';
 
 export default function App() {
   const [hasAdventure,setHasAdventure]=useState(false);
+  const [inviteInput,setInviteInput]=useState('');
+  const [adventureBusy,setAdventureBusy]=useState(false);
   const [currentTab, setCurrentTab] = useState<ApplicationTab>('play');
   const [identity, setIdentity] = useState<UserIdentityContext>({
     gameRole: 'dm',
@@ -52,6 +55,7 @@ export default function App() {
   useEffect(() => {
     let active = true;
     const initConnection = async () => {
+      if(new URLSearchParams(window.location.search).get('demo')==='1') { clientManager.switchClient(true);setConnectionState('EXPLICIT DEMO');return; }
       const key = consumeHostKeyFromUrlFragment();
       if (key) {
         setConnectionState('CONNECTING');
@@ -112,7 +116,9 @@ export default function App() {
 
   // Resolve effective projection parameters
   const effectiveRole = getEffectiveProjectionRole(identity);
-  const effectiveCharId = getEffectiveCharacterId(identity);
+  const effectiveCharId = !isUsingDemo && connectionStatus.isConnectedToLivePython && (effectiveRole === 'player' || effectiveRole === 'observer')
+    ? (activeClient.getProjection('player') as import('./types/runtime.ts').PlayerSafeCampaignProjection).activeCharacterId || ''
+    : getEffectiveCharacterId(identity);
 
   // Retrieve current role-aware projection safely
   let projection: CampaignProjection | null = null;
@@ -141,8 +147,20 @@ export default function App() {
     v2BackendClient.clearAssetBlobCache();
   }, [effectiveRole, identity.gameRole, projection?.campaignId, identity.assignedCharacterId, identity.previewMode?.isActive]);
 
+  useEffect(()=>{
+    if (!isUsingDemo && connectionStatus.isConnectedToLivePython && !getV2Token('dm')) {
+      const view=activeClient.getProjection('player') as import('./types/runtime.ts').PlayerSafeCampaignProjection;
+      setIdentity(previous=>previous.gameRole===view.projectionRole&&previous.assignedCharacterId===view.activeCharacterId ? previous :
+        {gameRole:view.projectionRole,isHost:false,assignedCharacterId:view.activeCharacterId});
+    }
+  },[isUsingDemo,connectionStatus.isConnectedToLivePython,activeClient]);
+
   // Handlers for switching identity preset
   const handleSelectIdentity = (newIdentity: UserIdentityContext) => {
+    if (!isUsingDemo && newIdentity.gameRole==='dm' && !getV2Token('dm')) return;
+    if (!isUsingDemo && connectionStatus.isConnectedToLivePython && newIdentity.gameRole === 'player') {
+      newIdentity = {...newIdentity, assignedCharacterId:(activeClient.getProjection('player') as import('./types/runtime.ts').PlayerSafeCampaignProjection).activeCharacterId};
+    }
     setIdentity(newIdentity);
     if (newIdentity.gameRole === 'player' || newIdentity.gameRole === 'observer') {
       battlemapSessionManager.clearPrivilegedCache();
@@ -188,6 +206,7 @@ export default function App() {
           const safeTab = sanitizeTabForIdentity(tab, identity);
           setCurrentTab(safeTab);
         }}
+        assignedCharacterName={projection?.characters.find(c=>c.id===effectiveCharId)?.name}
         identity={identity}
         onSelectIdentity={handleSelectIdentity}
         operatingMode={projection ? projection.operatingMode : 'ai_primary_codm'}
@@ -224,7 +243,7 @@ export default function App() {
         }}
         onOpenAudit={() => setIsAuditModalOpen(true)}
         runtimeStatusText={connectionStatus.statusLabel}
-        connectionState={connectionState}
+        connectionState={isUsingDemo?'EXPLICIT DEMO':connectionStatus.isConnectedToLivePython&&projection?'CONNECTED':connectionState==='CONNECTING'?'CONNECTING':hasV2Session()?'DISCONNECTED':'AUTH REQUIRED'}
         isUsingDemoClient={isUsingDemo}
         onToggleClientMode={(useDemo) => {
           if (useDemo) {
@@ -257,6 +276,8 @@ export default function App() {
                 <p className="text-[11px] text-neutral-400">
                   Target: {connectionStatus.endpoint}
                 </p>
+                {gatewayError&&<p role="alert">{gatewayError}</p>}
+                {clientManager.getPythonGateway().lastAuthError&&<p>{clientManager.getPythonGateway().lastAuthError}</p>}
               </div>
             </div>
 
@@ -264,7 +285,7 @@ export default function App() {
               <div className="text-red-400 font-bold">Architecture Safety Enforced:</div>
               <p className="leading-relaxed">
                 The canonical VadAllFate runtime must run as an authoritative Python daemon backed by SQLite.
-                Because the daemon is not currently reachable, live operations are safely locked.
+                No authenticated live projection is available, so live operations are safely locked.
               </p>
               <div className="text-neutral-500 pt-1 border-t border-neutral-900 text-[10px]">
                 * Automatic fallback from production failure to demo commits is disabled by architectural policy.
@@ -272,7 +293,7 @@ export default function App() {
             </div>
 
             <div className="p-3 rounded bg-neutral-950 border border-neutral-800 space-y-2 text-[11px]">
-              <div className="text-amber-300 font-bold">Host authentication required</div>
+              <div className="text-amber-300 font-bold">Host key or player invitation required</div>
               <p className="text-neutral-400">
                 Paste the Host key shown in the launcher window. The role is decided by the backend, never by this page.
               </p>
@@ -297,6 +318,15 @@ export default function App() {
                 >
                   Authenticate
                 </button>
+              </div>
+              <div className="flex gap-2">
+                <input type="password" aria-label="Player invite code" placeholder="Host-issued invite code" value={inviteInput} onChange={e=>setInviteInput(e.target.value)} className="flex-1 px-2 py-1 bg-neutral-900 border border-neutral-700 rounded"/>
+                <button disabled={!inviteInput.trim()} onClick={async()=>{
+                  try { await loginWithInvite(inviteInput.trim());setInviteInput('');
+                    const ok=await clientManager.connectPythonGateway();setConnectionState(ok?'CONNECTED':'DISCONNECTED');
+                    setAuthMessage(ok?null:'Invite accepted, but runtime connection failed.');
+                  } catch(e:any){setAuthMessage(e.message);}
+                }} className="px-3 py-1 bg-emerald-800 rounded">Join with invite</button>
               </div>
               {authMessage && <div className="text-red-400">{authMessage}</div>}
             </div>
@@ -335,10 +365,11 @@ export default function App() {
           fallbackDescription="A display error occurred in this workspace view. The error boundary caught it cleanly without crashing the application. Click below to return to the Play workspace."
         >
           <div className="flex-1 flex flex-col min-h-0">
+            <LiveRollPanel externalBusy={adventureBusy} projection={projection} role={effectiveRole} actorId={effectiveCharId} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onRefresh={()=>clientManager.connectPythonGateway()}/>
             {/* WORKSPACE 1: PLAY (Shared) */}
             {currentTab === 'play' && (
               <>{(!hasAdventure||effectiveRole==='dm_host')&&<ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />}
-              <AdventurePlayPanel refreshKey={JSON.stringify(activeClient.getCurrentSnapshot())} role={effectiveRole} characters={projection.characters} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onAvailable={setHasAdventure} onRefresh={()=>clientManager.connectPythonGateway()}/>
+              <AdventurePlayPanel onBusyChange={setAdventureBusy} refreshKey={JSON.stringify(activeClient.getCurrentSnapshot())} role={effectiveRole} characters={projection.characters} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onAvailable={setHasAdventure} onRefresh={()=>clientManager.connectPythonGateway()}/>
               {!hasAdventure&&<NarrativePlayView
                 characters={projection.characters}
                 npcs={projection.npcs}

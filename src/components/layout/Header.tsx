@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {getV2Token} from '../../services/v2Session.ts';
 import {
   Compass,
   Scroll,
@@ -70,6 +71,7 @@ export const OPERATING_MODES_CONFIG: {
 ];
 
 interface HeaderProps {
+  assignedCharacterName?: string;
   currentTab: ApplicationTab;
   onSelectTab: (tab: ApplicationTab) => void;
   identity: UserIdentityContext;
@@ -90,6 +92,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   currentTab,
+  assignedCharacterName,
   onSelectTab,
   identity,
   onSelectIdentity,
@@ -431,8 +434,8 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'DM (Host)'
                     : 'DM (Guest)'
                   : isHost
-                  ? `Player (Host: ${identity.assignedCharacterId === 'char-lyra' ? 'Lyra' : 'Kaelen'})`
-                  : `Player (${identity.assignedCharacterId === 'char-lyra' ? 'Lyra' : 'Kaelen'})`}
+                  ? `Player (Host: ${assignedCharacterName || (isUsingDemoClient ? (identity.assignedCharacterId === 'char-lyra' ? 'Lyra' : 'Kaelen') : 'assigned character')})`
+                  : `Player (${assignedCharacterName || (isUsingDemoClient ? (identity.assignedCharacterId === 'char-lyra' ? 'Lyra' : 'Kaelen') : 'assigned character')})`}
               </span>
               <ChevronDown className="w-3 h-3 text-neutral-500" />
             </button>
@@ -447,7 +450,8 @@ export const Header: React.FC<HeaderProps> = ({
                   Game Role determines narrative authority. Session hosting determines technical hosting. They are completely independent.
                 </div>
 
-                {DEMO_IDENTITY_PRESETS.map((preset) => {
+                {!isUsingDemoClient&&!getV2Token('dm')&&<p>Your host assigns this session's role and character.</p>}
+                {DEMO_IDENTITY_PRESETS.filter(()=>isUsingDemoClient||Boolean(getV2Token('dm'))).map((preset) => {
                   const isCurrent =
                     identity.gameRole === preset.context.gameRole &&
                     identity.isHost === preset.context.isHost &&
