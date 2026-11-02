@@ -127,3 +127,15 @@ Antigravity should fetch both review branches, inspect the ownership/coverage/po
 | Preservation/privacy | PASS prepublication tree audit: accepted I2-I7FQ evidence, frozen schemas/constraints, protected authority sources and all prior acceptance fields preserved. No private sources, generated databases/tickets/raw responses or credentials in the increment. Final committed-version/message audit accompanies verified publication. |
 
 All final implementation tests completed before publication. Earlier interrupted/pre-hardening runs are not substituted for these final results. No 10,000-action rerun, existing/copy Save conversion, normal granular activation, production policy change, protected merge or Antigravity checkout edit occurred. **I7T-01 first-slice foundation is ready for review; full playable-world/I7 production readiness is incomplete. Please review before any expansion.**
+
+
+## Verified publication
+
+Published normally and verified by remote refs and GitHub file retrieval on 2026-11-02. Every new committed file version/message passed the privacy/content audit; no force push or protected merge was used.
+
+| Repository | Immutable implementation / paired review commit |
+| --- | --- |
+| Backend | [`65303799aa2fbb46ea57750e5615534462ce23f9`](https://github.com/Minilaz-code/VadAllFate/commit/65303799aa2fbb46ea57750e5615534462ce23f9) |
+| Frontend review documents | [`d7d4848f7ff830f8535e25baf8ccc3ecf6ea73b6`](https://github.com/Minilaz-code/VadAllFate-Google-Ai-Studio/commit/d7d4848f7ff830f8535e25baf8ccc3ecf6ea73b6) |
+
+The following paired publication-record commit changes this handoff only; tested runtime bytes and numerical artifacts are unchanged. Final branch heads are in the delivery and available with `git ls-remote origin refs/heads/codex/v2-granular-i7t-01`. **STOP after I7T-01 and review before scope expansion.** Full typed-world coverage, new-domain FQ composition, production policy/activation and I8 remain held.
