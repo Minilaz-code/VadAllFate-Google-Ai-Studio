@@ -34,3 +34,5 @@ Final actual regression counts, numerical proof hashes, preservation/privacy che
 - Accepted I7R numerical evidence, earlier SQL/goldens, all original G01–G29 fields, production startup/legacy semantics and unsupported I6 owners are preserved. The 10,000-action workload was **not rerun**.
 
 Backend proof/verification artifacts: `docs/evidence/V2-GRANULAR-I7F-PROOF.json`, `V2-GRANULAR-I7Q-PROOF.json`, `V2-GRANULAR-I7-FQ-VERIFICATION.json`. Final branch SHAs are in the delivery response and verified remote refs. The Q branch follows the published F increment; review F separately, then the F-to-Q diff. F/Q composition and nested/multi-campaign forks are not claimed; production integrity cost, full typed-owner coverage and I8/live activation remain held.
+
+Exact verified implementation and paired documentation SHAs: [publication record](V2-GRANULAR-I7-FQ-PUBLICATION.md).
