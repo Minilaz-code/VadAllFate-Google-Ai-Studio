@@ -1,0 +1,182 @@
+{
+  "profile": "I7T01.PREPARED.world.v1",
+  "production_active": false,
+  "existing_save_conversion": false,
+  "domains": {
+    "clock_and_schedule": {
+      "status": "IMPLEMENTED_ORIGINAL_FIXTURE_FIRST_SLICE",
+      "tables": [
+        "g_t_clock",
+        "g_t_schedule"
+      ],
+      "operations": [
+        "clock.advance",
+        "clock.pause",
+        "schedule.create",
+        "schedule.fire"
+      ],
+      "reads": [
+        "project",
+        "due"
+      ],
+      "invariants": [
+        "one master minute/elapsed owner",
+        "minute>=3;elapsed=minute-3",
+        "positive advances<=1440 minutes",
+        "pause stops advance",
+        "NOTICE due before exactly-once fire",
+        "indexed stable keyset pagination",
+        "due cursor snapshot hash must equal current head; changed head forces restart"
+      ],
+      "not_implemented": [
+        "calendar/locale/epoch migration",
+        "weather",
+        "recurrence/cancellation",
+        "arbitrary executable events",
+        "production scheduler integration"
+      ]
+    },
+    "character_identity_and_resources": {
+      "status": "IMPLEMENTED_ORIGINAL_FIXTURE_MANUAL_ACCOUNTING",
+      "tables": [
+        "g_i5_actors",
+        "g_t_resources",
+        "g_t_slot",
+        "g_t_condition"
+      ],
+      "operations": [
+        "character.resources",
+        "character.slot",
+        "character.condition"
+      ],
+      "reads": [
+        "character",
+        "project"
+      ],
+      "invariants": [
+        "immutable original actor identity",
+        "DM writes; assigned player reads own resources",
+        "0<=HP<=maxHP; tempHP bounded",
+        "used slots within configured maximum",
+        "explicit boolean condition membership",
+        "no no-op row rewrite"
+      ],
+      "not_implemented": [
+        "character creator/import",
+        "class/level derived capacities",
+        "arbitrary slot/condition creation",
+        "spell resolution/rest/death saves",
+        "inventory/equipment/abilities",
+        "automatic combat effects",
+        "legacy alias reconciliation"
+      ]
+    },
+    "quest_and_objective": {
+      "status": "IMPLEMENTED_ORIGINAL_FIXTURE_TYPED_SIGNALS",
+      "tables": [
+        "g_t_quest",
+        "g_t_objective"
+      ],
+      "operations": [
+        "quest.create",
+        "objective.create",
+        "objective.progress",
+        "quest.complete"
+      ],
+      "reads": [
+        "project"
+      ],
+      "invariants": [
+        "at most32 objectives perquest",
+        "one immutable same-quest predecessor per objective; existing/earlier identities preventcycles",
+        "progress<=target<=1000",
+        "existing memory or fired NOTICE signal",
+        "all objectives complete before quest completion",
+        "party projection excludes DM note",
+        "progress is explicit human-DM adjudication gated by a real signal; no automatic unique occurrence count claim"
+      ],
+      "not_implemented": [
+        "multiple predecessor edges/boolean predicate algebra",
+        "all existing legacy condition variants",
+        "deadline/failure/branching/rewards",
+        "legacy binary objective conversion",
+        "DM UI/production hooks",
+        "per-objective unique signal-consumption ledger / automatic counted occurrences"
+      ]
+    },
+    "npc_and_lazy_context": {
+      "status": "REUSED_I2_SOURCE_AND_PRIVATE_TOLD_CONSEQUENCES_PLUS_INDEXED_THREADS",
+      "tables": [
+        "g_npc_instances",
+        "g_npc_memories",
+        "g_relationships",
+        "g_relationship_evidence",
+        "g_t_conversation"
+      ],
+      "operations": [
+        "npc.memory.record",
+        "relationship.adjust",
+        "conversation.open",
+        "conversation.resolve"
+      ],
+      "reads": [
+        "scene",
+        "relationship",
+        "recall"
+      ],
+      "invariants": [
+        "immutable exact source definition pins",
+        "private unverified TOLD memory only",
+        "relationship change requires current-action matching memory/event",
+        "NPC0 cannot read NPC1 memory",
+        "topic/actor/NPC/status index before recency ordering",
+        "all-NPC hydration and continuous model processing absent"
+      ],
+      "not_implemented": [
+        "production scene membership/placement",
+        "full knowledge/belief/commitment model",
+        "witnessed event generalisation",
+        "Laya ranking",
+        "new Qwen integration",
+        "full personal characterisation/source context"
+      ]
+    }
+  },
+  "ownership": {
+    "seed_roots": 23,
+    "seed_paths": 282,
+    "accounted_rows": 330,
+    "implementation_status_counts": {
+      "PROPOSED_OWNER_NOT_IMPLEMENTED": 307,
+      "PARTIAL_FIXTURE_ACCOUNTING_NO_COMBAT_OR_LEGACY_TRANSFORM": 10,
+      "IMMUTABLE_ORIGINAL_FIXTURE_IDENTITY_ONLY": 2,
+      "PARTIAL_ORIGINAL_QUEST_NOTICE_MEMORY_SIGNAL_ONLY": 7,
+      "FIXTURE_OWNER_IMPLEMENTED_NO_LEGACY_TRANSFORM": 2,
+      "PARTIAL_EXISTING_TELL_AND_RELATIONSHIP_FIXTURE": 2
+    },
+    "recorded_state_patch_sites": 95,
+    "opaque_dynamic_sites": 2
+  },
+  "shared_guarantees": {
+    "sole_writer": "CommitAuthority.granular_fixture existing transaction",
+    "shared_material_publisher": "material_publish.publish extracted from I5 with unchanged legacy IDs/receipts",
+    "canonical_head": "existing g_campaign_heads only",
+    "mutable_storage": "normalised scalar owner rows, not campaign JSON",
+    "hash_profile": "I7T01.PREPARED.hash.v1; frozen I4 meanings unchanged",
+    "staged_request_max_bytes": 65536,
+    "event_payload_max_bytes": 32768,
+    "max_write_targets": 16,
+    "max_dependency_reads": 128,
+    "record_max_bytes": 8192,
+    "full_audit_write_age_limit": 100,
+    "full_audit_policy_changed": false,
+    "replay": "original immutable per-record genesis plus normal RuntimeEvent deltas and retained R1 requests/receipts",
+    "schema": "new typed_world_v1.sql installed only in fresh original fixtures",
+    "production_registry": "unchanged; new manifest/access/registration objects are fixture-only frozen-schema validated"
+  },
+  "composition_gaps": [
+    "New typed world profile is not yet composed with I7FQ child fork/repair namespaces. Existing I7FQ remains preserved/tested separately.",
+    "Full I6 world ownership schemas and migration transforms remain incomplete.",
+    "No ACTIVE format, production launcher/authentication or existing Save migration route."
+  ]
+}

@@ -1,0 +1,307 @@
+{
+  "profile": "I7T01.PREPARED.world.v1",
+  "scope": "ORIGINAL_DISPOSABLE_FIRST_SLICE",
+  "rights": "CC0-1.0",
+  "cases": [
+    {
+      "npcs": 10,
+      "initial_memories": 20,
+      "setup": {
+        "wall_seconds": 0.44470829982310534,
+        "cpu_seconds": 0.328125
+      },
+      "joined_commit": {
+        "wall_seconds": 0.5051442000549287,
+        "cpu_seconds": 0.5
+      },
+      "joined_request_bytes": 24319,
+      "ordinary_resource_request_bytes": [
+        8204,
+        8204,
+        8204
+      ],
+      "ordinary_resource_commit_samples": [
+        {
+          "wall_seconds": 0.35636009997688234,
+          "cpu_seconds": 0.328125
+        },
+        {
+          "wall_seconds": 0.3718044999986887,
+          "cpu_seconds": 0.328125
+        },
+        {
+          "wall_seconds": 0.7376918999943882,
+          "cpu_seconds": 0.328125
+        }
+      ],
+      "ordinary_resource_commit_median_seconds": 0.3718044999986887,
+      "recall": {
+        "wall_seconds": 0.009272799827158451,
+        "cpu_seconds": 0.0
+      },
+      "recall_returned_memories": 1,
+      "sessions_since_original_conversation": 5,
+      "recall_sql_statements": 55,
+      "recall_progress_opcode_quanta_100": 15,
+      "recall_query_plan": [
+        "SEARCH g_t_conversation USING COVERING INDEX g_t_recall (campaign_id=? AND npc_id=? AND actor_id=? AND topic=? AND status=?)"
+      ],
+      "due_query_plan": [
+        "SEARCH g_t_schedule USING COVERING INDEX g_t_due (campaign_id=? AND status=? AND (due,entity_id)>(?,?) AND due<?)"
+      ],
+      "full_audit": {
+        "wall_seconds": 1.2388772999402136,
+        "cpu_seconds": 1.234375
+      },
+      "full_checkpoint": {
+        "wall_seconds": 1.2994181998074055,
+        "cpu_seconds": 1.296875
+      },
+      "mandatory_full_audit_reopen": {
+        "wall_seconds": 1.3255699998699129,
+        "cpu_seconds": 1.3125
+      },
+      "counts": {
+        "g_entities": 43,
+        "g_t_meta": 12,
+        "runtime_events": 20,
+        "causal_ledger": 10,
+        "idempotency_receipts": 10
+      },
+      "sqlite": {
+        "journal_mode": "wal",
+        "foreign_keys": 1,
+        "synchronous": 2,
+        "page_count": 278,
+        "page_size": 4096
+      },
+      "database_bytes_after_checkpoint": 1138688,
+      "wal_bytes_after_reopen": 0,
+      "final_snapshot": {
+        "profile_ref": "I7T01.PREPARED.hash.v1",
+        "activation_state": "PREPARED",
+        "campaign_id": "campaign.original",
+        "logical_save_id": "save.original",
+        "global_revision": 10,
+        "world_minute": 313,
+        "state_content_root": "1a5d278106ed0f22613da9aa727fe82a092620357e7528211ea3e63ef4576cb5",
+        "evidence_root": "83ec1bb3b7ceb31bb4b16b28868f9f964af3c1c3c8fd074acccf74b4216dc300",
+        "evidence_count": 20,
+        "module_ref": "I7T01.PREPARED.world.v1",
+        "module_version": "1.0.0",
+        "hash_profile_version": "1.0.0",
+        "snapshot_hash": "06f8e7ec42786d44e2473410dda4c8d3452fe9d54051b8c2bcada60d48fd81e4"
+      },
+      "real_r1_commit_and_exact_replay": true,
+      "full_replay_and_restart_exact": true,
+      "model_calls": 0,
+      "all_npc_hydration": false
+    },
+    {
+      "npcs": 100,
+      "initial_memories": 1000,
+      "setup": {
+        "wall_seconds": 7.019416800001636,
+        "cpu_seconds": 6.40625
+      },
+      "joined_commit": {
+        "wall_seconds": 0.578680400038138,
+        "cpu_seconds": 0.546875
+      },
+      "joined_request_bytes": 24320,
+      "ordinary_resource_request_bytes": [
+        8205,
+        8205,
+        8205
+      ],
+      "ordinary_resource_commit_samples": [
+        {
+          "wall_seconds": 0.38900880003347993,
+          "cpu_seconds": 0.359375
+        },
+        {
+          "wall_seconds": 0.3899716997984797,
+          "cpu_seconds": 0.375
+        },
+        {
+          "wall_seconds": 0.7419492998160422,
+          "cpu_seconds": 0.359375
+        }
+      ],
+      "ordinary_resource_commit_median_seconds": 0.3899716997984797,
+      "recall": {
+        "wall_seconds": 0.0117294997908175,
+        "cpu_seconds": 0.015625
+      },
+      "recall_returned_memories": 1,
+      "sessions_since_original_conversation": 5,
+      "recall_sql_statements": 91,
+      "recall_progress_opcode_quanta_100": 24,
+      "recall_query_plan": [
+        "SEARCH g_t_conversation USING COVERING INDEX g_t_recall (campaign_id=? AND npc_id=? AND actor_id=? AND topic=? AND status=?)"
+      ],
+      "due_query_plan": [
+        "SEARCH g_t_schedule USING COVERING INDEX g_t_due (campaign_id=? AND status=? AND (due,entity_id)>(?,?) AND due<?)"
+      ],
+      "full_audit": {
+        "wall_seconds": 3.3844701999332756,
+        "cpu_seconds": 3.375
+      },
+      "full_checkpoint": {
+        "wall_seconds": 3.3760255000088364,
+        "cpu_seconds": 3.359375
+      },
+      "mandatory_full_audit_reopen": {
+        "wall_seconds": 3.3506084999535233,
+        "cpu_seconds": 3.34375
+      },
+      "counts": {
+        "g_entities": 1203,
+        "g_t_meta": 12,
+        "runtime_events": 110,
+        "causal_ledger": 10,
+        "idempotency_receipts": 10
+      },
+      "sqlite": {
+        "journal_mode": "wal",
+        "foreign_keys": 1,
+        "synchronous": 2,
+        "page_count": 1123,
+        "page_size": 4096
+      },
+      "database_bytes_after_checkpoint": 4599808,
+      "wal_bytes_after_reopen": 0,
+      "final_snapshot": {
+        "profile_ref": "I7T01.PREPARED.hash.v1",
+        "activation_state": "PREPARED",
+        "campaign_id": "campaign.original",
+        "logical_save_id": "save.original",
+        "global_revision": 10,
+        "world_minute": 313,
+        "state_content_root": "447b01425a43b48e6ba507f0a6a61528345426ff9e448617aeca04831ca81cd9",
+        "evidence_root": "085d10a7744f6df1088ec9f7639c57063d8a1fece1d893ddece377a880ea991a",
+        "evidence_count": 110,
+        "module_ref": "I7T01.PREPARED.world.v1",
+        "module_version": "1.0.0",
+        "hash_profile_version": "1.0.0",
+        "snapshot_hash": "3143303cf31b28819ae002e10086b5d0f54eb076fa264c7ea3245cd20874c68e"
+      },
+      "real_r1_commit_and_exact_replay": true,
+      "full_replay_and_restart_exact": true,
+      "model_calls": 0,
+      "all_npc_hydration": false
+    },
+    {
+      "npcs": 1000,
+      "initial_memories": 3000,
+      "setup": {
+        "wall_seconds": 31.15051280008629,
+        "cpu_seconds": 27.546875
+      },
+      "joined_commit": {
+        "wall_seconds": 1.3629441999364644,
+        "cpu_seconds": 0.5
+      },
+      "joined_request_bytes": 24321,
+      "ordinary_resource_request_bytes": [
+        8206,
+        8206,
+        8206
+      ],
+      "ordinary_resource_commit_samples": [
+        {
+          "wall_seconds": 0.3867796999402344,
+          "cpu_seconds": 0.359375
+        },
+        {
+          "wall_seconds": 0.4062047000043094,
+          "cpu_seconds": 0.375
+        },
+        {
+          "wall_seconds": 0.6726955999620259,
+          "cpu_seconds": 0.359375
+        }
+      ],
+      "ordinary_resource_commit_median_seconds": 0.4062047000043094,
+      "recall": {
+        "wall_seconds": 0.01342050009407103,
+        "cpu_seconds": 0.015625
+      },
+      "recall_returned_memories": 1,
+      "sessions_since_original_conversation": 5,
+      "recall_sql_statements": 100,
+      "recall_progress_opcode_quanta_100": 26,
+      "recall_query_plan": [
+        "SEARCH g_t_conversation USING COVERING INDEX g_t_recall (campaign_id=? AND npc_id=? AND actor_id=? AND topic=? AND status=?)"
+      ],
+      "due_query_plan": [
+        "SEARCH g_t_schedule USING COVERING INDEX g_t_due (campaign_id=? AND status=? AND (due,entity_id)>(?,?) AND due<?)"
+      ],
+      "full_audit": {
+        "wall_seconds": 9.801572599913925,
+        "cpu_seconds": 9.78125
+      },
+      "full_checkpoint": {
+        "wall_seconds": 10.45498239994049,
+        "cpu_seconds": 10.375
+      },
+      "mandatory_full_audit_reopen": {
+        "wall_seconds": 10.442670100135729,
+        "cpu_seconds": 10.421875
+      },
+      "counts": {
+        "g_entities": 5003,
+        "g_t_meta": 12,
+        "runtime_events": 1010,
+        "causal_ledger": 10,
+        "idempotency_receipts": 10
+      },
+      "sqlite": {
+        "journal_mode": "wal",
+        "foreign_keys": 1,
+        "synchronous": 2,
+        "page_count": 4007,
+        "page_size": 4096
+      },
+      "database_bytes_after_checkpoint": 16412672,
+      "wal_bytes_after_reopen": 0,
+      "final_snapshot": {
+        "profile_ref": "I7T01.PREPARED.hash.v1",
+        "activation_state": "PREPARED",
+        "campaign_id": "campaign.original",
+        "logical_save_id": "save.original",
+        "global_revision": 10,
+        "world_minute": 313,
+        "state_content_root": "510b726b3ac955fe725f5403cb806c098088acfd26c6f526a6c698f6d7a0b8ad",
+        "evidence_root": "6d55aad2d110cc69c435e6551c34c25640a2643f14ec3ba6a7b5022e3fb404f4",
+        "evidence_count": 1010,
+        "module_ref": "I7T01.PREPARED.world.v1",
+        "module_version": "1.0.0",
+        "hash_profile_version": "1.0.0",
+        "snapshot_hash": "7813c5dbfd4427e72f2df44d223d5d4bd3b6a92232be85e4818cce050fd3e6e7"
+      },
+      "real_r1_commit_and_exact_replay": true,
+      "full_replay_and_restart_exact": true,
+      "model_calls": 0,
+      "all_npc_hydration": false
+    }
+  ],
+  "integrity_limit_probe": {
+    "untouched_corruption_injected": true,
+    "different_path_still_reads": true,
+    "bounded_read_time": {
+      "wall_seconds": 0.005252700066193938,
+      "cpu_seconds": 0.0
+    },
+    "full_audit_detected": true,
+    "failed_audit_seconds": 0.010573099832981825,
+    "failed_audit_did_not_refresh_eligibility": true,
+    "policy_change_activated": false
+  },
+  "original_10000_action_evidence_rerun": false,
+  "existing_saves_opened_for_conversion": false,
+  "production_registration": false,
+  "production_audit_policy_changed": false,
+  "private_fixture_files_retained_locally": true,
+  "measurements_are_representative_not_endurance_or_production_sla": true
+}

@@ -48,7 +48,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G02": {
       "increments": [
@@ -97,7 +104,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G03": {
       "increments": [
@@ -143,7 +157,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G04": {
       "increments": [
@@ -189,7 +210,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PRESERVED_PRIOR_GATE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G05": {
       "increments": [
@@ -234,7 +262,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G06": {
       "increments": [
@@ -275,7 +310,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G07": {
       "increments": [
@@ -317,7 +359,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G08": {
       "increments": [
@@ -366,7 +415,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G09": {
       "increments": [
@@ -417,7 +473,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G10": {
       "increments": [
@@ -466,7 +529,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G11": {
       "increments": [
@@ -515,7 +585,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G12": {
       "increments": [
@@ -565,7 +642,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G13": {
       "increments": [
@@ -615,7 +699,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G14": {
       "increments": [
@@ -667,7 +758,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "NEW_TYPED_DOMAIN_QUEUE_REPAIR_COMPOSITION_HELD",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G15": {
       "increments": [
@@ -716,7 +814,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G16": {
       "increments": [
@@ -772,7 +877,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G17": {
       "increments": [
@@ -825,7 +937,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G18": {
       "increments": [
@@ -877,7 +996,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G19": {
       "increments": [
@@ -918,7 +1044,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "MIGRATION_NOT_AUTHORISED",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G20": {
       "increments": [
@@ -966,7 +1099,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "NEW_TYPED_PROFILE_OLD_EXECUTABLE_FENCES_NOT_PROMOTED",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G21": {
       "increments": [
@@ -1019,7 +1159,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "NO_NEW_TYPED_UI_OR_PROVIDER_JOURNEY",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G22": {
       "increments": [
@@ -1077,7 +1224,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "NEW_TYPED_DOMAIN_FORK_COMPOSITION_HELD",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G23": {
       "increments": [
@@ -1130,7 +1284,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "SINGLE_CAMPAIGN_FIXTURE_ONLY",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G24": {
       "increments": [
@@ -1184,7 +1345,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G25": {
       "increments": [
@@ -1225,7 +1393,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PLANS_HOMEBREW_TYPED_OWNER_NOT_IMPLEMENTED",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G26": {
       "increments": [
@@ -1275,7 +1450,14 @@
         "tests/test_granular_i7fq.py",
         "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G27": {
       "increments": [
@@ -1318,7 +1500,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "INVENTORY_SPATIAL_TYPED_OWNER_NOT_IMPLEMENTED",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G28": {
       "increments": [
@@ -1363,7 +1552,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "PARTIAL_ORIGINAL_TYPED_DOMAIN_EVIDENCE",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     },
     "G29": {
       "increments": [
@@ -1404,7 +1600,14 @@
       "i7fq_evidence_refs": [
         "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
       ],
-      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held.",
+      "i7t01_status": "EXPORT_IMPORT_NOT_AUTHORISED",
+      "i7t01_evidence_refs": [
+        "docs/V2-GRANULAR-I7T01-HANDOFF.md",
+        "docs/V2-GRANULAR-I7T01-DOMAIN-COVERAGE.json",
+        "tests/test_granular_i7t.py"
+      ],
+      "i7t01_remaining_gate": "Fixture-only clock/resource/quest and existing NPC consequences; full world schemas, I7FQ composition, production integrity and I8 remain held. Original grades/definitions preserved."
     }
   },
   "i4_profile_ref": "I4.PREPARED.hash.v1",
