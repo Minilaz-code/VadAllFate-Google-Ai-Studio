@@ -43,7 +43,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G02": {
       "increments": [
@@ -87,7 +92,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G03": {
       "increments": [
@@ -128,7 +138,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G04": {
       "increments": [
@@ -169,7 +184,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G05": {
       "increments": [
@@ -209,7 +229,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G06": {
       "increments": [
@@ -245,7 +270,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G07": {
       "increments": [
@@ -282,7 +312,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G08": {
       "increments": [
@@ -324,7 +359,14 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G09": {
       "increments": [
@@ -370,7 +412,12 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G10": {
       "increments": [
@@ -412,7 +459,14 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G11": {
       "increments": [
@@ -454,7 +508,14 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G12": {
       "increments": [
@@ -497,7 +558,14 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G13": {
       "increments": [
@@ -540,7 +608,14 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G14": {
       "increments": [
@@ -585,7 +660,14 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G15": {
       "increments": [
@@ -627,7 +709,14 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G16": {
       "increments": [
@@ -676,7 +765,14 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G17": {
       "increments": [
@@ -724,7 +820,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G18": {
       "increments": [
@@ -771,7 +872,12 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G19": {
       "increments": [
@@ -807,7 +913,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G20": {
       "increments": [
@@ -850,7 +961,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G21": {
       "increments": [
@@ -898,7 +1014,12 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G22": {
       "increments": [
@@ -949,7 +1070,14 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G23": {
       "increments": [
@@ -997,7 +1125,12 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G24": {
       "increments": [
@@ -1046,7 +1179,12 @@
         "docs/evidence/V2-GRANULAR-I7Q-PROOF.json",
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report."
+      "i7q_remaining_gate": "Original fresh Q profile only; production schema/auth/migration, oversized archive streaming and F+Q profile composition remain unimplemented/held as described in the consolidated report.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G25": {
       "increments": [
@@ -1082,7 +1220,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G26": {
       "increments": [
@@ -1125,7 +1268,14 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PARTIAL_COMBINED_FIRST_SLICE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md",
+        "tests/test_granular_i7fq.py",
+        "docs/evidence/V2-GRANULAR-I7FQ-PROOF.json"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G27": {
       "increments": [
@@ -1163,7 +1313,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G28": {
       "increments": [
@@ -1203,7 +1358,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     },
     "G29": {
       "increments": [
@@ -1239,7 +1399,12 @@
       "i7q_evidence_refs": [
         "docs/V2-GRANULAR-I7Q-HANDOFF.md"
       ],
-      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained."
+      "i7q_remaining_gate": "No production/full-world or migration promotion; prior grades retained.",
+      "i7fq_status": "PRESERVED_PRIOR_GATE",
+      "i7fq_evidence_refs": [
+        "docs/V2-GRANULAR-I7FQ-HANDOFF.md"
+      ],
+      "i7fq_remaining_gate": "Disabled single-campaign two-segment original fixtures only; complete typed owners, production integration/integrity cost and I8 remain held."
     }
   },
   "i4_profile_ref": "I4.PREPARED.hash.v1",
