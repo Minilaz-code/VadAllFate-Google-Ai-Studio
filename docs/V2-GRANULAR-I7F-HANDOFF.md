@@ -68,3 +68,5 @@ Final targeted/broad results and publication checks are recorded in the verifica
 ## Verification update
 
 Final fork cases: **16 passed in 76.80s**, including nine genuine process-death windows and the unchanged 100-revision full-audit gate. Targeted I2-I7R/R1/JCS suite: **408 passed in 353.28s**; the bounded-manifest/realm checks received the final 16-case follow-up. Standalone original proof: PASS_FIRST_SLICE_FORK. Privacy/content review passed; original matrix fields, frozen SQL assets and all accepted I7R numerical evidence are preserved. Broad consolidated regression follows I7Q and is not claimed in this increment. See `docs/evidence/V2-GRANULAR-I7F-VERIFICATION.json`.
+
+Consolidated follow-up (2026-11-02): after I7Q, 435 targeted and 940 broad tests passed (two existing skips), including all F cases. See the separately published I7Q branch and V2-GRANULAR-I7-FQ-READINESS.md; this is the combined run, not an invented F-only broad count.
