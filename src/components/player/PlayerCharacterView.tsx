@@ -18,6 +18,7 @@ import { calculateAbilityModifier } from '../../runtime/rules.ts';
 import { runtimeService } from '../../runtime/adapter.ts';
 
 interface PlayerCharacterViewProps {
+  readOnly?: boolean;
   characters: CharacterSheet[];
   selectedCharacterId?: string;
   onSelectCharacter?: (id: string) => void;
@@ -25,6 +26,7 @@ interface PlayerCharacterViewProps {
 }
 
 export const PlayerCharacterView: React.FC<PlayerCharacterViewProps> = ({
+  readOnly=false,
   characters,
   selectedCharacterId,
   onSelectCharacter,
@@ -44,6 +46,7 @@ export const PlayerCharacterView: React.FC<PlayerCharacterViewProps> = ({
   }
 
   const dispatchCharAction = async (actionType: DemoActionType, payload: Record<string, any> = {}) => {
+    if(readOnly){setLastActionBanner('Read-only projection; no action submitted.');return;}
     try {
       const res = await runtimeService.submitAction({
         actionId: `act-char-${Date.now()}`,
@@ -389,6 +392,7 @@ export const PlayerCharacterView: React.FC<PlayerCharacterViewProps> = ({
               <Backpack className="w-4 h-4 text-amber-400" />
               <span>Backpack & Equipment</span>
             </h3>
+            {((activeChar as any).supportedConsumables||[]).map((item:any)=><div key={item.id} className="border border-emerald-800 rounded p-3"><strong>{item.name}</strong><p>{item.effect}</p><p>Qty: {item.quantity}</p><button disabled={item.quantity<=0} onClick={()=>void dispatchCharAction('USE_ITEM',{itemId:item.id})}>Use supported consumable</button><p>Only the accepted accounting effect is enabled; unprovided item fields remain unavailable.</p></div>)}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {(activeChar.inventory || []).map((item) => (
                 <div

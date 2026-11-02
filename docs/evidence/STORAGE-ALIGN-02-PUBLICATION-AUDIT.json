@@ -1,0 +1,35 @@
+{
+  "milestone": "STORAGE-ALIGN-02",
+  "base": "41d8ceb80ee68ccdd5f1b46d199f67480c9e5d82",
+  "scope": "All added/modified outgoing blobs; unchanged published ancestors retained. Commit messages checked before push.",
+  "result": "PASS",
+  "checks": [
+    "No personal absolute paths, secrets or credential literals found",
+    "No private source prose, images, SQLite databases or proof responses staged",
+    "Public test source is original CC0 creator fixture; private actual-source evidence metadata only",
+    "No protected R1 runtime/schema/codec/hash changes",
+    "No migration or existing Save conversion"
+  ],
+  "fileSha256": {
+    "docs/STORAGE-ALIGN-02-HANDOFF.md": "ac02b2fba5c07e7463fae69bc71cdd80fa46096fb7ad06559fe57e4f52911dc6",
+    "docs/V2-IMPLEMENTATION-REGISTER.md": "0b543de772d3e4e823da35f9b6ecf0e302129711e4f424feed195fa781f55506",
+    "e2e/storage-align-02.spec.ts": "248d9f42d94d6eacf4fbab6f4cfa5a9d9f95e574049a47bd9fbb9a9934a210e7",
+    "src/App.tsx": "3c20d46b729de6d4b65abc6c0aa3f3510a362212f0b09028ff87a8e43dd5ce4b",
+    "src/components/play/AdventurePlayPanel.tsx": "d6760b1180280bf5dd481789f83266a1b4a6c083a6657e81f64a57151b63529e",
+    "src/components/player/PlayerCharacterView.tsx": "215712cbcbc950bd106061b01542268519e7ef145dd82342568c0efbb2154e09",
+    "src/services/storageAlignmentSelection.test.ts": "2330dbe396440f23c002b0cfe58bbe596b8a290a49a0491b6266b3eb7ed70644",
+    "src/services/v2Session.ts": "d1df6b104c9751670a0344925af394592529de6261fb5883c1e469359ca30f97"
+  },
+  "protectedBackendFilesUnchanged": [
+    "commit_authority.py",
+    "store.py",
+    "contracts.py",
+    "storage_align/runtime.py",
+    "storage_align/model.py",
+    "storage_align/schema.sql",
+    "staged_request_codec.py",
+    "input_admission.py",
+    "jcs_hash.py",
+    "granular/hash_profile.py"
+  ]
+}

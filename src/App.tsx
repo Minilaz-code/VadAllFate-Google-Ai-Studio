@@ -31,7 +31,7 @@ import {LiveRollPanel} from './components/play/LiveRollPanel.tsx';
 import {AdventurePlayPanel} from './components/play/AdventurePlayPanel.tsx';
 import { ContentPlayPanel } from './components/content/ContentPlayPanel.tsx';
 import { ShieldAlert } from 'lucide-react';
-import { consumeHostKeyFromUrlFragment, hasV2Session, loginWithInvite, getV2Token } from './services/v2Session.ts';
+import { consumeHostKeyFromUrlFragment, hasV2Session, loginWithInvite, getV2Token,isLayeredDevelopment,getDevelopmentSave,selectDevelopmentSave } from './services/v2Session.ts';
 import { v2BackendClient } from './services/v2BackendClient.ts';
 import { battlemapSessionManager } from './state/battlemapSession.ts';
 
@@ -203,6 +203,7 @@ export default function App() {
       <Header
         currentTab={currentTab}
         onSelectTab={(tab) => {
+          if(isLayeredDevelopment()&&!['play','character','journal'].includes(tab)){window.alert('UNSUPPORTED: this domain is not registered for the layered development Save.');return;}
           const safeTab = sanitizeTabForIdentity(tab, identity);
           setCurrentTab(safeTab);
         }}
@@ -210,7 +211,7 @@ export default function App() {
         identity={identity}
         onSelectIdentity={handleSelectIdentity}
         operatingMode={projection ? projection.operatingMode : 'ai_primary_codm'}
-        onSelectOperatingMode={(mode) => activeClient.setOperatingMode(mode)}
+        onSelectOperatingMode={(mode) => {if(isLayeredDevelopment()){window.alert('UNSUPPORTED: AI/DM mode changes are not registered for this typed Save.');return;}activeClient.setOperatingMode(mode);}}
         worldClock={
           projection
             ? projection.worldClock
@@ -237,6 +238,7 @@ export default function App() {
           }
         }}
         onTogglePauseClock={() => {
+          if(isLayeredDevelopment()){window.alert('UNSUPPORTED: clock pause is not registered for this typed Save.');return;}
           if (canAccessDmWorkspaces(identity)) {
             activeClient.toggleClockPause();
           }
@@ -368,9 +370,9 @@ export default function App() {
             <LiveRollPanel externalBusy={adventureBusy} projection={projection} role={effectiveRole} actorId={effectiveCharId} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onRefresh={()=>clientManager.connectPythonGateway()}/>
             {/* WORKSPACE 1: PLAY (Shared) */}
             {currentTab === 'play' && (
-              <>{(!hasAdventure||effectiveRole==='dm_host')&&<ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />}
+              <>{(!hasAdventure||effectiveRole==='dm_host')&&!isLayeredDevelopment()&&<ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />}
               <AdventurePlayPanel onBusyChange={setAdventureBusy} refreshKey={JSON.stringify(activeClient.getCurrentSnapshot())} role={effectiveRole} characters={projection.characters} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onAvailable={setHasAdventure} onRefresh={()=>clientManager.connectPythonGateway()}/>
-              {!hasAdventure&&<NarrativePlayView
+              {!hasAdventure&&!isLayeredDevelopment()&&<NarrativePlayView
                 characters={projection.characters}
                 npcs={projection.npcs}
                 quests={projection.quests}
@@ -497,6 +499,7 @@ export default function App() {
             {/* WORKSPACE 5: PLAYER CHARACTER (Player View) */}
             {currentTab === 'character' && (
               <PlayerCharacterView
+                readOnly={Boolean(identity.previewMode?.isActive)||effectiveRole==='observer'}
                 characters={projection.characters}
                 selectedCharacterId={effectiveCharId}
                 onSelectCharacter={(id) => {
@@ -523,6 +526,7 @@ export default function App() {
         </ErrorBoundary>
       )}
 
+      {isLayeredDevelopment()&&<aside className="px-4 py-2 text-sm border-t border-amber-900">Layered source Save <select aria-label="Layered development Save" value={getDevelopmentSave()} onChange={e=>{selectDevelopmentSave(e.target.value);window.location.reload();}} className="bg-neutral-900"><option value="a">A</option><option value="b">B</option></select> · Supported: HP/balm, source NPC testimony, clock and controlled objective. Other writes, including dice and combat, return unsupported.</aside>}
       {/* Architectural Status Register Audit Modal */}
       <FeatureStatusModal
         isOpen={isAuditModalOpen}

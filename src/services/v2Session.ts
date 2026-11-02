@@ -28,6 +28,16 @@ function apiBase(): string {
   return typeof envUrl === 'string' && envUrl ? envUrl.replace(/\/$/, '') : 'http://127.0.0.1:8765/api/v2';
 }
 
+export function isLayeredDevelopment():boolean {
+  return typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('storageAlign')==='2';
+}
+export function getDevelopmentSave():string{return storage()?.getItem('vadallfate.v2.developmentSave')==='b'?'b':'a';}
+export function selectDevelopmentSave(save:string):void {
+  if(!isLayeredDevelopment()||!['a','b'].includes(save))throw new Error('Explicit development format selection required');
+  clearV2Session();storage()?.setItem('vadallfate.v2.developmentSave',save);
+}
+function developmentHeaders():Record<string,string>{return isLayeredDevelopment()?{'X-VadAllFate-Development-Save':getDevelopmentSave()}:{};}
+
 function storage(): Storage | null {
   try {
     return typeof sessionStorage !== 'undefined' ? sessionStorage : null;
@@ -75,13 +85,13 @@ export function getV2Token(role?: string): string | undefined {
 
 export function v2SessionHeaders(role?: string): Record<string, string> {
   const token = getV2Token(role);
-  return token ? { 'X-VadAllFate-Session-Token': token } : {};
+  return {...developmentHeaders(),...(token ? { 'X-VadAllFate-Session-Token': token } : {})};
 }
 
 async function postSession(body: Record<string, unknown>): Promise<any> {
   const resp = await fetch(`${apiBase()}/auth/session`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json',...developmentHeaders() },
     body: JSON.stringify(body),
   });
   const data = await resp.json().catch(() => ({}));

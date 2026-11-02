@@ -741,3 +741,8 @@ PARTIAL: actual legacy Windows/Edge original-world resource/dice journey, full s
 Controlled implementation: five read-only pinned SQLite baselines plus one R1 Save delta store; exact precedence/facet secrecy, bounded typed property updates, native receipts/recovery, independent fresh Save outcomes and explicit audit policy without a 100-revision foreground gate. Actual Windows/Edge journey and full application restart verified. No old Save conversion, production registration/audit change or complete fixture branch merge. See [paired handoff](STORAGE-ALIGN-01-HANDOFF.md). Production coverage remains held; STOP for acceptance.
 
 Final STORAGE-ALIGN frontend: 154 tests/TypeScript/build PASS; actual Edge journey 4.6s and full restart 2.5s. Paired backend 614 passed/2 skipped; 27 scoped cases, 11 process deaths. Review only; no migration or production activation.
+
+
+## STORAGE-ALIGN-02 — controlled source/application convergence
+
+Paired `codex/v2-storage-align-02`; see [acceptance handoff](STORAGE-ALIGN-02-HANDOFF.md). Existing App uses pinned private source publication and native R1 Save deltas for HP/balm, authorised NPC testimony/trust, minute and original objective. Actual headed Windows/Edge journey, separate player secrecy, divergent Saves and full process restart verified. No production registration, migration or new mechanics. Original ownership statuses retained. Stop for acceptance.
