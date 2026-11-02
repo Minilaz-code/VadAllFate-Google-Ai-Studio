@@ -734,3 +734,8 @@ PASS: exact 64 KiB boundary measurement, safe preflight, equivalent UTF-8 state 
 ## 2026-11-02 - PLAY-00 connected application review
 
 PARTIAL: actual legacy Windows/Edge original-world resource/dice journey, full service restart, invited-player isolation and explicit demo verification. Automatic recall and 64 KiB campaign capacity remain HOLD. Narrow gateway/dice/inventory/auth and frontend connection repairs; no granular activation or migration. See [PLAY-00 handoff](PLAY-00-HANDOFF.md). STOP for review.
+
+
+## 2026-11-02 - STORAGE-ALIGN-01 layered disposable application
+
+Controlled implementation: five read-only pinned SQLite baselines plus one R1 Save delta store; exact precedence/facet secrecy, bounded typed property updates, native receipts/recovery, independent fresh Save outcomes and explicit audit policy without a 100-revision foreground gate. Actual Windows/Edge journey and full application restart verified. No old Save conversion, production registration/audit change or complete fixture branch merge. See [paired handoff](STORAGE-ALIGN-01-HANDOFF.md). Production coverage remains held; STOP for acceptance.
