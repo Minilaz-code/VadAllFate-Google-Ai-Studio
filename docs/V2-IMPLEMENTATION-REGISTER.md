@@ -836,3 +836,10 @@ Final test counts, representative 10/100/1,000-NPC measurements and privacy/publ
 Frontend executable source is unchanged; 157 tests, TypeScript and production build passed with existing native-config/large-chunk warnings. Paired review documents only.
 
 I7T-01 final verification: 53 domain tests (24 genuine process-death cases); broad 1,025 passed, 2 baseline skips; frontend 157/TypeScript/build passed. Three original population proofs passed with ten real commits each, full audit/checkpoint/reopen and exact retry. Direct R1 snapshot/target/mount identities checked. Scope remains PREPARED first-slice; 307 ownership rows still proposed, new-domain FQ composition and I8/live policy/activation held. STOP for review.
+
+
+## I7T-02 — controlled typed-world/FQ fixture integration
+
+Paired review branch `codex/v2-granular-i7t-02`; see `docs/V2-GRANULAR-I7T02-HANDOFF.md`. Backend combines existing first-slice typed owners with shared authenticated fork and child queue repair/quarantine protocols, one existing R1 writer/head, full independent replay and unchanged full-audit eligibility. Connected original fixtures cover divergent timelines, source-bound NPC recall, resources/time/quest consequences, real process death and restart. Additive 330-row/29-case evidence retains all prior statuses and 307 proposed-row holds. Frontend is documentation-only; existing gameplay/auth/UI/Save paths remain unchanged.
+
+No existing Save/conversion, I8, production activation, integrity-policy amendment, frozen schema/hash rewrite, second authority, protected merge or original Antigravity checkout change. Numerical measurements, final test results and paired publication SHAs follow in the handoff. STOP after I7T-02 for separate review.
