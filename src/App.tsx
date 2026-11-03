@@ -1,3 +1,4 @@
+import {CombatTracker} from './components/play/CombatTracker.tsx';
 /**
  * VadAllFate (Ada V2) — Persistent AI Tabletop RPG Platform
  * Master Application Shell (AIUI-HOTFIX-001 Role Separation & Independent Hosting)
@@ -372,6 +373,7 @@ export default function App() {
             {currentTab === 'play' && (
               <>{(!hasAdventure||effectiveRole==='dm_host')&&!isLayeredDevelopment()&&<ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />}
               <AdventurePlayPanel onBusyChange={setAdventureBusy} refreshKey={JSON.stringify(activeClient.getCurrentSnapshot())} role={effectiveRole} characters={projection.characters} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onAvailable={setHasAdventure} onRefresh={()=>clientManager.connectPythonGateway()}/>
+              {(projection as any).storageFormat==='STORAGE-ALIGN-04'&&projection.combatState&&<CombatTracker supportedProfile readOnly={Boolean(identity.previewMode?.isActive)||effectiveRole==='observer'} combatState={projection.combatState} characters={projection.characters} npcs={projection.npcs} userRole={effectiveRole} activeCharacterId={effectiveCharId} currentSnapshot={activeClient.getCurrentSnapshot()} onOpenCharacterSheet={()=>setCurrentTab('character')} onSubmitAction={async action=>{const result=await activeClient.submitAction(action);await clientManager.connectPythonGateway();return result;}}/>}
               {!hasAdventure&&!isLayeredDevelopment()&&<NarrativePlayView
                 characters={projection.characters}
                 npcs={projection.npcs}
@@ -526,7 +528,7 @@ export default function App() {
         </ErrorBoundary>
       )}
 
-      {isLayeredDevelopment()&&<aside className="px-4 py-2 text-sm border-t border-amber-900">Layered source Save <select aria-label="Layered development Save" value={getDevelopmentSave()} onChange={e=>{selectDevelopmentSave(e.target.value);window.location.reload();}} className="bg-neutral-900"><option value="a">A</option><option value="b">B</option></select> · Supported: HP/balm, source NPC testimony, clock and controlled objective. Other writes, including dice and combat, return unsupported.</aside>}
+      {isLayeredDevelopment()&&<aside className="px-4 py-2 text-sm border-t border-amber-900">Layered source Save <select aria-label="Layered development Save" value={getDevelopmentSave()} onChange={e=>{selectDevelopmentSave(e.target.value);window.location.reload();}} className="bg-neutral-900"><option value="a">A</option><option value="b">B</option></select> · {(projection as any)?.storageFormat==='STORAGE-ALIGN-04'?'Supported: dynamic NPCs, bounded catalogue/history, owned balm/transfer, d20 rolls and approved original encounter. Other mechanics remain unsupported.':'Supported: HP/balm, source NPC testimony, clock and controlled objective. Other writes, including dice and combat, return unsupported.'}</aside>}
       {/* Architectural Status Register Audit Modal */}
       <FeatureStatusModal
         isOpen={isAuditModalOpen}

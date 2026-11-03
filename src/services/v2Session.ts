@@ -1,3 +1,4 @@
+import {controlledGatewayFetch} from './controlledGatewayFetch.ts';
 /**
  * V2 session credentials (Host-controlled authentication).
  *
@@ -89,7 +90,7 @@ export function v2SessionHeaders(role?: string): Record<string, string> {
 }
 
 async function postSession(body: Record<string, unknown>): Promise<any> {
-  const resp = await fetch(`${apiBase()}/auth/session`, {
+  const resp = await controlledGatewayFetch(`${apiBase()}/auth/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json',...developmentHeaders() },
     body: JSON.stringify(body),
@@ -108,7 +109,7 @@ export async function loginWithHostKey(
 ): Promise<V2SessionTokens> {
   const dm = await postSession({ bootstrapKey, role: 'dm_host', actorId: 'dm-1', isHost: true });
   if(isLayeredDevelopment()){
-    const response=await fetch(`${apiBase()}/projection`,{headers:{...developmentHeaders(),'X-VadAllFate-Session-Token':dm.sessionToken}});
+    const response=await controlledGatewayFetch(`${apiBase()}/projection`,{headers:{...developmentHeaders(),'X-VadAllFate-Session-Token':dm.sessionToken}});
     if(!response.ok)throw new Error('Authorised development character discovery failed');
     const view=await response.json();
     if(!view.characters?.some((c:any)=>c.id===playerCharacterId))playerCharacterId=view.characters?.[0]?.id;
@@ -164,12 +165,12 @@ export async function logoutV2Session(): Promise<void> {
   for (const token of [t.dm, t.player]) {
     if (!token) continue;
     try {
-      const verify = await fetch(`${apiBase()}/auth/verify`, {
+      const verify = await controlledGatewayFetch(`${apiBase()}/auth/verify`, {
         headers: { 'X-VadAllFate-Session-Token': token },
       });
       if (!verify.ok) continue;
       const { sessionId } = await verify.json();
-      await fetch(`${apiBase()}/auth/revoke`, {
+      await controlledGatewayFetch(`${apiBase()}/auth/revoke`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-VadAllFate-Session-Token': token },
         body: JSON.stringify({ targetSessionId: sessionId }),
@@ -188,7 +189,7 @@ export async function provisionInvite(input: {
   displayName?: string;
   assignedCharacterId?: string;
 }): Promise<{ inviteCode: string }> {
-  const resp = await fetch(`${apiBase()}/auth/provision`, {
+  const resp = await controlledGatewayFetch(`${apiBase()}/auth/provision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...v2SessionHeaders('dm') },
     body: JSON.stringify(input),

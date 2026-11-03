@@ -1,0 +1,26 @@
+{
+  "baseline": "82116ba0c5233eae6453aac8ef6056b71295ff2a",
+  "audit": "PASS",
+  "scope": "All added/modified outgoing source, tests, public original fixtures and documentation; committed blob audit repeated after commit. Existing accepted history retained.",
+  "checks": {
+    "personalPaths": false,
+    "credentials": false,
+    "privateDatabasesImagesResponses": false,
+    "restrictedContent": "No restricted source content or artwork; original CC0 synthetic fixtures only",
+    "protectedFilesUnchanged": {},
+    "commitAuthority": "Four internal calls pass existing private context; no public contract change"
+  },
+  "sha256": {
+    "docs/STORAGE-ALIGN-04-HANDOFF.md": "4dc17b0aa6cbf4a16c51e1665da7645e0daaf90a469c338783ac71ac8d68e7a1",
+    "docs/V2-IMPLEMENTATION-REGISTER.md": "af39e4951b17c189cefad65c1b31156727f6a28023eeed89dd36c35966d0e90e",
+    "e2e/storage-align-04.spec.ts": "9e208a1560d4d6bdeb6639581779e7c1fcfca2fc5b982d5e10b44bee3207183d",
+    "src/App.tsx": "66c2ec0b89d5369f1e01400f15e3b2c9d1c2257b3692510021e51fd0c553cd47",
+    "src/components/play/AdventurePlayPanel.tsx": "75573f2ecc10eaee02093a6c77b6414ecec0c7c43256db302f030617d92f684d",
+    "src/components/play/CombatTracker.tsx": "a0ea9c0192774f1a3e315a1051abc8af1bff86ee5489b444263f3a82381748f2",
+    "src/runtime/adapter.ts": "d6fdc3b700b7ab0151a9361bd8efeddb23642e07503c029c1860580c17f5e862",
+    "src/services/controlledGatewayFetch.test.ts": "0befc3cb6f6b63ef8493f11212d44869ba737c06f971d16bc1d936d083dff676",
+    "src/services/controlledGatewayFetch.ts": "df61ff0957d704c4186f30f19506c96cdce13e478456c10ea3cd70c9bec463ee",
+    "src/services/v2ContentClient.ts": "89ed2301338ebbe2771b530f2641dfe247a00ed4cffd39fc17c4f41ecea1c266",
+    "src/services/v2Session.ts": "54fc830d24698cc70aebcf3b5d4bb30208395c49730235cee451b6b52ec34d6b"
+  }
+}

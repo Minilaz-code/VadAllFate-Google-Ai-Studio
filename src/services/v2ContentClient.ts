@@ -1,3 +1,4 @@
+import {controlledGatewayFetch} from './controlledGatewayFetch.ts';
 import { v2SessionHeaders, getStoredSession } from './v2Session.ts';
 import { resolveV2ApiBaseUrl } from './v2BackendClient.ts';
 export interface ContentPin { pack_id: string; pack_version: string; manifest_sha256: string }
@@ -22,7 +23,7 @@ export function selectContentClosure(packs: ContentPack[], roots: ContentPin[]):
 export async function contentRequest(path:string, role:string, body?:unknown):Promise<any> {
   const campaign=getStoredSession().campaignId || 'aethelgard-vault-001';
   const sep=path.includes('?')?'&':'?';
-  const response=await fetch(`${resolveV2ApiBaseUrl()}/content/${path}${sep}campaign_id=${encodeURIComponent(campaign)}`,{
+  const response=await controlledGatewayFetch(`${resolveV2ApiBaseUrl()}/content/${path}${sep}campaign_id=${encodeURIComponent(campaign)}`,{
     method:body===undefined?'GET':'POST',headers:{...v2SessionHeaders(role),...(body===undefined?{}:{'Content-Type':'application/json'})},
     body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});
   const data=await response.json();

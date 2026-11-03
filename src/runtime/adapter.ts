@@ -1,3 +1,4 @@
+import {controlledGatewayFetch} from '../services/controlledGatewayFetch.ts';
 /**
  * VadAllFate - Campaign Client & Runtime Boundary Architecture (AIUI-CP001)
  *
@@ -1124,9 +1125,9 @@ export class PythonRuntimeGateway implements CampaignClient {
       const hasDm = Boolean(getV2Token('dm'));
       const hasPlayer = Boolean(getV2Token('player'));
       const [statusResp, dmResp, playerResp] = await Promise.all([
-        fetch(`${this.endpoint}/status?campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders()}),
-        hasDm ? fetch(`${this.endpoint}/projection?role=dm_host&campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders('dm')}) : Promise.resolve(null),
-        hasPlayer ? fetch(`${this.endpoint}/projection?campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders('player')}) : Promise.resolve(null),
+        controlledGatewayFetch(`${this.endpoint}/status?campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders()}),
+        hasDm ? controlledGatewayFetch(`${this.endpoint}/projection?role=dm_host&campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders('dm')}) : Promise.resolve(null),
+        hasPlayer ? controlledGatewayFetch(`${this.endpoint}/projection?campaign_id=${encodeURIComponent(getV2CampaignId())}`, {headers:v2SessionHeaders('player')}) : Promise.resolve(null),
       ]);
       if (!statusResp.ok || (dmResp && !dmResp.ok) || (playerResp && !playerResp.ok) || (!dmResp && !playerResp)) {
         const refused=[statusResp,dmResp,playerResp].find(r=>r&&!r.ok);
@@ -1242,7 +1243,7 @@ export class PythonRuntimeGateway implements CampaignClient {
       'Content-Type': 'application/json',
       ...v2SessionHeaders(envelope.actorRole),
     };
-    const resp = await fetch(`${this.endpoint}/actions`, {
+    const resp = await controlledGatewayFetch(`${this.endpoint}/actions`, {
       method: 'POST',
       headers,
       body: JSON.stringify(envelope),

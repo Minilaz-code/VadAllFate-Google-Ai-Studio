@@ -33,6 +33,8 @@ import type {
 } from '../../types/runtime.ts';
 
 interface CombatTrackerProps {
+  supportedProfile?: boolean;
+  readOnly?: boolean;
   combatState: CombatTurnState;
   characters: CharacterSheet[];
   npcs: (NonPlayerCharacter | PlayerSafeNpc)[];
@@ -63,6 +65,8 @@ const COMMON_CONDITIONS = [
 ];
 
 export const CombatTracker: React.FC<CombatTrackerProps> = ({
+  supportedProfile=false,
+  readOnly=false,
   combatState,
   characters,
   npcs,
@@ -85,6 +89,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   const [selectedSpellLevel, setSelectedSpellLevel] = useState<number>(1);
   const [customValue, setCustomValue] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profileNotice,setProfileNotice]=useState('');
 
   // Milestone 12B: Physical vs Server Digital Dice states
   const [diceMode, setDiceMode] = useState<'SERVER_DIGITAL' | 'PLAYER_PHYSICAL'>('SERVER_DIGITAL');
@@ -300,6 +305,15 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
     setTargetId('');
   };
 
+  if(supportedProfile){
+    const send=async(actionType:any,payload:any)=>{if(readOnly)return;setIsSubmitting(true);setProfileNotice('');try{const id=crypto.randomUUID();await onSubmitAction({actionId:id,clientNonce:id,actorId:isDm?'dm-1':activeCharacterId!,actorRole:userRole,actionType,payload,snapshotRef:currentSnapshot,timestampUtc:new Date().toISOString()});setProfileNotice('R1 encounter action committed.');}catch(e:any){setProfileNotice(e.message);}finally{setIsSubmitting(false);}};
+    const active=combatState.combatants[combatState.activeTurnIndex];
+    return <section aria-label="Original encounter" className="border border-red-900 p-3 shrink-0"><h3>Original encounter · authoritative bounded training rules</h3><p>Only an explicitly approved original template is legal. No SRD monster or spatial mechanics.</p>{profileNotice&&<p role="status">{profileNotice}</p>}<fieldset disabled={isSubmitting||readOnly} className="flex flex-wrap gap-2">
+    {!combatState.isActive&&isDm&&<><select aria-label="Original opponent" value={selectedCombatantId||''} onChange={e=>setSelectedCombatantId(e.target.value)} className="bg-neutral-900"><option value="">Select runtime opponent</option>{npcs.map(n=><option key={n.id} value={n.id}>{n.name} · {n.id}</option>)}</select><button disabled={!selectedCombatantId} onClick={()=>void send('START_ENCOUNTER',{participantIds:[...characters.map(c=>(c as any).instanceId),selectedCombatantId]})}>Start original encounter</button></>}
+    {combatState.isActive&&<><p>Round {combatState.round} · Active {active?.name} · {active?.entityId}</p><select aria-label="Original attack target" value={targetId} onChange={e=>setTargetId(e.target.value)} className="bg-neutral-900"><option value="">Select target</option>{combatState.combatants.filter(c=>c.entityId!==active?.entityId).map(c=><option key={c.entityId} value={c.entityId}>{c.name} · {c.entityId}</option>)}</select><button disabled={!targetId} onClick={()=>void send('ATTACK_ACTION',{attacker:active.entityId,targetId})}>Resolve original attack</button><button onClick={()=>void send('NEXT_TURN',{})}>Next original turn</button>
+    {isDm&&<><button onClick={()=>void send('DM_OVERRIDE_STATE',{entityId:active.entityId,path:'conditions',condition:'Prone',enabled:true})}>Apply supported Prone</button><button onClick={()=>void send('DM_OVERRIDE_STATE',{entityId:active.entityId,path:'conditions',condition:'Prone',enabled:false})}>Remove supported Prone</button><button onClick={()=>void send('END_ENCOUNTER',{})}>End original encounter</button></>}</>}
+    </fieldset>{(combatState as any).lastAttack&&<p>Committed attack: d20 {(combatState as any).lastAttack.d20}, damage {(combatState as any).lastAttack.damage}, target HP {(combatState as any).lastAttack.hpAfter}</p>}</section>;
+  }
   return (
     <div className="bg-neutral-900 border-b border-neutral-800 p-4 space-y-4">
       {/* 1. Header Toolbar */}
