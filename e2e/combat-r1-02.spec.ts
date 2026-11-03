@@ -5,8 +5,9 @@ import {createHash} from 'node:crypto';
 const expect=baseExpect.configure({timeout:45000});
 
 function fixture(){
-  const c=JSON.parse(readFileSync(process.env.VADALLFATE_COMBAT_R1_02_CONTROL || process.env.VADALLFATE_COMBAT_R1_01_CONTROL!,'utf8'));
-  return {c,host:JSON.parse(readFileSync(join(c.root,'launcher/pids.json'),'utf8'))};
+  const controlPath = process.env.VADALLFATE_COMBAT_R1_02_CONTROL || process.env.VADALLFATE_COMBAT_R1_01_CONTROL;
+  const c = JSON.parse(readFileSync(controlPath!, 'utf8'));
+  return {c, host: JSON.parse(readFileSync(join(c.root, 'launcher/pids.json'), 'utf8'))};
 }
 
 function hashes(c:any){
@@ -65,8 +66,10 @@ async function settle(page:Page){
   await expect(page.getByText('Resolving your action…',{exact:true})).toBeHidden();
 }
 
-test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 combatants, vulnerability/resistance/qualifiers, physical confirmation, defeat memory, and Save isolation',async({page,browser})=>{
-  test.skip(!process.env.VADALLFATE_COMBAT_R1_01_CONTROL||process.env.VADALLFATE_COMBAT_R1_01_PHASE!=='journey');
+test('COMBAT-R1-02 connected Edge acceptance: generic combat profiles, disposable worker execution, and original creature resolution',async({page,browser})=>{
+  const isJourney = (process.env.VADALLFATE_COMBAT_R1_02_PHASE === 'journey') || (!process.env.VADALLFATE_COMBAT_R1_02_PHASE && process.env.VADALLFATE_COMBAT_R1_01_PHASE === 'journey');
+  test.skip(!process.env.VADALLFATE_COMBAT_R1_02_CONTROL && !process.env.VADALLFATE_COMBAT_R1_01_CONTROL);
+  test.skip(!isJourney);
   test.setTimeout(360000);
   const {c,host}=fixture();
   const before=hashes(c);
@@ -316,8 +319,10 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
   },null,2));
 });
 
-test('COMBAT-R1-01 full restart recovers SRD encounter state, defeated NPC memory, and Save isolation without full replay',async({page})=>{
-  test.skip(!process.env.VADALLFATE_COMBAT_R1_01_CONTROL||process.env.VADALLFATE_COMBAT_R1_01_PHASE!=='restart');
+test('COMBAT-R1-02 full restart recovers generic profile encounter state, defeated NPC memory, and Save isolation without full replay',async({page})=>{
+  const isRestart = (process.env.VADALLFATE_COMBAT_R1_02_PHASE === 'restart') || (!process.env.VADALLFATE_COMBAT_R1_02_PHASE && process.env.VADALLFATE_COMBAT_R1_01_PHASE === 'restart');
+  test.skip(!process.env.VADALLFATE_COMBAT_R1_02_CONTROL && !process.env.VADALLFATE_COMBAT_R1_01_CONTROL);
+  test.skip(!isRestart);
   const {c,host}=fixture();
   await page.goto('/?storageAlign=2');
   for(const save of ['a','b']){
