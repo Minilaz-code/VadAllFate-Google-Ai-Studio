@@ -178,25 +178,35 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
   expect(initSt.projection.combatState.combatants).toHaveLength(5);
 
   // 4. Advance turns and execute attacks proving:
-  // - conditional resistance on Gargoyle (`steel_longsword` nonmagical slashing halved)
-  // - qualifier bypass on Gargoyle (`adamantine_warhammer` adamantine bludgeoning full damage)
-  // - vulnerability on Skeleton #1 (`iron_mace` bludgeoning doubled) until Skeleton #1 is defeated (0 HP)
+  // - forged weapon ownership refusal (Ada attempting Ben's `adamantine_warhammer` fails closed)
+  // - conditional resistance on Gargoyle (Ada's owned `steel_longsword` nonmagical slashing halved)
+  // - qualifier bypass on Gargoyle (Ben's owned `adamantine_warhammer` adamantine bludgeoning full damage)
+  // - vulnerability on Skeleton #1 (Ada's owned `iron_mace` bludgeoning doubled) until Skeleton #1 is defeated (0 HP)
   // - Skeleton #2 remains at full HP (13/13) proving shared-source instance independence
+  let sawForgedOwnershipRefusal=false;
   let sawResistance=false;
   let sawBypass=false;
   let sawVulnerability=false;
   let skel1Defeated=false;
 
-  for(let step=0;step<25&&(!sawResistance||!sawBypass||!sawVulnerability||!skel1Defeated);step++){
-    const cur=await state(page,c);
-    const cs=cur.projection.combatState;
+  for(let step=0;step<25&&(!sawForgedOwnershipRefusal||!sawResistance||!sawBypass||!sawVulnerability||!skel1Defeated);step++){
+    const proj=await request(page,c,'/projection');
+    const cs=proj.combatState;
     const active=cs.combatants[cs.activeTurnIndex];
-    const activeHp=active.entityType==='character'
-      ?cur.projection.characters.find((x:any)=>x.instanceId===active.entityId).currentHp
-      :cur.entities[active.entityId].entity.resources.hp.value;
+    const activeHp=active.currentHp;
 
     if(activeHp>0){
-      if(active.entityType==='character'){
+      if(active.entityId==='instance.v1.ada'){
+        if(!sawForgedOwnershipRefusal){
+          await combat.getByLabel('Original attack target').selectOption(gargoyle);
+          await combat.getByLabel('Approved weapon profile').selectOption('adamantine_warhammer');
+          await combat.getByLabel('Combat roll mode').selectOption('PLAYER_PHYSICAL');
+          await combat.getByLabel('Physical d20 face').fill('19');
+          await combat.getByLabel('Physical damage face').fill('6');
+          await combat.getByRole('button',{name:'Resolve original attack'}).click();
+          await expect(combat.getByRole('status')).toContainText('rejected action HTTP 403');
+          sawForgedOwnershipRefusal=true;
+        }
         if(!sawResistance){
           await combat.getByLabel('Original attack target').selectOption(gargoyle);
           await combat.getByLabel('Approved weapon profile').selectOption('steel_longsword');
@@ -205,24 +215,11 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
           await combat.getByLabel('Physical damage face').fill('6');
           await combat.getByRole('button',{name:'Resolve original attack'}).click();
           await expect(combat.getByRole('status')).toContainText('committed');
-          const after=await state(page,c);
-          expect(after.projection.combatState.lastAttack.ruleApplied).toBe('RESISTANCE_HALF_FLOOR');
-          expect(after.projection.combatState.lastAttack.rawDamage).toBe(7);
-          expect(after.projection.combatState.lastAttack.damage).toBe(3);
+          const afterProj=await request(page,c,'/projection');
+          expect(afterProj.combatState.lastAttack.ruleApplied).toBe('RESISTANCE_HALF_FLOOR');
+          expect(afterProj.combatState.lastAttack.rawDamage).toBe(7);
+          expect(afterProj.combatState.lastAttack.damage).toBe(3);
           sawResistance=true;
-        }else if(!sawBypass){
-          await combat.getByLabel('Original attack target').selectOption(gargoyle);
-          await combat.getByLabel('Approved weapon profile').selectOption('adamantine_warhammer');
-          await combat.getByLabel('Combat roll mode').selectOption('PLAYER_PHYSICAL');
-          await combat.getByLabel('Physical d20 face').fill('19');
-          await combat.getByLabel('Physical damage face').fill('6');
-          await combat.getByRole('button',{name:'Resolve original attack'}).click();
-          await expect(combat.getByRole('status')).toContainText('committed');
-          const after=await state(page,c);
-          expect(after.projection.combatState.lastAttack.ruleApplied).toBe('UNMODIFIED');
-          expect(after.projection.combatState.lastAttack.rawDamage).toBe(7);
-          expect(after.projection.combatState.lastAttack.damage).toBe(7);
-          sawBypass=true;
         }else if(!skel1Defeated){
           await combat.getByLabel('Original attack target').selectOption(skel1);
           await combat.getByLabel('Approved weapon profile').selectOption('iron_mace');
@@ -231,18 +228,35 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
           await combat.getByLabel('Physical damage face').fill('6');
           await combat.getByRole('button',{name:'Resolve original attack'}).click();
           await expect(combat.getByRole('status')).toContainText('committed');
-          const after=await state(page,c);
-          expect(after.projection.combatState.lastAttack.ruleApplied).toBe('VULNERABILITY_DOUBLE');
-          expect(after.projection.combatState.lastAttack.rawDamage).toBe(7);
-          expect(after.projection.combatState.lastAttack.damage).toBe(14);
-          expect(after.entities[skel1].entity.resources.hp.value).toBe(0);
-          expect(after.entities[skel2].entity.resources.hp.value).toBe(13);
+          const afterProj=await request(page,c,'/projection');
+          expect(afterProj.combatState.lastAttack.ruleApplied).toBe('VULNERABILITY_DOUBLE');
+          expect(afterProj.combatState.lastAttack.rawDamage).toBe(7);
+          expect(afterProj.combatState.lastAttack.damage).toBe(14);
+          const skel1Combatant=afterProj.combatState.combatants.find((x:any)=>x.entityId===skel1);
+          const skel2Combatant=afterProj.combatState.combatants.find((x:any)=>x.entityId===skel2);
+          expect(skel1Combatant.currentHp).toBe(0);
+          expect(skel2Combatant.currentHp).toBe(13);
           sawVulnerability=true;
           skel1Defeated=true;
         }
+      }else if(active.entityId==='instance.v1.ben'){
+        if(!sawBypass){
+          await combat.getByLabel('Original attack target').selectOption(gargoyle);
+          await combat.getByLabel('Approved weapon profile').selectOption('adamantine_warhammer');
+          await combat.getByLabel('Combat roll mode').selectOption('PLAYER_PHYSICAL');
+          await combat.getByLabel('Physical d20 face').fill('19');
+          await combat.getByLabel('Physical damage face').fill('6');
+          await combat.getByRole('button',{name:'Resolve original attack'}).click();
+          await expect(combat.getByRole('status')).toContainText('committed');
+          const afterProj=await request(page,c,'/projection');
+          expect(afterProj.combatState.lastAttack.ruleApplied).toBe('UNMODIFIED');
+          expect(afterProj.combatState.lastAttack.rawDamage).toBe(7);
+          expect(afterProj.combatState.lastAttack.damage).toBe(7);
+          sawBypass=true;
+        }
       }else{
-        // Monster turn: digital attack against Ada
-        await combat.getByLabel('Original attack target').selectOption('instance.v1.ada');
+        // Monster turn: digital attack against Ben
+        await combat.getByLabel('Original attack target').selectOption('instance.v1.ben');
         await combat.getByLabel('Combat roll mode').selectOption('SERVER_DIGITAL');
         await combat.getByRole('button',{name:'Resolve original attack'}).click();
         await expect(combat.getByRole('status')).toContainText('committed');
@@ -252,6 +266,7 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
     await expect(combat.getByRole('status')).toContainText('committed');
   }
 
+  expect(sawForgedOwnershipRefusal).toBe(true);
   expect(sawResistance).toBe(true);
   expect(sawBypass).toBe(true);
   expect(sawVulnerability).toBe(true);
@@ -291,6 +306,7 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
     skel2,
     gargoyle,
     fireElem,
+    sawForgedOwnershipRefusal,
     sawResistance,
     sawBypass,
     sawVulnerability,

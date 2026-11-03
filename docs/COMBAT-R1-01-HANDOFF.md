@@ -16,11 +16,14 @@ Instead of rebuilding combat from scratch or blanket-activating all 334 SRD 5.1 
    - **Unreviewed & Held (`combat_ready=False`)**: Remaining `326/334` SRD 5.1 monsters fail closed with `REJECTED_MONSTER_COMBAT_HOLD`.
 4. **Pure Rules Provider Inside Single Commit Authority**: `COMBAT-R1-01.PROVIDER.v1` (`src/vadallfate/runtime/storage_align/combat_provider.py`) has zero SQLite write connection and cannot mutate state directly. All encounter starts, turn advances, attacks, damage calculations, condition toggles, balm heals, physical roll confirmations, and defeat records are admitted, staged, and committed solely through `CommitAuthority` into the active `SAVE` (`save-a.sqlite` or `save-b.sqlite`).
 5. **Expanded >3 Combatants & Shared-Source Instance Isolation**: Supports 3 to 8 participants mixing PCs (`instance.v1.ada`, `instance.v1.ben`), original CC0 training NPCs, and multiple runtime instances spawned from the same SRD 5.1 monster definition (e.g., two `srd51:monster:256` Skeletons) with independent HP, conditions, trust, and memory histories.
-6. **Deterministic Mechanics, Qualifiers & Defeat Continuity**:
+6. **Deterministic Mechanics, Authoritative Equipment Loadout, Qualifiers & Defeat Continuity**:
+   - **Documented Six-Layer Precedence**: `SAVE > HOMEBREW > CAMPAIGN > ADVENTURE/REGION > WORLD > RULES` (while preserving the existing `mounts.py` resolver unchanged).
+   - **R1-Pinned Character Equipment Loadouts (`sa.loadout.v1`)**: Weapon identity, damage type, and mechanical qualifiers (`magicalWeapon`, `silvered`, `adamantine`, `spellDamage`, `damageType`) are sourced strictly from an R1-validated equipped item / authorised character loadout (`(entity, 'combat_loadout')` in `campaign.sqlite`) or approved monster attack definition. Characters are **not** silently granted all weapons (`instance.v1.ada` equips `training_strike`, `iron_mace`, `steel_longsword`, `silvered_shortsword`; `instance.v1.ben` equips `training_strike`, `adamantine_warhammer`, `runed_sunblade`, `flame_bolt`, `poison_dart`). Client-provided mechanical qualifiers are rejected fail-closed (`FORGED_MECHANICAL_QUALIFIER`, `AUTHORITY_VIOLATION`) across both `SERVER_DIGITAL` and `PLAYER_PHYSICAL` confirmation paths.
+   - **Validated Condition & DM-Adjudicated Advantage/Disadvantage**: Roll mode (`NORMAL`, `ADVANTAGE`, `DISADVANTAGE`, `NORMAL_CANCELLED`) is derived from validated R1 conditions (`Prone`, `Poisoned`, `Restrained`, `Blinded`, `Unconscious`). Ordinary client `advantage`/`disadvantage` flags are rejected (`UNAUTHORISED_ADVANTAGE_CLAIM`, `AUTHORITY_VIOLATION`). Manual DM tactical adjudication requires an explicit DM-only auditable decision path (`dmAdjudicatedRollMode` + `dmAdjudicationReason`, enforcing `actor_role == 'dm'`).
    - Deterministic initiative (`1d20 + initiative_bonus` sorted descending by `(initiative, initiativeBonus, entityId)`), round counter increment after a full cycle, and per-turn `actionUsed` / `bonusActionUsed` economy.
    - Attack rolls (`1d20` or `2d20` for advantage/disadvantage with cancellation when both apply), natural 1 automatic miss, natural 20 automatic hit + critical damage dice doubling (flat modifier added once).
    - Unconditional and conditional damage modifiers (`magicalWeapon`, `silvered`, `adamantine`, `spellDamage`) with SRD 5.1 floor division (`math.floor(raw / 2)` for resistance, `raw * 2` for vulnerability, `0` for immunity, and resistance+vulnerability cancellation) and structured `ruleExplanation` audit output.
-   - Defeated NPCs (`0 HP`, `Unconscious`) retain their UUID identity, relationship edges, and memory history (`sa_npc_memories`), and emit a bounded `COMBAT_NPC_DEFEATED` causal proposal (`facet='PROPOSED'`) without writing to `STORAGE-ALIGN-05` scheduler internals.
+   - **0 HP Incapacitation vs Certified Death (`WORLD-CAUSAL` Distinction)**: Defeated NPCs (`0 HP`, `Unconscious`) retain their UUID identity, relationship edges, and memory history (`sa_npc_memories`), and emit a bounded `COMBAT_NPC_DEFEATED` causal proposal (`facet='PROPOSED'`) carrying `status_at_zero_hp='INCAPACITATED_AT_ZERO_HP'` and `death_certified=False`. Reaching 0 HP in `COMBAT-R1-01` records combat defeat/incapacitation and does **not** certify irreversible death, preserving that distinction for `WORLD-CAUSAL` integration without writing to `STORAGE-ALIGN-05` scheduler internals.
 
 See [harvest and crosswalk](COMBAT-R1-01-HARVEST-AND-CROSSWALK.md) for the four-source inspection table, monster coverage matrix, and provider architecture.
 
@@ -33,14 +36,15 @@ Actual headed Edge against the owned Python/React launcher passed the complete S
 - Invited player (`actor.ada`) logged in via a separate browser context, verified DM secret/memory isolation (`403` on `/content/history`), requested a d20 check, and reported a physical roll (`18`) that remained `PENDING_CONFIRMATION` until DM approval.
 - DM started a 5-combatant encounter (`Ada`, `Ben`, `Skeleton #1`, `Skeleton #2`, `Gargoyle`).
 - During turn-by-turn resolution:
-  1. Nonmagical `steel_longsword` slashing attack against `Gargoyle` rolled raw damage `7`, which `COMBAT-R1-01.PROVIDER.v1` halved via conditional resistance (`RESISTANCE_HALF_FLOOR`) to `3` damage (`HP 52 -> 49`).
-  2. `adamantine_warhammer` bludgeoning attack against `Gargoyle` rolled raw damage `7`, bypassing conditional nonmagical/non-adamantine resistance (`UNMODIFIED`) for full `7` damage (`HP 49 -> 42`).
-  3. `iron_mace` bludgeoning attack against `Skeleton #1` rolled raw damage `7`, which doubled via unconditional bludgeoning vulnerability (`VULNERABILITY_DOUBLE`) to `14` damage, defeating `Skeleton #1` (`HP 13 -> 0`, `Unconscious`) while `Skeleton #2` (sharing `srd51:monster:256`) remained untouched at `13/13 HP`.
+  1. When `Ada` (`instance.v1.ada`) attempted to attack `Gargoyle` with `adamantine_warhammer` (owned by `Ben`, not `Ada`), the backend rejected the forged weapon ownership claim fail-closed (`HTTP 403 AUTHORITY_VIOLATION: WEAPON_NOT_EQUIPPED`).
+  2. `Ada`'s owned nonmagical `steel_longsword` slashing attack against `Gargoyle` rolled raw damage `7`, which `COMBAT-R1-01.PROVIDER.v1` halved via conditional resistance (`RESISTANCE_HALF_FLOOR`) to `3` damage (`HP 52 -> 49`).
+  3. `Ben`'s (`instance.v1.ben`) owned `adamantine_warhammer` bludgeoning attack against `Gargoyle` rolled raw damage `7`, bypassing conditional nonmagical/non-adamantine resistance (`UNMODIFIED`) for full `7` damage (`HP 49 -> 42`).
+  4. `Ada`'s owned `iron_mace` bludgeoning attack against `Skeleton #1` rolled raw damage `7`, which doubled via unconditional bludgeoning vulnerability (`VULNERABILITY_DOUBLE`) to `14` damage, defeating `Skeleton #1` (`HP 13 -> 0`, `Unconscious`, `status_at_zero_hp='INCAPACITATED_AT_ZERO_HP'`, `death_certified=False`) while `Skeleton #2` (sharing `srd51:monster:256`) remained untouched at `13/13 HP`.
 - Encounter ended cleanly; defeated `Skeleton #1` retained its pre-combat memory and relationship history.
 - Save B (`save-b.sqlite`) against identical baselines retained zero spawned NPCs, original character HP (`12/9`), and zero encounter history.
 - All five baseline SQLite files (`world.sqlite`, `rules.sqlite`, `adventure.sqlite`, `campaign.sqlite`, `homebrew.sqlite`) and `data/vadallfate_srd51.sqlite` retained byte-identical SHA-256 hashes before and after the journey and restart.
 
-## Acceptance matrix (Gates 1–14)
+## Acceptance matrix (Gates 1–15)
 
 | Gate | Requirement | Result / Evidence |
 | :--- | :--- | :--- |
@@ -54,10 +58,11 @@ Actual headed Edge against the owned Python/React launcher passed the complete S
 | **Gate 8** | Advantage, disadvantage & condition cancellation | **PASS**: `test_gate7_8_9_mechanics_modifiers_qualifiers_and_conditions` |
 | **Gate 9** | Resistance, immunity, vulnerability & conditional weapon qualifiers | **PASS**: `test_gate7_8_9_mechanics_modifiers_qualifiers_and_conditions` + UI E2E |
 | **Gate 10** | Digital HMAC sampler & two-stage physical roll confirmation | **PASS**: `test_gate10_11_12_physical_combat_confirmation_defeat_memory_and_save_isolation` + UI E2E |
-| **Gate 11** | Defeated NPC memory retention & `COMBAT_NPC_DEFEATED` proposal | **PASS**: `test_gate10_11_12_physical_combat_confirmation_defeat_memory_and_save_isolation` + UI E2E |
+| **Gate 11** | Defeated NPC memory retention & `COMBAT_NPC_DEFEATED` proposal (`INCAPACITATED_AT_ZERO_HP`, `death_certified=False`) | **PASS**: `test_gate10_11_12_physical_combat_confirmation_defeat_memory_and_save_isolation` + UI E2E |
 | **Gate 12** | Save A vs Save B isolation & immutable baseline SQLite hashes | **PASS**: `test_gate10_11_12...`, `tools/combat_r1_01_proof.py`, and UI E2E |
 | **Gate 13** | Connected Windows/Edge journey & full process restart recovery | **PASS**: `e2e/combat-r1-01.spec.ts` (journey + restart phases) & `e2e/storage-align-04.spec.ts` |
 | **Gate 14** | Process-death crash recovery (`after_admission`, `after_stage`, `after_state_write`, `after_commit`) & pre-admission provider fault | **PASS**: `test_gate14_combat_process_death_and_exact_retry_recovery` (4 `os._exit(99)` boundaries) + `test_gate14_provider_fault_before_admission_leaves_save_clean` |
+| **Gate 15** | Input-authority security negatives (forged weapon ownership, `adamantine`, `silvered`, `magicalWeapon`, `spellDamage`, `damageType`, `advantage`/`disadvantage` claims rejected across `SERVER_DIGITAL` & `PLAYER_PHYSICAL`; DM-only auditable `dmAdjudicatedRollMode`) | **PASS**: `test_gate15_input_authority_negative_spoofing_and_loadout_isolation` + UI E2E forged ownership check |
 
 ## Reproduce
 

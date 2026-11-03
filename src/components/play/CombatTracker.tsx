@@ -316,12 +316,15 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
     const selectedParticipantIds=[...characters.map(c=>(c as any).instanceId),...(selectedCombatantId?[selectedCombatantId]:[]),...additionalOpponentIds.filter(x=>x!==selectedCombatantId)];
     const activeChar=characters.find(c=>(c as any).instanceId===active?.entityId);
     const activeBalm=(activeChar as any)?.supportedConsumables?.[0];
+    const activeEquippedWeapons:string[]=(activeChar as any)?.equippedWeapons||['training_strike'];
     const buildAttackPayload=()=>{
       const payload:Record<string,any>={attacker:active.entityId,targetId};
       if(active?.entityType==='character'&&profileWeapon)payload.weapon=profileWeapon;
       if(active?.entityType==='npc'&&profileMonsterAttack)payload.attackName=profileMonsterAttack;
-      if(rollAdvState==='advantage')payload.advantage=true;
-      if(rollAdvState==='disadvantage')payload.disadvantage=true;
+      if(isDm&&rollAdvState!=='normal'){
+        payload.dmAdjudicatedRollMode=rollAdvState==='advantage'?'ADVANTAGE':'DISADVANTAGE';
+        payload.dmAdjudicationReason='DM tactical ruling';
+      }
       if(diceMode==='PLAYER_PHYSICAL'){
         payload.mode=isDm?'DM_PHYSICAL':'PLAYER_PHYSICAL';
         payload.d20Faces=rollAdvState==='normal'?[physicalD20]:[physicalD20,physicalD20Adv];
@@ -345,13 +348,13 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
       <select aria-label="Original attack target" value={targetId} onChange={e=>setTargetId(e.target.value)} className="bg-neutral-900"><option value="">Select target</option>{combatState.combatants.filter(c=>c.entityId!==active?.entityId).map(c=><option key={c.entityId} value={c.entityId}>{c.name} · {c.entityId}</option>)}</select>
       <select aria-label="Approved weapon profile" value={profileWeapon} onChange={e=>setProfileWeapon(e.target.value)} className="bg-neutral-900">
         <option value="">Default weapon (training_strike)</option>
-        <option value="iron_mace">Iron Mace (1d6 bludgeoning)</option>
-        <option value="steel_longsword">Steel Longsword (1d8 slashing)</option>
-        <option value="silvered_shortsword">Silvered Shortsword (1d6 piercing, silvered)</option>
-        <option value="adamantine_warhammer">Adamantine Warhammer (1d8 bludgeoning, adamantine)</option>
-        <option value="runed_sunblade">Runed Sunblade (1d8 radiant, magical)</option>
-        <option value="flame_bolt">Flame Bolt (1d10 fire, spell)</option>
-        <option value="poison_dart">Venom Tipped Needle (1d4 poison)</option>
+        <option value="iron_mace">Iron Mace (1d6 bludgeoning){active?.entityType==='character'&&!activeEquippedWeapons.includes('iron_mace')?' [unowned]':''}</option>
+        <option value="steel_longsword">Steel Longsword (1d8 slashing){active?.entityType==='character'&&!activeEquippedWeapons.includes('steel_longsword')?' [unowned]':''}</option>
+        <option value="silvered_shortsword">Silvered Shortsword (1d6 piercing, silvered){active?.entityType==='character'&&!activeEquippedWeapons.includes('silvered_shortsword')?' [unowned]':''}</option>
+        <option value="adamantine_warhammer">Adamantine Warhammer (1d8 bludgeoning, adamantine){active?.entityType==='character'&&!activeEquippedWeapons.includes('adamantine_warhammer')?' [unowned]':''}</option>
+        <option value="runed_sunblade">Runed Sunblade (1d8 radiant, magical){active?.entityType==='character'&&!activeEquippedWeapons.includes('runed_sunblade')?' [unowned]':''}</option>
+        <option value="flame_bolt">Flame Bolt (1d10 fire, spell){active?.entityType==='character'&&!activeEquippedWeapons.includes('flame_bolt')?' [unowned]':''}</option>
+        <option value="poison_dart">Venom Tipped Needle (1d4 poison){active?.entityType==='character'&&!activeEquippedWeapons.includes('poison_dart')?' [unowned]':''}</option>
       </select>
       {active?.entityType==='npc'&&<input aria-label="Monster attack name" value={profileMonsterAttack} onChange={e=>setProfileMonsterAttack(e.target.value)} placeholder="Monster attack (e.g. Shortsword)" className="bg-neutral-900 px-2 py-1 text-xs"/>}
       <select aria-label="Combat roll mode" value={diceMode} onChange={e=>setDiceMode(e.target.value as any)} className="bg-neutral-900">
