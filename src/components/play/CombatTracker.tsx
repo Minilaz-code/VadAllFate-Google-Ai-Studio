@@ -90,6 +90,10 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   const [customValue, setCustomValue] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileNotice,setProfileNotice]=useState('');
+  const [additionalOpponentIds, setAdditionalOpponentIds] = useState<string[]>([]);
+  const [profileWeapon, setProfileWeapon] = useState<string>('');
+  const [profileMonsterAttack, setProfileMonsterAttack] = useState<string>('');
+  const [profileCondition, setProfileCondition] = useState<string>('Prone');
 
   // Milestone 12B: Physical vs Server Digital Dice states
   const [diceMode, setDiceMode] = useState<'SERVER_DIGITAL' | 'PLAYER_PHYSICAL'>('SERVER_DIGITAL');
@@ -308,11 +312,81 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   if(supportedProfile){
     const send=async(actionType:any,payload:any)=>{if(readOnly)return;setIsSubmitting(true);setProfileNotice('');try{const id=crypto.randomUUID();await onSubmitAction({actionId:id,clientNonce:id,actorId:isDm?'dm-1':activeCharacterId!,actorRole:userRole,actionType,payload,snapshotRef:currentSnapshot,timestampUtc:new Date().toISOString()});setProfileNotice('R1 encounter action committed.');}catch(e:any){setProfileNotice(e.message);}finally{setIsSubmitting(false);}};
     const active=combatState.combatants[combatState.activeTurnIndex];
-    return <section aria-label="Original encounter" className="border border-red-900 p-3 shrink-0"><h3>Original encounter · authoritative bounded training rules</h3><p>Only an explicitly approved original template is legal. No SRD monster or spatial mechanics.</p>{profileNotice&&<p role="status">{profileNotice}</p>}<fieldset disabled={isSubmitting||readOnly} className="flex flex-wrap gap-2">
-    {!combatState.isActive&&isDm&&<><select aria-label="Original opponent" value={selectedCombatantId||''} onChange={e=>setSelectedCombatantId(e.target.value)} className="bg-neutral-900"><option value="">Select runtime opponent</option>{npcs.map(n=><option key={n.id} value={n.id}>{n.name} · {n.id}</option>)}</select><button disabled={!selectedCombatantId} onClick={()=>void send('START_ENCOUNTER',{participantIds:[...characters.map(c=>(c as any).instanceId),selectedCombatantId]})}>Start original encounter</button></>}
-    {combatState.isActive&&<><p>Round {combatState.round} · Active {active?.name} · {active?.entityId}</p><select aria-label="Original attack target" value={targetId} onChange={e=>setTargetId(e.target.value)} className="bg-neutral-900"><option value="">Select target</option>{combatState.combatants.filter(c=>c.entityId!==active?.entityId).map(c=><option key={c.entityId} value={c.entityId}>{c.name} · {c.entityId}</option>)}</select><button disabled={!targetId} onClick={()=>void send('ATTACK_ACTION',{attacker:active.entityId,targetId})}>Resolve original attack</button><button onClick={()=>void send('NEXT_TURN',{})}>Next original turn</button>
-    {isDm&&<><button onClick={()=>void send('DM_OVERRIDE_STATE',{entityId:active.entityId,path:'conditions',condition:'Prone',enabled:true})}>Apply supported Prone</button><button onClick={()=>void send('DM_OVERRIDE_STATE',{entityId:active.entityId,path:'conditions',condition:'Prone',enabled:false})}>Remove supported Prone</button><button onClick={()=>void send('END_ENCOUNTER',{})}>End original encounter</button></>}</>}
-    </fieldset>{(combatState as any).lastAttack&&<p>Committed attack: d20 {(combatState as any).lastAttack.d20}, damage {(combatState as any).lastAttack.damage}, target HP {(combatState as any).lastAttack.hpAfter}</p>}</section>;
+    const toggleExtraOpponent=(id:string)=>setAdditionalOpponentIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+    const selectedParticipantIds=[...characters.map(c=>(c as any).instanceId),...(selectedCombatantId?[selectedCombatantId]:[]),...additionalOpponentIds.filter(x=>x!==selectedCombatantId)];
+    const activeChar=characters.find(c=>(c as any).instanceId===active?.entityId);
+    const activeBalm=(activeChar as any)?.supportedConsumables?.[0];
+    const buildAttackPayload=()=>{
+      const payload:Record<string,any>={attacker:active.entityId,targetId};
+      if(active?.entityType==='character'&&profileWeapon)payload.weapon=profileWeapon;
+      if(active?.entityType==='npc'&&profileMonsterAttack)payload.attackName=profileMonsterAttack;
+      if(rollAdvState==='advantage')payload.advantage=true;
+      if(rollAdvState==='disadvantage')payload.disadvantage=true;
+      if(diceMode==='PLAYER_PHYSICAL'){
+        payload.mode=isDm?'DM_PHYSICAL':'PLAYER_PHYSICAL';
+        payload.d20Faces=rollAdvState==='normal'?[physicalD20]:[physicalD20,physicalD20Adv];
+        payload.damageFaces=physicalDamageDice;
+      }
+      return payload;
+    };
+    const lastAtk=(combatState as any).lastAttack;
+    return <section aria-label="Original encounter" className="border border-red-900 p-3 shrink-0 space-y-2">
+    <h3>Original encounter · authoritative bounded training &amp; reviewed SRD 5.1 rules</h3>
+    <p>Only explicitly approved original templates or reviewed SRD 5.1 monster records (`COMBAT-R1-01.PROVIDER.v1`) are legal. Held monsters and spatial mechanics fail closed.</p>
+    <p role="status">{profileNotice}</p>
+    <fieldset disabled={isSubmitting||readOnly} className="flex flex-wrap gap-2 items-center">
+    {!combatState.isActive&&isDm&&<>
+      <select aria-label="Original opponent" value={selectedCombatantId||''} onChange={e=>setSelectedCombatantId(e.target.value)} className="bg-neutral-900"><option value="">Select runtime opponent</option>{npcs.map(n=><option key={n.id} value={n.id}>{n.name} · {n.id}</option>)}</select>
+      {npcs.length>1&&<div aria-label="Additional encounter opponents" className="flex flex-wrap gap-2 text-xs">{npcs.filter(n=>n.id!==selectedCombatantId).map(n=><label key={n.id} className="flex items-center gap-1"><input type="checkbox" aria-label={`Include opponent ${n.id}`} checked={additionalOpponentIds.includes(n.id)} onChange={()=>toggleExtraOpponent(n.id)}/>{n.name} ({n.id})</label>)}</div>}
+      <button disabled={!selectedCombatantId} onClick={()=>void send('START_ENCOUNTER',{participantIds:selectedParticipantIds})}>Start original encounter</button>
+    </>}
+    {combatState.isActive&&<>
+      <p>Round {combatState.round} · Active {active?.name} · {active?.entityId}</p>
+      <select aria-label="Original attack target" value={targetId} onChange={e=>setTargetId(e.target.value)} className="bg-neutral-900"><option value="">Select target</option>{combatState.combatants.filter(c=>c.entityId!==active?.entityId).map(c=><option key={c.entityId} value={c.entityId}>{c.name} · {c.entityId}</option>)}</select>
+      <select aria-label="Approved weapon profile" value={profileWeapon} onChange={e=>setProfileWeapon(e.target.value)} className="bg-neutral-900">
+        <option value="">Default weapon (training_strike)</option>
+        <option value="iron_mace">Iron Mace (1d6 bludgeoning)</option>
+        <option value="steel_longsword">Steel Longsword (1d8 slashing)</option>
+        <option value="silvered_shortsword">Silvered Shortsword (1d6 piercing, silvered)</option>
+        <option value="adamantine_warhammer">Adamantine Warhammer (1d8 bludgeoning, adamantine)</option>
+        <option value="runed_sunblade">Runed Sunblade (1d8 radiant, magical)</option>
+        <option value="flame_bolt">Flame Bolt (1d10 fire, spell)</option>
+        <option value="poison_dart">Venom Tipped Needle (1d4 poison)</option>
+      </select>
+      {active?.entityType==='npc'&&<input aria-label="Monster attack name" value={profileMonsterAttack} onChange={e=>setProfileMonsterAttack(e.target.value)} placeholder="Monster attack (e.g. Shortsword)" className="bg-neutral-900 px-2 py-1 text-xs"/>}
+      <select aria-label="Combat roll mode" value={diceMode} onChange={e=>setDiceMode(e.target.value as any)} className="bg-neutral-900">
+        <option value="SERVER_DIGITAL">Digital roll (R1 RNG)</option>
+        <option value="PLAYER_PHYSICAL">Physical roll (reported faces)</option>
+      </select>
+      <select aria-label="Combat advantage mode" value={rollAdvState} onChange={e=>setRollAdvState(e.target.value as any)} className="bg-neutral-900">
+        <option value="normal">Normal roll</option>
+        <option value="advantage">Advantage</option>
+        <option value="disadvantage">Disadvantage</option>
+      </select>
+      {diceMode==='PLAYER_PHYSICAL'&&<>
+        <input aria-label="Physical d20 face" type="number" min={1} max={20} value={physicalD20} onChange={e=>setPhysicalD20(Number(e.target.value)||1)} className="bg-neutral-900 w-16 px-1"/>
+        {rollAdvState!=='normal'&&<input aria-label="Physical second d20 face" type="number" min={1} max={20} value={physicalD20Adv} onChange={e=>setPhysicalD20Adv(Number(e.target.value)||1)} className="bg-neutral-900 w-16 px-1"/>}
+        <input aria-label="Physical damage face" type="number" min={1} max={12} value={physicalDamageDice[0]||4} onChange={e=>setPhysicalDamageDice([Number(e.target.value)||1])} className="bg-neutral-900 w-16 px-1"/>
+      </>}
+      <button disabled={!targetId} onClick={()=>void send('ATTACK_ACTION',buildAttackPayload())}>Resolve original attack</button>
+      {active?.entityType==='character'&&activeBalm&&activeBalm.quantity>0&&<button disabled={!targetId&&!active?.entityId} onClick={()=>void send('COMBAT_HEAL',{actor:active.entityId,targetId:targetId||active.entityId,itemId:activeBalm.id})}>Use balm heal (bonus action)</button>}
+      <button onClick={()=>void send('NEXT_TURN',{})}>Next original turn</button>
+      {isDm&&<>
+        <select aria-label="Supported condition" value={profileCondition} onChange={e=>setProfileCondition(e.target.value)} className="bg-neutral-900">
+          <option value="Prone">Prone</option>
+          <option value="Poisoned">Poisoned</option>
+          <option value="Restrained">Restrained</option>
+          <option value="Blinded">Blinded</option>
+        </select>
+        <button onClick={()=>void send('DM_OVERRIDE_STATE',{entityId:active.entityId,path:'conditions',condition:profileCondition,enabled:true})}>Apply supported Prone</button>
+        <button onClick={()=>void send('DM_OVERRIDE_STATE',{entityId:active.entityId,path:'conditions',condition:profileCondition,enabled:false})}>Remove supported Prone</button>
+        <button onClick={()=>void send('END_ENCOUNTER',{})}>End original encounter</button>
+      </>}
+    </>}
+    </fieldset>
+    {combatState.isActive&&<div aria-label="Encounter roster" className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">{combatState.combatants.map((c:any,idx:number)=><div key={c.entityId} aria-label={`Combatant ${c.entityId}`} className={`p-2 border ${idx===combatState.activeTurnIndex?'border-amber-500 bg-neutral-900':'border-neutral-800 bg-neutral-950'}`}><strong>{c.name}</strong> · <span>{c.entityId}</span> {(c as any).sourceId&&<span>· {(c as any).sourceId}</span>} · Init {c.initiative} {(c as any).currentHp!==undefined&&<span>· HP {(c as any).currentHp}/{(c as any).maxHp}</span>} {Array.isArray((c as any).conditions)&&(c as any).conditions.length>0&&<span>· Conditions: {(c as any).conditions.join(', ')}</span>}</div>)}</div>}
+    {lastAtk&&<p aria-label="Last attack resolution">Committed attack: d20 {lastAtk.d20}{lastAtk.d20Rolls?` (${lastAtk.d20Rolls.join(',')})`:''}, {lastAtk.critical?'CRITICAL HIT, ':lastAtk.automaticMiss?'AUTOMATIC MISS, ':''}raw damage {lastAtk.rawDamage??lastAtk.damage}, damage {lastAtk.damage}{lastAtk.damageType?` ${lastAtk.damageType}`:''}{lastAtk.ruleApplied?` [rule: ${lastAtk.ruleApplied}]`:''}, target HP {lastAtk.hpAfter}{lastAtk.defeated?' (DEFEATED)':''}</p>}
+    </section>;
   }
   return (
     <div className="bg-neutral-900 border-b border-neutral-800 p-4 space-y-4">

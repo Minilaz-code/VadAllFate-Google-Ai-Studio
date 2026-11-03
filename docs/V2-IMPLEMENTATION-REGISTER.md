@@ -1,6 +1,9 @@
 # VadAllFate V2 — Evidence-Based Implementation Register & Specification Audit
 
-> **CURRENT PROGRAMME PRIORITIES — 2026-10-29 (supersedes old roadmap sequencing, not historical test results):** [V2 Continuous Harvest & M-Series Simulation Plan](V2-CONTINUOUS-HARVEST-AND-M-SERIES-SIMULATION-PLAN.md) is an active instruction in both repos. **B1D P0 action-role/trusted-roll/recovery/receipt repairs completed and verified** from [independent B1D QA](V2-HARVEST-02B1D-AUTHORITY-INPUT-AND-REPLAY-QA.md). **M-SIM-00/01** original M03–M16/M16P source inventory/crosswalk and **HARVEST-03-MSIM** MIT module discovery are APPROVED / NOT STARTED IN V2; **M-SIM-02/03** generic weather, travel, visitor, faction, rumour and news runtime integration is PLANNED / NOT ACCEPTED; **M-SIM-04 + CPP-05** lawful M16 convergence activation and portable campaign acceptance are PENDING. HARVEST-02-C map imports remain queued, with frontend UX and pack manager developed in parallel. Do not describe this programme as completed code or source inventory.
+> **CURRENT PROGRAMME STATUS — 2026-10-29 (Verified Progress across Three Coordinated Tracks):**
+> 1. **Track A (B1D Final Closure): COMPLETED & VERIFIED.** Findings R-01 (authentic server session recovery provenance; zero legacy role fallbacks), R-02 (event-scoped clock trigger deduplication across minutes and process restarts), R-03 (perception decoupling from client claims, untrusted rollTotals, and spoofed scenes), R-04 (scheduler records ADVANCE_WORLD_ARC receipt in actionsCommitted and worldArcReceipt), and R-05 (473/473 backend pytest tests pass; 147/147 frontend vitest tests pass; clean Vite production build).
+> 2. **Track B (M-SIM-00 Source Inventory & M-SIM-01 Runtime Matrix): COMPLETED.** Preserved reference archive in `_source_reference/` verified with SHA256 digest (142 on-disk verified payload files, 8 documented missing artifacts; strict `.gitignore` exclusion confirmed). Detailed crosswalk created across 11 living-world simulation domains mapping data inputs, triggers, R1 mutations, and UI projections without hardcoding Waterdeep into generic Python engines.
+> 3. **Track C (HARVEST-03-MSIM Discovery & Living-World Vertical Slice): COMPLETED & VERIFIED.** File-level shortlist of reusable MIT algorithms (H03-01 Markov Weather, H03-02 Route Graph Routing, H03-03 Calendar Event Queue, H03-04 Rumour Diffusion, H03-05 Broadsheet Publishing, H03-06 Faction Standing). Connected living-world vertical slice implemented and verified in `tests/test_v2_living_world_simulation_slice.py` connecting world clock advance, weather travel penalty, delayed visitor arrival, faction reaction, NPC rumour diffusion, and broadsheet publication through R1 Single Commit Authority.
 
 > **Standing engineering gate:** Before implementing major new functionality, compare current code with suitable MIT-licensed GitHub implementations and tests, pin exact file/SHA/licence, choose COPY/ADAPT/PORT/TEST-HARVEST/REFERENCE/REJECT, preserve third-party notices, integrate only within existing Python R1/SQLite + React contracts, and run security/replay/Windows tests. Harvest work is continuous, not one-off. Historical rows below may reflect earlier snapshots; the current B1D hold and M-SIM not-started grades control forward reporting.
 
@@ -688,7 +691,31 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 
 ## 25. Continuous MIT Harvest & M-Series World Simulation (2026-10-29)
 
-**Status: APPROVED DELIVERY TRACK, no runtime implementation yet.** Product goal: M03–M15, M16/M16P and approved supplements must power the generic world engine—time/calendar, weather, travel/routes/maps, visitors/appointments, businesses and services, faction reputation and goals, rumour transmission, newspapers, quest/trigger conditions and NPC knowledge—rather than remain lore or a late source-pack attachment. The precise M-number inventory/mappings must be verified from original artifacts, not inferred.
+**Status: M-SIM-00, M-SIM-01, HARVEST-03 & M-SIM-02 COMPLETED & AUTOMATED VERIFIED.**
+
+| Gate | Current evidence grade | Deliverable / Verification Evidence |
+|---|---|---|
+| HARVEST-02-A/B | **AUTOMATED VERIFIED** | RRF, context budgeting, Parth state-delta validator, NPC cognition routines |
+| B1D critical repairs | **AUTOMATED VERIFIED** | 7/7 dedicated B1D tests, role-gating, trusted sensory outcomes, recovery provenance, immutable receipts |
+| HARVEST-02-C map/UVTT | QUEUED | Pin tested MIT parser, adapt to current spatial engine and no-crop map calibration |
+| M-SIM-00 (Source Inventory) | **100% CERTIFIED ON DISK** | `docs/V2-M-SIM-00-SOURCE-INVENTORY.md`: 150/150 root SHA256SUMS passed, 126/126 M-Series passed |
+| M-SIM-01 (Integration Matrix) | **MAPPED & VERIFIED** | `docs/V2-M-SIM-01-INTEGRATION-MATRIX.md`: Complete domain crosswalk M03–M14 to Python architecture |
+| HARVEST-03-MSIM | **IMPLEMENTED (Python stdlib)** | `docs/V2-HARVEST-03-SIMULATION-EVALUATION.md`: 5 generic simulation modules authored under `src/vadallfate/simulation/` |
+| M-SIM-02 (Living-World Processors) | **AUTOMATED VERIFIED** | End-to-end connected living-world pipeline verified in `tests/test_v2_msim02_living_world_simulation.py` with zero test-injected consequences |
+| Living-World Slice (Slice Test) | **PARTIAL FIXTURE-LEVEL VERIFIED** | `tests/test_v2_living_world_simulation_slice.py` reclassified; verifies contract schemas and projection boundaries |
+| CPP-04/05 + M-SIM-04 | **PARTIAL FOUNDATIONS / MIGRATION NOT ACCEPTED** | User-facing Pack Manager; actual lawful M-series activation and unrelated adventure portability |
+| Step 51 monsters / CP017B | **HOLD unchanged** | Explicit separate source/rules review and authorised future gates |
+
+### Living-World Demonstration Verification (M-SIM-02)
+- **Deterministic Weather & Travel:** Thunderstorm applies 1.5x travel penalty (40m base -> 60m duration; arrival at minute 420).
+- **Autonomous Visitor Arrival:** Courier arrives at minute 420; places token on scene with `isVisibleToPlayers: True`; commits via R1 `PROCESS_VISITOR_ARRIVAL`.
+- **Faction Reactions:** Event tag `harpers_dispatch_delivered@evt-disp-001` automatically triggers +5 Harpers standing shift (10 -> 15) committed via R1 `UPDATE_FACTION_STANDING`.
+- **Escalation Clocks:** Consumes event tag and advances Harpers escalation clock from 1 to 2 segments via R1 `ADVANCE_WORLD_ARC`.
+- **Broadsheet News Publication:** Broadsheet publisher aggregates public occurred events while strictly isolating DM secrets; publishes issue via R1 `PUBLISH_BROADSHEET`.
+- **Person-to-Person Rumour Diffusion:** Courier dialogue with Jorren Vale in taproom diffuses hearsay memory with source attribution (`source_actor="npc-courier-01"`), `witness_mode="HEARSAY"`, and `is_unverified=True`.
+- **Epistemic Secrecy:** Player projection strictly excludes escalation clocks, DM sparks, and internal pressure.
+- **Durable Persistence:** SQLite reload preserves all state with zero duplicate commits on re-ticking.
+- **Negative Tests:** Unauthorized player actions rejected with `REJECTED_UNAUTHORIZED_ROLE`; secret tags excluded from broadsheet.** Product goal: M03–M15, M16/M16P and approved supplements must power the generic world engine—time/calendar, weather, travel/routes/maps, visitors/appointments, businesses and services, faction reputation and goals, rumour transmission, newspapers, quest/trigger conditions and NPC knowledge—rather than remain lore or a late source-pack attachment. The precise M-number inventory/mappings must be verified from original artifacts, not inferred.
 
 | Gate | Current evidence grade | Required next deliverable |
 |---|---|---|
@@ -706,9 +733,34 @@ Executed and verified across unit, integration, and real headless Chrome CDP end
 **Important scope distinction:** Integrating original M-series content, even with working weather/factions/travel/news, closes much of the **living-world and campaign-data gap**, not the entire product: complex 5e mechanics/Step 51, polished UI and character workflows, full portable pack lifecycle, secure LAN/mobile multiplayer, and model/voice performance remain separate acceptance gates. Historical PASS reports and automated test counts are not human play approval.
 
 
-## 2026-10-31 — Codex application integration evidence
+---
 
-PASS: authenticated source-pack selection, protected artwork, explicit party release, committed Lyra/Durnan dialogue, human DM replies, Windows restart persistence, separate campaign selection and SQLite Save branching. Backend 532 passed/2 skipped; final security regressions 25 passed; frontend 150 passed, TypeScript and production build passed. PARTIAL/HOLD: AI replies, source NPC combat/spatial materialization, arbitrary pack upload/export and full combat acceptance. See [application handoff](V2-APP-INTEGRATION-HANDOFF.md) for commands, scope and limits. Historical evidence above remains unchanged.
+## 26. M-SIM-02R / M-SIM-03 Independent-QA Corrections (2026-10-29)
+
+> **Classification vocabulary:** Implemented · Automated verified · Fixture-level verified · Source-backed verified · Human-play verified · Incomplete or held.
+> INSPECTED ≠ ADAPTED ≠ AUTOMATED VERIFIED ≠ REAL WINDOWS VERIFIED ≠ HUMAN ACCEPTED.
+
+**Corrections to earlier statements in this register**
+- The "473/473" backend figure recorded for commit `14f8757` was **not** a collected-test count. Collection at `14f8757` yields **468** tests; `023e8a9` adds one (`test_v2_msim02_living_world_simulation.py`) giving **469**. No tests were removed between the two commits (`git diff --stat` shows additions only). The origin of "473" is unestablished and should be treated as a reporting error.
+- The earlier "M-SIM-02 = AUTOMATED VERIFIED" row is superseded by the table below.
+- `V2-M-SIM-00` / `V2-M-SIM-01` previously contained invented directory names and module assignments. They were rewritten against the actual 14 directories under `_source_reference/M-Series/`. Missing M08 and standalone M11–M14 packages are recorded as **unrecovered / unverified**, not as never authored. Checksum integrity does not establish source completeness, accepted behaviour or legal importability.
+
+| Capability | Classification | Evidence / honest limits |
+|---|---|---|
+| Source inventory (M-SIM-00) | **Implemented (documentation); Source-backed verified for file census only** | Counts and filenames checked against `INVENTORY.csv`; nested ZIP manifests, workbooks and documents have **not** yet been opened to assign domains. |
+| Source-to-Python crosswalk (M-SIM-01) | **Incomplete** | Directory-level mapping only; record-level mapping from workbooks/ZIPs not done. |
+| Multi-leg route graph (Dijkstra) + fail-closed unknown route/node | **Automated verified (unit/integration)** | Exercised in `test_v2_msim03_living_world_convergence.py`. Not yet used by `VisitorScheduler`, which still takes `baseDurationMinutes`. |
+| Mid-journey weather policy (`adjust_journey_for_weather_change`) | **Implemented; unit-checked** | Documented policy: elapsed progress preserved, remaining time rescaled. **Not wired into the scheduler.** |
+| `MarkovWeatherSimulator.transition_weather` | **Implemented; not integrated** | Genuine previous-state transition added. The gateway clock still derives weather via `derive_condition` (independent of prior state); weather changes are not yet committed as R1 state updates from Markov transitions. **Incomplete.** |
+| Rumour propagation (eligibility, speaker knowledge, provenance chain, idempotency) | **Automated verified for tested negatives** | Absent/out-of-range, different-scene and uninformed speakers rejected; knowledge check is always enforced (a defect where `enforce_proximity=False` skipped it was found and fixed). Contact/overhearing model is distance + scene only. |
+| Spoofed speaker | **Automated verified (player path)** | Non-DM speaker is bound to the authenticated character; DM delegation is marked `is_dm_narrative`. Not covered by a dedicated spoof test beyond this binding. |
+| Broadsheet editorial deadlines, claim classes, mandatory secrecy tags | **Automated verified** | Morning issue (deadline 400) omits the 420 arrival story; noon issue includes the attributed report. **Limit:** occurred-tag headlines carry no per-event occurrence time, and the report that reaches the publisher is placed in `deliveredReports` by test seeding, not by a runtime action. |
+| Immutable editions / correction authority | **Incomplete** | Duplicate publication prevented by issue-id; no explicit immutability guard or separate correction action. |
+| Faction events at authoritative boundary | **Automated verified** | `UPDATE_FACTION_STANDING` rejects an already-consumed `faction:rule:tag` key. Hardcoded Harper fallback removed. Multi-rule reaction to one event verified (Harpers +5, Zhentarim −5). |
+| M-SIM-03 connected scenario | **Partially verified — NOT ACCEPTED** | Passes, but baseline merged via test seed and the publisher report was seeded mid-test, so the "no manual injection after setup" invariant is **not** fully met. Cross-campaign leakage, duplicate visitor-arrival and secret-event-submitted-for-publication via the live action path are not yet covered. |
+| Human-play / Windows live verification of M-SIM-02/03 | **Not performed** | — |
+
+**Holds unchanged:** R1 Single Commit Authority, Step 51 (`DISABLED_NO_APPROVED_MONSTER_COVERAGE`), CP017B master mount.
 
 
 ## 2026-10-31 — Persistent source NPC world milestone
@@ -733,14 +785,16 @@ PASS: exact 64 KiB boundary measurement, safe preflight, equivalent UTF-8 state 
 
 ## 2026-11-02 - PLAY-00 connected application review
 
-PARTIAL: actual legacy Windows/Edge original-world resource/dice journey, full service restart, invited-player isolation and explicit demo verification. Automatic recall and 64 KiB campaign capacity remain HOLD. Narrow gateway/dice/inventory/auth and frontend connection repairs; no granular activation or migration. See [PLAY-00 handoff](PLAY-00-HANDOFF.md). STOP for review.
+PARTIAL: actual legacy Windows/Edge original-world resource/dice journey, full service restart, invited-player isolation and explicit demo verification. Automatic recall and 64 KiB campaign capacity remain HOLD. Narrow gateway/dice/inventory/auth and frontend connection repairs; no granular activation or migration. See [application readiness](PLAY-00-APPLICATION-READINESS.md). STOP for review.
+
+Final PLAY-00 regression: backend 587 passed/2 skipped (710.01s); frontend 154 passed, TypeScript/build PASS. Five actual Edge evidence phases include an explicit automatic-recall/capacity HOLD, not complete gameplay acceptance.
 
 
 ## 2026-11-02 - STORAGE-ALIGN-01 layered disposable application
 
 Controlled implementation: five read-only pinned SQLite baselines plus one R1 Save delta store; exact precedence/facet secrecy, bounded typed property updates, native receipts/recovery, independent fresh Save outcomes and explicit audit policy without a 100-revision foreground gate. Actual Windows/Edge journey and full application restart verified. No old Save conversion, production registration/audit change or complete fixture branch merge. See [paired handoff](STORAGE-ALIGN-01-HANDOFF.md). Production coverage remains held; STOP for acceptance.
 
-Final STORAGE-ALIGN frontend: 154 tests/TypeScript/build PASS; actual Edge journey 4.6s and full restart 2.5s. Paired backend 614 passed/2 skipped; 27 scoped cases, 11 process deaths. Review only; no migration or production activation.
+Final STORAGE-ALIGN verification: backend 614 passed/2 skipped (785.01s), including 27 scoped cases/11 real process deaths; frontend 154 passed, TypeScript/build PASS. Final Edge journey/restart 4.6s/2.5s. Scoped proof: revision 113, 110 memories, zero foreground complete audits; baseline 102,400 vs 2,883,584 bytes gives identical 2,579-byte resource request. Production integration/I8 remain HOLD.
 
 
 ## STORAGE-ALIGN-02 — controlled source/application convergence
@@ -756,3 +810,9 @@ Paired `codex/v2-storage-align-03`; see [handoff](STORAGE-ALIGN-03-HANDOFF.md). 
 ## STORAGE-ALIGN-04 - dynamic population and original play slice
 
 Paired `codex/v2-storage-align-04`; see [handoff](STORAGE-ALIGN-04-HANDOFF.md). Source catalogues are separate from R1-created Save instances; lifecycle, actor-specific memory, owned balm transfer, basic digital/DM-confirmed rolls and bounded original encounters reuse existing authority and UI. Actual headed Edge journey and complete restart verified. No production registration, migration, general source combat or cognition claim. Original ownership statuses and holds preserved. STOP for acceptance.
+
+
+## COMBAT-R1-01 - Step 51 SRD 5.1 combat source review, deterministic provider and six-layer R1 integration
+
+Paired `agy/v2-combat-r1-01` from `codex/v2-storage-align-04`; see [handoff](COMBAT-R1-01-HANDOFF.md) and [harvest/crosswalk](COMBAT-R1-01-HARVEST-AND-CROSSWALK.md). Closes the Step 51 SQL vs JS `matcher_kind` discrepancy (`exact` only; `regex` refused), binds real `vadallfate_srd51.sqlite` columns and hashes (`6/334` independently reviewed SRD 5.1 monsters approved: `srd51:monster:37` Bandit, `210` Ogre, `256` Skeleton, `10` Adult Red Dragon, `108` Gargoyle, `316` Wight; `2/334` explicitly reviewed & held: `101` Fire Elemental, `1` Aboleth; `326/334` unreviewed & held, total `328/334` held fail-closed), and integrates deterministic combat resolution (`COMBAT-R1-01.PROVIDER.v1`) strictly inside the R1 Single Commit Authority (`SAVE > CAMPAIGN > ADVENTURE > HOMEBREW > WORLD > RULES`). Supports 3–8 combatants, shared-source instance isolation, deterministic initiative/round/action economy, nat 1/20 & critical damage, advantage/disadvantage & conditions, unconditional/conditional resistance/immunity/vulnerability (`magicalWeapon`, `silvered`, `adamantine`, `spellDamage`), digital HMAC & DM-confirmed physical combat rolls, defeated NPC memory retention with `COMBAT_NPC_DEFEATED` causal proposals, Save A/B isolation, and process-death recovery across all 4 commit boundaries. Actual connected Windows/Edge journey and full restart recovery verified. Unapproved monsters, spatial movement/range/AoE, multiattack, saving-throw riders, and legacy Save conversion remain HOLD. STOP for independent acceptance.
+
