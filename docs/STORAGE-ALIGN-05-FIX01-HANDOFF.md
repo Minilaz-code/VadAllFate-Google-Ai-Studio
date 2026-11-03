@@ -2,7 +2,7 @@
 
 Delivered for independent senior control review; acceptance PENDING. No merge, normal activation, combat integration or Save conversion.
 
-Paired branch `codex/v2-storage-align-05-fix01`; frontend exact parent `beeb95186f7793e5038208beb6484567a0da7c2b`. Executable frontend `8c25a72fa2ffe6d576af0c4c2aa0af8ffff0e3c0`. Backend exact parent `5aca964dbfa7b27cade8a82ecb76446ba48a6e70`; executable backend `ba0b3b55d68c7a46b671b663b18409937a98121a`, proof checkpoint `82e9cef012fd0bc4922ff05f8e2b60eb31ce0b80`. Final publication HEADs are delivered with this handoff. Later changes are evidence/docs only.
+Paired branch `codex/v2-storage-align-05-fix01`; frontend exact parent `beeb95186f7793e5038208beb6484567a0da7c2b`. Executable frontend `8c25a72fa2ffe6d576af0c4c2aa0af8ffff0e3c0`. Backend exact parent `5aca964dbfa7b27cade8a82ecb76446ba48a6e70`; executable backend `ba0b3b55d68c7a46b671b663b18409937a98121a`, proof checkpoint `82e9cef012fd0bc4922ff05f8e2b60eb31ce0b80`. Final publication HEADs are delivered with this handoff. Runtime sources remain unchanged since those executable commits. Backend b925c8d strengthens unsupported-kind/forged-parameter negative tests; subsequent work is proof utilities, tests and documentation.
 
 [Backend contract, tests, measurements and evidence](https://github.com/Minilaz-code/VadAllFate/blob/codex/v2-storage-align-05-fix01/docs/STORAGE-ALIGN-05-FIX01-HANDOFF.md).
 
