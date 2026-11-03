@@ -1,0 +1,17 @@
+# FIX01 frontend handoff
+
+Delivered for independent senior control review; acceptance PENDING. No merge, normal activation, combat integration or Save conversion.
+
+Paired branch `codex/v2-storage-align-05-fix01`; frontend exact parent `beeb95186f7793e5038208beb6484567a0da7c2b`. Executable frontend `8c25a72fa2ffe6d576af0c4c2aa0af8ffff0e3c0`. Backend exact parent `5aca964dbfa7b27cade8a82ecb76446ba48a6e70`; executable backend `ba0b3b55d68c7a46b671b663b18409937a98121a`, proof checkpoint `82e9cef012fd0bc4922ff05f8e2b60eb31ce0b80`. Final publication HEADs are delivered with this handoff. Later changes are evidence/docs only.
+
+[Backend contract, tests, measurements and evidence](https://github.com/Minilaz-code/VadAllFate/blob/codex/v2-storage-align-05-fix01/docs/STORAGE-ALIGN-05-FIX01-HANDOFF.md).
+
+Changed UI: existing WorldSimulationPanel offers approved source routine, arbitrary selected individual, due minute, optional earlier prerequisite and approved location association. New causal profile continues through one authenticated bounded host batch. Existing old-source publications preserve legacy compatibility. Rejections display exact reason and native completion; unresolved errors display as errors. No browser simulation, SQL writer, NPC-specific handlers or model authority.
+
+Actual headed Windows/Edge original disposable journey: six source-bound NPCs; changed listener contact -> CONTACT_UNAVAILABLE/no listener memory, failed appointment -> NOT_AT_APPOINTMENT, unrelated watch/travel/faction/news progress, dormant prior testimony/future appointment retained, SaveB and invited player isolated.28 native receipts match stored R1 evidence. Both Python+React killed and relaunched; both Save projections exact, player reauthentication/private projection checked, post-restart full replay revision28/40records agrees. Original successful SA05 headed Edge regression also PASS55.8s/58.0s total. New full restart PASS14.5s/17.9s total. Sources unchanged.
+
+Frontend158 tests, TypeScript and Vite build PASS. Existing Vite native-config/chunk advisories retained. Backend15 scoped cases PASS including8 genuine process-death boundaries; full hosted3.11/3.12 each681passed/1failed/1skipped, only inherited unprovisioned live-Ollama node. [Exact backend CI run](https://github.com/Minilaz-code/VadAllFate/actions/runs/41719391794) remains HOLD; no tests suppressed. Full local Windows final evidence is reported in backend delivery.
+
+Reproduce using backend fresh scripts/storage_align_causal.py control; set VADALLFATE_WORLD_CONTROL and VADALLFATE_E2E_URL to the NEW original disposable app. Wait for launcher health and pids.json readiness. Run `node node_modules/@playwright/test/cli.js test e2e/storage-align-05-fix01.spec.ts --headed -g "connected causal"` with VADALLFATE_WORLD_PHASE=fix01; terminate owned Python+React/supervisor, relaunch same root, phase=fix01-restart and grep "full application restart". No demo adapter. Raw responses/screenshots/Saves/credentials stay private. Initial test-driver shape error was corrected and fresh fixture rerun, not repaired in SQLite.
+
+Holds: production/I8, existing Save conversion, SOURCE-LAYER-00, source combat, autonomous AI authority and production audit policy. Pages remain bounded; this is not a full-world editor or general rerouting/planning system. Existing330 inventory/307 proposed statuses unchanged. Antigravity combat worktrees untouched; they may advance independently. **STOP for independent control review.**

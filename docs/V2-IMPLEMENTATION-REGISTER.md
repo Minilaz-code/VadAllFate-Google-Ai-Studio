@@ -761,3 +761,8 @@ Paired `codex/v2-storage-align-04`; see [handoff](STORAGE-ALIGN-04-HANDOFF.md). 
 ## STORAGE-ALIGN-05 - controlled living-world integration
 
 Paired `codex/v2-storage-align-05`: existing M-SIM processors adapted to bounded typed R1 Save deltas, durable PAUSED scheduler plan, exact NPC travel/rumour/faction/news owners and existing adventure UI. See `docs/STORAGE-ALIGN-05-HANDOFF.md` and backend world contract/evidence. Controlled original slice only; general simulation remains partial. No migration, production activation, protected contract change or Antigravity combat merge. STOP for independent acceptance.
+
+
+## STORAGE-ALIGN-05-FIX01 - controlled causal routines
+
+Paired codex/v2-storage-align-05-fix01; see FIX01 handoff. Existing React now exposes approved source routines and location association for independently bound NPCs, authoritative rejection reasons, and bounded authenticated host continuation. Headed Edge journey and full Python+React restart verified with28 native receipts; original successful SA05 regression retained. No production activation, combat integration or existing Save conversion. STOP for independent senior control review.
