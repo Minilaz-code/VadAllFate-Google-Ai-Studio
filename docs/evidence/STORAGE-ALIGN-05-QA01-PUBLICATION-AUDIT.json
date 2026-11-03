@@ -1,0 +1,17 @@
+{
+  "checkpoint": "STORAGE-ALIGN-05-QA01",
+  "parent": "4c4d09376443f04d932ffa95712b7bb77ab1191a",
+  "status": "PASS publication privacy/source-scope review, not independent feature acceptance",
+  "scope": "All new outgoing committed and prospective files; every new commit message/blobs checked again before final publication. No history rewrite.",
+  "protectedPathsUnchanged": [
+    "src",
+    "package.json",
+    "package-lock.json"
+  ],
+  "rights": "Only original CC0 test content and selected native receipt/hash metadata; no private world text, restricted artwork, database, raw API response, credentials or machine paths.",
+  "authorSeparation": "Same-author QA; independent review HOLD",
+  "sha256": {
+    "docs/STORAGE-ALIGN-05-QA01-HANDOFF.md": "c19b64e52cc71d0a1b2b5d247d8633167bd6028fd5af731b0f695a53b19befd5",
+    "e2e/storage-align-05.spec.ts": "2ae13dcae27e232c6dd81dd9f64bbf6e1047228255dced63d5b8d1e3c4734959"
+  }
+}
