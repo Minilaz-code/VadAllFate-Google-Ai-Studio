@@ -4,13 +4,17 @@ import {getStoredSession} from '../../services/v2Session.ts';
 
 /** Development-only view of committed R1 projections; no local simulation. */
 export function WorldSimulationPanel({initial,role,npcs,isPreview,onRefresh}:{initial:any;role:string;npcs:any[];isPreview:boolean;onRefresh:()=>Promise<unknown>}){
- const [world,setWorld]=useState(initial);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [actors,setActors]=useState<string[]>(['','','']);const locked=useRef(false);const dm=['dm','dm_host'].includes(role);
+ const [world,setWorld]=useState(initial);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [actors,setActors]=useState<string[]>(['','','']);const [routines,setRoutines]=useState<any[]>([]);const [routine,setRoutine]=useState('');const [individual,setIndividual]=useState('');const [due,setDue]=useState('');const [parent,setParent]=useState('');const [location,setLocation]=useState('');const locked=useRef(false);const dm=['dm','dm_host'].includes(role);
  useEffect(()=>{setWorld(initial);},[initial]);
+ useEffect(()=>{if(dm&&initial?.causalScheduler&&!isPreview)contentRequest('routines',role).then(v=>setRoutines(v.entries)).catch(e=>setError(e.message));},[dm,role,initial?.causalScheduler,isPreview]);
+ const locations=[...new Set(routines.flatMap(r=>r.definition.kind==='APPOINTMENT'?[r.definition.location]:[r.definition.route.origin,r.definition.route.destination]))];
+ const edit=async(kind:string)=>{if(locked.current||isPreview)return;locked.current=true;setBusy(true);setError('');try{const current=await contentRequest('world',role);const selected=routines.find(r=>r.source.id===routine);await contentMutation(kind==='schedule'?'world-schedule':'world-associate',kind==='schedule'?{id:crypto.randomUUID(),npc:individual,source:selected.source,due:Number(due),parent}:{npc:individual,location},current.snapshotRef,role);setWorld(await contentRequest('world',role));await onRefresh();}catch(e:any){setError(e.message);}finally{locked.current=false;setBusy(false);}};
  const run=async(kind:string)=>{if(locked.current||isPreview)return;locked.current=true;setBusy(true);setError('');const selection=JSON.stringify(getStoredSession());
   try{let current=await contentRequest('world',role);if(selection!==JSON.stringify(getStoredSession()))throw new Error('Session changed; reload world view.');
    if(kind!=='resume'){await contentMutation(kind==='enrol'?'world-enrol':'world-advance',kind==='enrol'?{visitor:actors[0],listener:actors[1],outsider:actors[2]}:{minutes:Number(kind)},current.snapshotRef,role);current=await contentRequest('world',role);}
-   // Every consequence has a separate bounded receipt. Durable plan remains on interruption.
-   for(let i=0;i<20&&current.plan?.processing;i++){if(selection!==JSON.stringify(getStoredSession()))throw new Error('Session changed; resume with the selected Save.');await contentMutation('world-step',{},current.snapshotRef,role);current=await contentRequest('world',role);setWorld(current);}
+   // New profile continues on the authenticated host; the browser never simulates events.
+   if(current.causalScheduler&&current.plan?.processing){const batch=await contentRequest('world-run',role,{payload:{budget:20},snapshotRef:current.snapshotRef,actionId:crypto.randomUUID()});if(batch.status==='ERROR')throw new Error(`Integrity / authority error: ${batch.error.message}`);current=await contentRequest('world',role);}
+   else if(!current.causalScheduler){for(let i=0;i<20&&current.plan?.processing;i++){if(selection!==JSON.stringify(getStoredSession()))throw new Error('Session changed; resume with the selected Save.');await contentMutation('world-step',{},current.snapshotRef,role);current=await contentRequest('world',role);setWorld(current);}}
    setWorld(current);await onRefresh();
   }catch(e:any){setError(e.message);try{setWorld(await contentRequest('world',role));}catch{}}
   finally{setBusy(false);locked.current=false;}
@@ -24,11 +28,21 @@ export function WorldSimulationPanel({initial,role,npcs,isPreview,onRefresh}:{in
  {['30','40','140'].map(n=><button key={n} disabled={world.plan?.processing} onClick={()=>void run(n)}>Advance world {n} minutes</button>)}
  <button disabled={!world.plan?.processing} onClick={()=>void run('resume')}>Resume pending world events</button>
  </fieldset>}
- {busy&&<p role="status">Processing bounded R1 world events…</p>}{error&&<p role="alert">{error}. Committed work is retained; resume pending events.</p>}
+ {dm&&world.causalScheduler&&<fieldset disabled={busy||isPreview||world.plan?.processing} className="flex flex-wrap gap-2">
+ <legend>Source-backed individual routines</legend>
+ <label>Routine individual<select aria-label="Routine individual" value={individual} onChange={e=>setIndividual(e.target.value)}><option value="">Choose individual</option>{npcs.map(n=><option key={n.id} value={n.id}>{n.name} · {n.id}</option>)}</select></label>
+ <label>Approved routine<select aria-label="Approved routine" value={routine} onChange={e=>setRoutine(e.target.value)}><option value="">Choose source activity</option>{routines.map(r=><option key={r.source.id} value={r.source.id}>{r.name} ({r.kind})</option>)}</select></label>
+ <label>Due world minute<input aria-label="Due world minute" type="number" min={world.minute+1} value={due} onChange={e=>setDue(e.target.value)}/></label>
+ <label>Prerequisite event<select aria-label="Prerequisite event" value={parent} onChange={e=>setParent(e.target.value)}><option value="">Independent</option>{world.jobs.map((j:any)=><option key={j.id} value={j.id}>{j.id} ({j.status})</option>)}</select></label>
+ <button disabled={!individual||!routine||Number(due)<=world.minute} onClick={()=>void edit('schedule')}>Schedule approved activity</button>
+ <label>Approved association<select aria-label="Approved association" value={location} onChange={e=>setLocation(e.target.value)}><option value="">Choose location</option>{locations.map(loc=><option key={loc} value={loc}>{loc}</option>)}</select></label>
+ <button disabled={!individual||!location} onClick={()=>void edit('associate')}>Associate individual with location</button>
+ </fieldset>}
+ {busy&&<p role="status">Processing bounded R1 world events…</p>}{error&&<p role="alert">{error}. Committed work is retained. Domain rejections appear in scheduled events; unresolved errors require investigation.</p>}
  {world.plan?.processing&&<p>World consequences are pending. Further actions wait for explicit scheduler completion.</p>}
  {world.people?.map((p:any)=><p key={p.id}>{p.name||'Unnamed'} · {p.id}: {p.location} ({p.lifecycle})</p>)}
- {world.journeys.map((j:any)=><p key={j.npc}>Journey {j.npc}: {j.origin} → {j.destination}; {j.status}; depart {j.departure}, ETA {j.eta}; base {j.baseMinutes} minutes under {j.weather}. Named association only.</p>)}
- {dm&&<details><summary>Scheduled events and provenance</summary>{world.jobs.map((j:any)=><p key={j.id}>{j.kind}: {j.status}, due {j.due}, target {j.target}; cause {j.cause}; completion {j.completion||'pending'}</p>)}</details>}
+ {world.journeys.map((j:any)=><p key={`${j.npc}:${j.cause}`}>Journey {j.npc}: {j.origin} → {j.destination}; {j.status}; depart {j.departure}, ETA {j.eta}; base {j.baseMinutes} minutes under {j.weather}. Named association only.</p>)}
+ {dm&&<details><summary>Scheduled events and provenance</summary>{world.jobs.map((j:any)=><p key={j.id}>{j.kind}: {j.status}, due {j.due}, target {j.target}; cause {j.cause}; completion {j.completion||'pending'}{j.outcome&&<>; rejected because {j.outcome.reason}; prerequisite {j.outcome.dependency||'none'}</>}</p>)}</details>}
  {world.factions.map((f:any)=><p key={f.faction}>Faction {f.faction}: standing {f.standing}; clock {f.clock.filled_segments}/{f.clock.max_segments}</p>)}
  {dm&&<details><summary>Authorised NPC knowledge</summary>{world.memories.map((m:any,i:number)=><p key={i}>{m.npc}: {m.text} ({m.epistemic_status}; sender {m.sender||m.actor}; minute {m.minute})</p>)}</details>}
  {world.news.map((n:any)=><article key={n.issue.issueId}><h4>{n.issue.title} · published {n.issue.publicationMinute}</h4>{n.issue.stories.map((s:any,i:number)=><p key={i}>{s.headline} [{s.claimType}; {s.source}]</p>)}</article>)}
