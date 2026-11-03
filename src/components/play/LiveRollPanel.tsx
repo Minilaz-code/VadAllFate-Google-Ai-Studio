@@ -49,7 +49,7 @@ export function LiveRollPanel({projection,role,actorId,isLive,isPreview,onRefres
           {r.allowedModes.includes('PLAYER_PHYSICAL')&&<><input aria-label={`Physical faces ${r.requestId}`} value={faces[r.requestId]||''} onChange={e=>setFaces({...faces,[r.requestId]:e.target.value})} placeholder="Physical faces, comma separated" className="bg-neutral-900"/>
           <button disabled={!faces[r.requestId]?.trim()} onClick={()=>void submit('SUBMIT_ROLL',{requestId:r.requestId,diceMode:'PLAYER_PHYSICAL',rawRolls:faces[r.requestId].split(',').map(x=>Number(x.trim()))})}>Report physical roll</button></>}
         </>}
-        {dm&&pending.filter(a=>a.status==='PENDING_HUMAN_DM_APPROVAL'&&(a as any).requestId===r.requestId).map(a=><button key={a.adjudicationId} onClick={()=>void submit('APPROVE_ADJUDICATION',{adjudicationId:a.adjudicationId})}>Confirm physical roll</button>)}
+        {dm&&pending.filter(a=>a.status==='PENDING_HUMAN_DM_APPROVAL'&&(a as any).requestId===r.requestId).map(a=><React.Fragment key={a.adjudicationId}><button onClick={()=>void submit('APPROVE_ADJUDICATION',{adjudicationId:a.adjudicationId})}>Confirm physical roll</button><button onClick={()=>void submit('REJECT_ADJUDICATION',{adjudicationId:a.adjudicationId})}>Reject physical roll</button></React.Fragment>)}
       </fieldset>
     </article>)}</div>
     {externalBusy&&<p>Waiting for the current NPC action to finish.</p>}

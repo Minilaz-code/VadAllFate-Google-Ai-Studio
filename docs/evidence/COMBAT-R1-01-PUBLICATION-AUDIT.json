@@ -1,0 +1,20 @@
+{
+  "baseline": "5fe326eeb4d4a0e04256dc2efbdd96a2191dd911",
+  "audit": "PASS",
+  "scope": "All added/modified outgoing source, tests, public original fixtures and documentation; committed blob audit repeated after commit. Existing accepted history retained.",
+  "checks": {
+    "personalPaths": false,
+    "credentials": false,
+    "privateDatabasesImagesResponses": false,
+    "restrictedContent": "No restricted source content or artwork; reviewed SRD 5.1 CC-BY-4.0 metadata and original CC0 synthetic fixtures only",
+    "protectedFilesUnchanged": {}
+  },
+  "sha256": {
+    "docs/COMBAT-R1-01-HANDOFF.md": "59d06f2d5ee09a503b806960915c5dfee149c4fe4f2eec9976ea54122938864f",
+    "docs/COMBAT-R1-01-HARVEST-AND-CROSSWALK.md": "2ab7854e2774e273b18ac531fa58dd9956d5a4cd94b706c1cde162a369924e91",
+    "docs/V2-IMPLEMENTATION-REGISTER.md": "9e873f64348e924ae9b162e60073e8f58d400d697020ab485ba9d3badce8eb5d",
+    "e2e/combat-r1-01.spec.ts": "0321a9bbfc4fec5e0f4aa39f30714d1b67c585a0b23577d87d5400549b23b3f0",
+    "src/components/play/CombatTracker.tsx": "3bd2b6546b12004c19d8393c5b18773a944ce971049eab450c9a16a4fdfb696c",
+    "src/components/play/LiveRollPanel.tsx": "7ae93ca9ff76c24bc78afe2891fa01e5cff079dddb56a3e5175d56900aef467f"
+  }
+}
