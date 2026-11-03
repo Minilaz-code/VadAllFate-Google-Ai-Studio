@@ -756,3 +756,8 @@ Paired `codex/v2-storage-align-03`; see [handoff](STORAGE-ALIGN-03-HANDOFF.md). 
 ## STORAGE-ALIGN-04 - dynamic population and original play slice
 
 Paired `codex/v2-storage-align-04`; see [handoff](STORAGE-ALIGN-04-HANDOFF.md). Source catalogues are separate from R1-created Save instances; lifecycle, actor-specific memory, owned balm transfer, basic digital/DM-confirmed rolls and bounded original encounters reuse existing authority and UI. Actual headed Edge journey and complete restart verified. No production registration, migration, general source combat or cognition claim. Original ownership statuses and holds preserved. STOP for acceptance.
+
+
+## STORAGE-ALIGN-05 - controlled living-world integration
+
+Paired `codex/v2-storage-align-05`: existing M-SIM processors adapted to bounded typed R1 Save deltas, durable PAUSED scheduler plan, exact NPC travel/rumour/faction/news owners and existing adventure UI. See `docs/STORAGE-ALIGN-05-HANDOFF.md` and backend world contract/evidence. Controlled original slice only; general simulation remains partial. No migration, production activation, protected contract change or Antigravity combat merge. STOP for independent acceptance.

@@ -1,0 +1,29 @@
+{
+  "milestone": "STORAGE-ALIGN-05",
+  "base": "5fe326eeb4d4a0e04256dc2efbdd96a2191dd911",
+  "status": "PASS",
+  "scope": "All outgoing added/modified text, code, original fixtures, tests, documentation and evidence. Accepted prior history retained unchanged; committed blobs and messages verified again before publication.",
+  "checks": {
+    "personalPathsAndMachineNamesFound": false,
+    "credentialsFound": false,
+    "privateContentOrArtworkAdded": false,
+    "privateDatabasesOrRawProofResponsesAdded": false,
+    "rightsReview": "Original CC0 synthetic scenario and source-generation recipes only; no restricted archive or commercial text/assets introduced.",
+    "existingProtectedFilesByteIdentical": {
+      "src/App.tsx": true,
+      "src/components/play/CombatTracker.tsx": true,
+      "src/runtime/adapter.ts": true,
+      "src/services/v2Session.ts": true,
+      "src/services/v2ContentClient.ts": true,
+      "src/services/controlledGatewayFetch.ts": true
+    },
+    "protectedMergesOrProductionActivation": false
+  },
+  "sha256": {
+    "docs/STORAGE-ALIGN-05-HANDOFF.md": "9c01130d1ea519ece5036669827fc0487f57f4b6d0d1c6d3238597559816ad5b",
+    "docs/V2-IMPLEMENTATION-REGISTER.md": "00ce788616ca90f44ffb42bb7f16b78d5d2b78dfe13b4a1bde83ab247e139c10",
+    "e2e/storage-align-05.spec.ts": "90386fbe72c7356537a27efe283fad1c1746a752376921fce084c917996ec36e",
+    "src/components/play/AdventurePlayPanel.tsx": "bbab5ddacf5cbd90e9afecae28ea6dafe4c9a99c4be90219c605299395ac43ee",
+    "src/components/play/WorldSimulationPanel.tsx": "7843d6be2de030ef98a0598ba2033bbcad0a7a58b687f9f8b440af52796af4f4"
+  }
+}
