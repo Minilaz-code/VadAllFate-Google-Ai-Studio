@@ -1,0 +1,18 @@
+{
+    "scope":  "All added/modified outgoing source, tests, and documentation; committed blob audit repeated after commit. Existing accepted history retained.",
+    "checks":  {
+                   "personalPaths":  false,
+                   "restrictedContent":  "No restricted source content or artwork; reviewed SRD 5.1 CC-BY-4.0 metadata and original CC0 synthetic fixtures only",
+                   "privateDatabasesImagesResponses":  false,
+                   "credentials":  false,
+                   "protectedFilesUnchanged":  {
+
+                                               }
+               },
+    "audit":  "PASS",
+    "baseline":  "b4608df87d9bec2e7f910f82cd582fe3074c525f",
+    "sha256":  {
+                   "e2e/combat-r1-02.spec.ts":  "a57c401f2500d2698dec559a1bdf9ba1681d73feeddd7c1abb391c4a5ca51212",
+                   "docs/COMBAT-R1-02-HANDOFF.md":  "67f13898ddb8d81808b1c050766e2f80d9775b2ef544552d35a767d85075d578"
+               }
+}
