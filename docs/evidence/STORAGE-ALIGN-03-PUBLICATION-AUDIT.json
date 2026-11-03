@@ -1,0 +1,32 @@
+{
+  "milestone": "STORAGE-ALIGN-03",
+  "base": "d5d1a7c6f0dd1c5232d21e2d0821a10b72601751",
+  "result": "PASS",
+  "scope": "All outgoing added/modified blobs and final commit messages; fileSha256 excludes this self-referential audit report; unchanged published ancestry retained",
+  "checks": [
+    "No personal paths or credential/token literals",
+    "No restricted prose, private packs, databases, images or raw proof responses",
+    "Original CC0 acceptance fixtures only; existing source reader rights/approval preserved",
+    "Protected schema/store/codec/JCS/tree/gateway files byte-identical",
+    "CommitAuthority differs only in two existing recovery campaign parameters",
+    "Original 330 ownership rows and statuses preserved; 307 proposed; no migration",
+    "Existing Antigravity working trees remain clean"
+  ],
+  "fileSha256": {
+    "docs/STORAGE-ALIGN-03-HANDOFF.md": "a824d0c3bb5ea57a4156ae2f0c55b2163f7e142dde720425561806be85ac31db",
+    "docs/V2-IMPLEMENTATION-REGISTER.md": "32f013aab444c2e5eda46902999bfdc06bff2991110b74c56ca5c487fed99a63",
+    "e2e/storage-align-03.spec.ts": "f06f864fcbaa23d5973fd702ea81fe9086c9d64d3d60838b2fe37d1079310b90",
+    "src/components/play/AdventurePlayPanel.tsx": "e36a1c4ad3e494042101154edd7782bf1b6e03bdf0319f815ebf597414b80090",
+    "src/services/v2Session.ts": "5a7d41ba2e4ee890e7fd858674197f739afc83282b7fceefaebfac5108c7f6e0"
+  },
+  "protectedBackendFilesUnchanged": [
+    "store.py",
+    "contracts.py",
+    "storage_align/schema.sql",
+    "staged_request_codec.py",
+    "input_admission.py",
+    "jcs_hash.py",
+    "granular/hash_profile.py",
+    "v2_campaign_gateway.py"
+  ]
+}

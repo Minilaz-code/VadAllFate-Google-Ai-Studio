@@ -746,3 +746,8 @@ Final STORAGE-ALIGN frontend: 154 tests/TypeScript/build PASS; actual Edge journ
 ## STORAGE-ALIGN-02 — controlled source/application convergence
 
 Paired `codex/v2-storage-align-02`; see [acceptance handoff](STORAGE-ALIGN-02-HANDOFF.md). Existing App uses pinned private source publication and native R1 Save deltas for HP/balm, authorised NPC testimony/trust, minute and original objective. Actual headed Windows/Edge journey, separate player secrecy, divergent Saves and full process restart verified. No production registration, migration or new mechanics. Original ownership statuses retained. Stop for acceptance.
+
+
+## STORAGE-ALIGN-03 - generic instance slice
+
+Paired `codex/v2-storage-align-03`; see [handoff](STORAGE-ALIGN-03-HANDOFF.md). Existing App now resolves explicit character/NPC instances, distinct owned resources, NPC memories and actor-specific trust through the same R1 Save transaction. Original CC0 connected multi-player journey and process restart verified; legacy aliases preserved without conversion. No production activation, frozen schema change or broader inventory/cognition claim. STOP for acceptance.

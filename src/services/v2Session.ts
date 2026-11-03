@@ -107,6 +107,13 @@ export async function loginWithHostKey(
   playerCharacterId: string = 'char-lyra-01'
 ): Promise<V2SessionTokens> {
   const dm = await postSession({ bootstrapKey, role: 'dm_host', actorId: 'dm-1', isHost: true });
+  if(isLayeredDevelopment()){
+    const response=await fetch(`${apiBase()}/projection`,{headers:{...developmentHeaders(),'X-VadAllFate-Session-Token':dm.sessionToken}});
+    if(!response.ok)throw new Error('Authorised development character discovery failed');
+    const view=await response.json();
+    if(!view.characters?.some((c:any)=>c.id===playerCharacterId))playerCharacterId=view.characters?.[0]?.id;
+    if(!playerCharacterId)throw new Error('No authorised development character');
+  }
   const player = await postSession({
     bootstrapKey,
     role: 'player',
