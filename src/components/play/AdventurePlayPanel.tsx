@@ -1,3 +1,4 @@
+import {WorldSimulationPanel} from './WorldSimulationPanel.tsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {contentRequest,contentMutation} from '../../services/v2ContentClient.ts';
 import {getStoredSession} from '../../services/v2Session.ts';
@@ -34,6 +35,7 @@ export function AdventurePlayPanel({role,characters,isLive,isPreview,refreshKey,
  if(!view?.available)return error?<p role="alert">Adventure unavailable: {error} <button onClick={()=>void load().catch(e=>setError(e.message))}>Retry adventure</button></p>:<p>Loading authorised adventure…</p>;
  const button='px-3 py-2 rounded border border-neutral-600 bg-neutral-800 disabled:opacity-40';const field='bg-neutral-950 border border-neutral-700 rounded p-2';
  return <section aria-label="Adventure play" className="flex-1 min-h-0 overflow-auto bg-neutral-950 p-5 text-neutral-200">
+ {view.livingWorld&&<WorldSimulationPanel initial={view.livingWorld} role={role} npcs={view.npcs} isPreview={isPreview} onRefresh={async()=>{await load();await onRefresh();}}/>}
  <header className="flex flex-wrap items-center gap-4"><h2 className="text-xl text-amber-200">{view.title}</h2><p>World time {view.time}</p><p>{['STORAGE-ALIGN-02','STORAGE-ALIGN-03','STORAGE-ALIGN-04'].includes(view.storageFormat)?'Source location (association only)':'Location'}: {view.location?.name||'Not yet entered'}</p>{dm&&<select aria-label="Adventure character" className={field} value={characterId} onChange={e=>setCharacterId(e.target.value)}>{characters.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}</header>
  {view.storageFormat==='STORAGE-ALIGN-04'&&<details open={populationOpen} onToggle={e=>setPopulationOpen(e.currentTarget.open)} aria-label="NPC catalogue and lifecycle" className="border border-amber-900 p-3 my-3"><summary>NPC catalogue and persistent individuals</summary>
  {dm&&<fieldset disabled={busy||isPreview} className="flex flex-wrap gap-2 my-2">
