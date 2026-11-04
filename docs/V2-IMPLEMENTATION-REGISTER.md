@@ -766,3 +766,8 @@ Paired `codex/v2-storage-align-05`: existing M-SIM processors adapted to bounded
 ## STORAGE-ALIGN-05-FIX01 - controlled causal routines
 
 Paired codex/v2-storage-align-05-fix01; see FIX01 handoff. Existing React now exposes approved source routines and location association for independently bound NPCs, authoritative rejection reasons, and bounded authenticated host continuation. Headed Edge journey and full Python+React restart verified with28 native receipts; original successful SA05 regression retained. No production activation, combat integration or existing Save conversion. STOP for independent senior control review.
+
+
+## WORLD-ROUTINES-02 - approved agendas and causal alternatives
+
+Paired codex/v2-world-routines-02; see handoff. Existing world UI previews immutable approved agendas, admits through authenticated R1, resumes persistent activation and shows bounded original/alternate/arrival statuses and availability.161 frontend tests/typecheck/build verified. Actual six-NPC headed Edge journey and full Python/React restart verified with45 matching native receipts and private player projection. No shadow scheduler/Save, source ingestion, combat integration or production activation. STOP for independent senior review; accepted330/307 statuses unchanged.
