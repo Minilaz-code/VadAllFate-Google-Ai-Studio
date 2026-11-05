@@ -24,6 +24,7 @@ import type { CharacterSheet } from '../../types/dnd5e.ts';
 import type { NonPlayerCharacter } from '../../types/npc.ts';
 import type {
   CombatTurnState,
+  NativeCombatEvidence,
   UserRole,
   DemoActionEnvelope,
   PlayerSafeNpc,
@@ -34,6 +35,7 @@ import type {
 
 interface CombatTrackerProps {
   supportedProfile?: boolean;
+  combatEvidence?: NativeCombatEvidence[];
   readOnly?: boolean;
   combatState: CombatTurnState;
   characters: CharacterSheet[];
@@ -66,6 +68,7 @@ const COMMON_CONDITIONS = [
 
 export const CombatTracker: React.FC<CombatTrackerProps> = ({
   supportedProfile=false,
+  combatEvidence=[],
   readOnly=false,
   combatState,
   characters,
@@ -79,6 +82,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   onSubmitAction,
 }) => {
   const isDm = userRole === 'dm_host';
+  const [includedCharacterIds,setIncludedCharacterIds]=useState<string[]>(()=>characters.map(c=>(c as any).instanceId||c.id));
 
   // Modal / Action states
   const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
@@ -310,10 +314,10 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
   };
 
   if(supportedProfile){
-    const send=async(actionType:any,payload:any)=>{if(readOnly)return;setIsSubmitting(true);setProfileNotice('');try{const id=crypto.randomUUID();await onSubmitAction({actionId:id,clientNonce:id,actorId:isDm?'dm-1':activeCharacterId!,actorRole:userRole,actionType,payload,snapshotRef:currentSnapshot,timestampUtc:new Date().toISOString()});setProfileNotice('R1 encounter action committed.');}catch(e:any){setProfileNotice(e.message);}finally{setIsSubmitting(false);}};
+    const send=async(actionType:any,payload:any)=>{if(readOnly)return;setIsSubmitting(true);setProfileNotice('');try{const id=crypto.randomUUID();const result=await onSubmitAction({actionId:id,clientNonce:id,actorId:isDm?'dm-1':activeCharacterId!,actorRole:userRole,actionType,payload,snapshotRef:currentSnapshot,timestampUtc:new Date().toISOString()});if(result?.receipt?.status!=='COMMITTED'||result?.r1Receipt?.status!=='APPLIED')throw new Error('No applied native R1 receipt returned; refresh before retrying.');setProfileNotice(`R1 record committed: ${result.r1Receipt.commit_id} · revision ${result.r1Receipt.revision_after}`);}catch(e:any){setProfileNotice(e.message);}finally{setIsSubmitting(false);}};
     const active=combatState.combatants[combatState.activeTurnIndex];
     const toggleExtraOpponent=(id:string)=>setAdditionalOpponentIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
-    const selectedParticipantIds=[...characters.map(c=>(c as any).instanceId),...(selectedCombatantId?[selectedCombatantId]:[]),...additionalOpponentIds.filter(x=>x!==selectedCombatantId)];
+    const selectedParticipantIds=[...characters.filter(c=>includedCharacterIds.includes((c as any).instanceId||c.id)).map(c=>(c as any).instanceId),...(selectedCombatantId?[selectedCombatantId]:[]),...additionalOpponentIds.filter(x=>x!==selectedCombatantId)];
     const activeChar=characters.find(c=>(c as any).instanceId===active?.entityId);
     const activeBalm=(activeChar as any)?.supportedConsumables?.[0];
     const activeEquippedWeapons:string[]=(activeChar as any)?.equippedWeapons||['training_strike'];
@@ -339,6 +343,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
     <p role="status">{profileNotice}</p>
     <fieldset disabled={isSubmitting||readOnly} className="flex flex-wrap gap-2 items-center">
     {!combatState.isActive&&isDm&&<>
+      <div aria-label="Encounter characters">{characters.map(c=>{const id=(c as any).instanceId||c.id;return <label key={id}><input type="checkbox" aria-label={`Include character ${id}`} checked={includedCharacterIds.includes(id)} onChange={()=>setIncludedCharacterIds(old=>old.includes(id)?old.filter(x=>x!==id):[...old,id])}/>{c.name}</label>;})}</div>
       <select aria-label="Original opponent" value={selectedCombatantId||''} onChange={e=>setSelectedCombatantId(e.target.value)} className="bg-neutral-900"><option value="">Select runtime opponent</option>{npcs.map(n=><option key={n.id} value={n.id}>{n.name} · {n.id}</option>)}</select>
       {npcs.length>1&&<div aria-label="Additional encounter opponents" className="flex flex-wrap gap-2 text-xs">{npcs.filter(n=>n.id!==selectedCombatantId).map(n=><label key={n.id} className="flex items-center gap-1"><input type="checkbox" aria-label={`Include opponent ${n.id}`} checked={additionalOpponentIds.includes(n.id)} onChange={()=>toggleExtraOpponent(n.id)}/>{n.name} ({n.id})</label>)}</div>}
       <button disabled={!selectedCombatantId} onClick={()=>void send('START_ENCOUNTER',{participantIds:selectedParticipantIds})}>Start original encounter</button>
@@ -389,6 +394,7 @@ export const CombatTracker: React.FC<CombatTrackerProps> = ({
     </fieldset>
     {combatState.isActive&&<div aria-label="Encounter roster" className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">{combatState.combatants.map((c:any,idx:number)=><div key={c.entityId} aria-label={`Combatant ${c.entityId}`} className={`p-2 border ${idx===combatState.activeTurnIndex?'border-amber-500 bg-neutral-900':'border-neutral-800 bg-neutral-950'}`}><strong>{c.name}</strong> · <span>{c.entityId}</span> {(c as any).sourceId&&<span>· {(c as any).sourceId}</span>} · Init {c.initiative} {(c as any).currentHp!==undefined&&<span>· HP {(c as any).currentHp}/{(c as any).maxHp}</span>} {Array.isArray((c as any).conditions)&&(c as any).conditions.length>0&&<span>· Conditions: {(c as any).conditions.join(', ')}</span>}</div>)}</div>}
     {lastAtk&&<p aria-label="Last attack resolution">Committed attack: d20 {lastAtk.d20}{lastAtk.d20Rolls?` (${lastAtk.d20Rolls.join(',')})`:''}, {lastAtk.critical?'CRITICAL HIT, ':lastAtk.automaticMiss?'AUTOMATIC MISS, ':''}raw damage {lastAtk.rawDamage??lastAtk.damage}, damage {lastAtk.damage}{lastAtk.damageType?` ${lastAtk.damageType}`:''}{lastAtk.ruleApplied?` [rule: ${lastAtk.ruleApplied}]`:''}, target HP {lastAtk.hpAfter}{lastAtk.defeated?' (DEFEATED)':''}</p>}
+    <details aria-label="Committed combat receipts"><summary>Combat receipts ({combatEvidence.length})</summary>{combatEvidence.map(e=><article key={e.receipt.commit_id} className="text-xs border-t border-neutral-800 py-2"><strong>{e.operation}</strong> · revision {e.receipt.revision_after} · {e.receipt.status}<p>{e.receipt.commit_id}</p><p>State hash {e.receipt.state_hash_after}</p><p>Events {e.receipt.event_ids.join(", ")}</p>{e.attack&&<p>Committed damage {e.attack.damage}; target HP {e.attack.hpAfter}; d20 {e.attack.d20}</p>}</article>)}</details>
     </section>;
   }
   return (

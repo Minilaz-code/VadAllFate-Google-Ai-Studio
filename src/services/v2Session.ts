@@ -1,3 +1,4 @@
+import {discoverRuntimeProfile,isLayeredRuntime} from './runtimeProfile.ts';
 import {controlledGatewayFetch} from './controlledGatewayFetch.ts';
 /**
  * V2 session credentials (Host-controlled authentication).
@@ -30,7 +31,7 @@ function apiBase(): string {
 }
 
 export function isLayeredDevelopment():boolean {
-  return typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('storageAlign')==='2';
+  return isLayeredRuntime();
 }
 export function getDevelopmentSave():string{return storage()?.getItem('vadallfate.v2.developmentSave')==='b'?'b':'a';}
 export function selectDevelopmentSave(save:string):void {
@@ -107,6 +108,7 @@ export async function loginWithHostKey(
   bootstrapKey: string,
   playerCharacterId: string = 'char-lyra-01'
 ): Promise<V2SessionTokens> {
+  await discoverRuntimeProfile(apiBase());
   const dm = await postSession({ bootstrapKey, role: 'dm_host', actorId: 'dm-1', isHost: true });
   if(isLayeredDevelopment()){
     const response=await controlledGatewayFetch(`${apiBase()}/projection`,{headers:{...developmentHeaders(),'X-VadAllFate-Session-Token':dm.sessionToken}});
@@ -135,6 +137,7 @@ export async function loginWithHostKey(
 
 /** Redeem a Host-provisioned single-use invite; the backend decides the role, not the client. */
 export async function loginWithInvite(inviteCode: string): Promise<V2SessionTokens> {
+  await discoverRuntimeProfile(apiBase());
   const res = await postSession({ inviteCode });
   const tokens: V2SessionTokens = { displayName: res.displayName, isHost: Boolean(res.isHost), campaignId: res.campaignId };
   if (res.role === 'dm') tokens.dm = res.sessionToken;

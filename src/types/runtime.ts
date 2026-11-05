@@ -162,7 +162,14 @@ export interface PendingAdjudication {
   proposedPatches?: any[];
 }
 
+export interface NativeCombatEvidence {
+  operation: string;
+  receipt: {commit_id:string;action_id:string;revision_after:number;state_hash_after:string;event_ids:string[];status:string};
+  attack: Record<string,any>|null;
+}
+
 export interface BaseCampaignProjection {
+  combatEvidence?: NativeCombatEvidence[];
   campaignId: string;
   name: string;
   operatingMode: OperatingMode;

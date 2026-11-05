@@ -1249,7 +1249,8 @@ export class PythonRuntimeGateway implements CampaignClient {
       body: JSON.stringify(envelope),
     });
     if (!resp.ok) {
-      throw new Error(`Python V2 runtime rejected action HTTP ${resp.status}`);
+      const error=await resp.json().catch(()=>({}));
+      throw new Error(`Python V2 runtime rejected action HTTP ${resp.status}: ${error.message||error.detail||error.code||'Action refused'}`);
     }
     const result = await resp.json();
     await this.connectToLiveBackend();
