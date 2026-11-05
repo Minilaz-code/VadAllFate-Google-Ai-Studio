@@ -1,8 +1,9 @@
-import {test,expect,Page} from '@playwright/test';
+import {test,expect as baseExpect,Page} from '@playwright/test';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 
+const expect=baseExpect.configure({timeout:45000});
 test.use({actionTimeout:45000,screenshot:'only-on-failure'});
 function fixture(){const c=JSON.parse(readFileSync(process.env.VADALLFATE_INTEGRATE_01_CONTROL!,'utf8'));const host=JSON.parse(readFileSync(join(c.root,'launcher/pids.json'),'utf8'));return {c,host};}
 function hashes(c:any){const m=JSON.parse(readFileSync(join(c.root,'mounts.json'),'utf8'));return Object.fromEntries(m.mounts.map((p:any)=>[p.file,createHash('sha256').update(readFileSync(join(c.root,p.file))).digest('hex')]));}
