@@ -1,3 +1,4 @@
+import {SrdReferencePanel} from './components/play/SrdReferencePanel.tsx';
 import {discoverRuntimeProfile} from './services/runtimeProfile.ts';
 import {resolveSessionApiBaseUrl} from './services/v2Session.ts';
 import {CombatTracker} from './components/play/CombatTracker.tsx';
@@ -378,6 +379,7 @@ export default function App() {
               <>{(!hasAdventure||effectiveRole==='dm_host')&&!isLayeredDevelopment()&&<ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />}
               <AdventurePlayPanel onBusyChange={setAdventureBusy} refreshKey={JSON.stringify(activeClient.getCurrentSnapshot())} role={effectiveRole} characters={projection.characters} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onAvailable={setHasAdventure} onRefresh={()=>clientManager.connectPythonGateway()}/>
               {(projection as any).storageFormat==='STORAGE-ALIGN-04'&&projection.combatState&&<CombatTracker supportedProfile combatEvidence={projection.combatEvidence} readOnly={Boolean(identity.previewMode?.isActive)||effectiveRole==='observer'} combatState={projection.combatState} characters={projection.characters} npcs={projection.npcs} userRole={effectiveRole} activeCharacterId={effectiveCharId} currentSnapshot={activeClient.getCurrentSnapshot()} onOpenCharacterSheet={()=>setCurrentTab('character')} onSubmitAction={async action=>{const result=await activeClient.submitAction(action);await clientManager.connectPythonGateway();return result;}}/>}
+              {isLayeredDevelopment()&&<SrdReferencePanel/>}
               {!hasAdventure&&!isLayeredDevelopment()&&<NarrativePlayView
                 characters={projection.characters}
                 npcs={projection.npcs}
