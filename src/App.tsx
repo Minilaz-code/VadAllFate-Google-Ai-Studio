@@ -1,3 +1,6 @@
+import {SrdReferencePanel} from './components/play/SrdReferencePanel.tsx';
+import {discoverRuntimeProfile} from './services/runtimeProfile.ts';
+import {resolveSessionApiBaseUrl} from './services/v2Session.ts';
 import {CombatTracker} from './components/play/CombatTracker.tsx';
 /**
  * VadAllFate (Ada V2) — Persistent AI Tabletop RPG Platform
@@ -58,6 +61,8 @@ export default function App() {
     const initConnection = async () => {
       if(new URLSearchParams(window.location.search).get('demo')==='1') { clientManager.switchClient(true);setConnectionState('EXPLICIT DEMO');return; }
       const key = consumeHostKeyFromUrlFragment();
+      await discoverRuntimeProfile(resolveSessionApiBaseUrl());
+      if(active)setTick(t=>t+1);
       if (key) {
         setConnectionState('CONNECTING');
         const token = await clientManager.getPythonGateway().authenticateSession(key);
@@ -373,7 +378,8 @@ export default function App() {
             {currentTab === 'play' && (
               <>{(!hasAdventure||effectiveRole==='dm_host')&&!isLayeredDevelopment()&&<ContentPlayPanel isPreview={Boolean(identity.previewMode?.isActive)} role={effectiveRole} snapshot={activeClient.getCurrentSnapshot()} characters={projection.characters} isLive={!isUsingDemo && connectionStatus.isConnectedToLivePython} onRefresh={() => clientManager.connectPythonGateway()} />}
               <AdventurePlayPanel onBusyChange={setAdventureBusy} refreshKey={JSON.stringify(activeClient.getCurrentSnapshot())} role={effectiveRole} characters={projection.characters} isLive={!isUsingDemo&&connectionStatus.isConnectedToLivePython} isPreview={Boolean(identity.previewMode?.isActive)} onAvailable={setHasAdventure} onRefresh={()=>clientManager.connectPythonGateway()}/>
-              {(projection as any).storageFormat==='STORAGE-ALIGN-04'&&projection.combatState&&<CombatTracker supportedProfile readOnly={Boolean(identity.previewMode?.isActive)||effectiveRole==='observer'} combatState={projection.combatState} characters={projection.characters} npcs={projection.npcs} userRole={effectiveRole} activeCharacterId={effectiveCharId} currentSnapshot={activeClient.getCurrentSnapshot()} onOpenCharacterSheet={()=>setCurrentTab('character')} onSubmitAction={async action=>{const result=await activeClient.submitAction(action);await clientManager.connectPythonGateway();return result;}}/>}
+              {(projection as any).storageFormat==='STORAGE-ALIGN-04'&&projection.combatState&&<CombatTracker supportedProfile combatEvidence={projection.combatEvidence} readOnly={Boolean(identity.previewMode?.isActive)||effectiveRole==='observer'} combatState={projection.combatState} characters={projection.characters} npcs={projection.npcs} userRole={effectiveRole} activeCharacterId={effectiveCharId} currentSnapshot={activeClient.getCurrentSnapshot()} onOpenCharacterSheet={()=>setCurrentTab('character')} onSubmitAction={action=>activeClient.submitAction(action)}/>}
+              {isLayeredDevelopment()&&<SrdReferencePanel/>}
               {!hasAdventure&&!isLayeredDevelopment()&&<NarrativePlayView
                 characters={projection.characters}
                 npcs={projection.npcs}
@@ -528,7 +534,7 @@ export default function App() {
         </ErrorBoundary>
       )}
 
-      {isLayeredDevelopment()&&<aside className="px-4 py-2 text-sm border-t border-amber-900">Layered source Save <select aria-label="Layered development Save" value={getDevelopmentSave()} onChange={e=>{selectDevelopmentSave(e.target.value);window.location.reload();}} className="bg-neutral-900"><option value="a">A</option><option value="b">B</option></select> · {(projection as any)?.storageFormat==='STORAGE-ALIGN-04'?'Supported: dynamic NPCs, bounded catalogue/history, owned balm/transfer, d20 rolls and approved original encounter. Other mechanics remain unsupported.':'Supported: HP/balm, source NPC testimony, clock and controlled objective. Other writes, including dice and combat, return unsupported.'}</aside>}
+      {isLayeredDevelopment()&&<aside className="px-4 py-2 text-sm border-t border-amber-900">Campaign Save <select aria-label="Campaign Save" value={getDevelopmentSave()} onChange={e=>{selectDevelopmentSave(e.target.value);window.location.reload();}} className="bg-neutral-900"><option value="a">A</option><option value="b">B</option></select> · {(projection as any)?.storageFormat==='STORAGE-ALIGN-04'?'Controlled first-play campaign: approved NPCs, supported SRD 5.1 combat and persistent R1 receipts. Existing legacy Saves are not converted.':'Supported: HP/balm, source NPC testimony, clock and controlled objective. Other writes, including dice and combat, return unsupported.'}</aside>}
       {/* Architectural Status Register Audit Modal */}
       <FeatureStatusModal
         isOpen={isAuditModalOpen}

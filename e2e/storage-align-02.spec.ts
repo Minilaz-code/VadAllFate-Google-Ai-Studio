@@ -36,7 +36,7 @@ test('SA02 actual existing App consumes source baseline and R1 deltas',async({pa
   expect(await player.evaluate(()=>Boolean(JSON.parse(sessionStorage.getItem('vadallfate.v2.session')!).dm))).toBe(false);
   await expect(player.getByLabel('Approve trust consequence')).toHaveCount(0);
  }finally{await context.close();}
- await page.getByLabel('Layered development Save').selectOption('b');await login(page,host.hostKey);
+ await page.getByLabel('Campaign Save').selectOption('b');await login(page,host.hostKey);
  const b=await read(page,c);expect(b.character.currentHp).toBe(24);expect(b.memory).toEqual([]);expect(b.worldMinute).toBe(855);writeFileSync(join(c.root,'source-b.private.json'),JSON.stringify(b));
  expect(hashes(c)).toEqual(before);writeFileSync(join(c.root,'source-ui.private.json'),JSON.stringify({verified:true,baselineHashes:before,playerNoDmCredential:true,playerPrivateDataAbsent:true}));
 });
@@ -44,7 +44,7 @@ test('SA02 actual existing App consumes source baseline and R1 deltas',async({pa
 test('SA02 existing App full restart recovers both source-bound outcomes',async({page})=>{
  test.skip(!process.env.VADALLFATE_SOURCE_CONTROL||process.env.VADALLFATE_SOURCE_PHASE!=='restart');const {c,host}=fixture();
  await page.goto('/?storageAlign=2');
- for(const save of ['a','b']){if(save==='b')await page.getByLabel('Layered development Save').selectOption(save);await login(page,host.hostKey);expect(await read(page,c)).toEqual(JSON.parse(readFileSync(join(c.root,`source-${save}.private.json`),'utf8')));}
+ for(const save of ['a','b']){if(save==='b')await page.getByLabel('Campaign Save').selectOption(save);await login(page,host.hostKey);expect(await read(page,c)).toEqual(JSON.parse(readFileSync(join(c.root,`source-${save}.private.json`),'utf8')));}
  expect(hashes(c)).toEqual(JSON.parse(readFileSync(join(c.root,'source-ui.private.json'),'utf8')).baselineHashes);
  writeFileSync(join(c.root,'source-restart.private.json'),JSON.stringify({verified:true,bothSnapshotsExact:true,baselineBytesUnchanged:true}));await page.screenshot({path:join(c.root,'source-app-restart.png'),fullPage:true});
 });

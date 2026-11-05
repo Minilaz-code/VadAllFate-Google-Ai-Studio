@@ -204,7 +204,13 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
           await combat.getByLabel('Physical d20 face').fill('19');
           await combat.getByLabel('Physical damage face').fill('6');
           await combat.getByRole('button',{name:'Resolve original attack'}).click();
-          await expect(combat.getByRole('status')).toContainText('rejected action HTTP 403');
+          // Accepted disposable worker wraps this equipment authority error as
+          // VALIDATION_FAILED/400; preserve the specific refusal and canonical state.
+          await expect(combat.getByRole('status')).toContainText('rejected action HTTP 400');
+          await expect(combat.getByRole('status')).toContainText('WEAPON_NOT_EQUIPPED');
+          const refused=await request(page,c,'/projection');
+          expect(refused.combatState).toEqual(proj.combatState);
+          expect(refused.combatEvidence).toEqual(proj.combatEvidence);
           sawForgedOwnershipRefusal=true;
         }
         if(!sawResistance){
@@ -290,7 +296,7 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
   expect(auditA.complete_history_verified).toBe(true);
 
   // Switch to Save B and verify complete Save isolation
-  await page.getByLabel('Layered development Save').selectOption('b');
+  await page.getByLabel('Campaign Save').selectOption('b');
   await login(page,host.hostKey);
   const b=await state(page,c);
   expect(b.projection.npcs).toEqual([]);
@@ -321,7 +327,7 @@ test('COMBAT-R1-01 full restart recovers SRD encounter state, defeated NPC memor
   const {c,host}=fixture();
   await page.goto('/?storageAlign=2');
   for(const save of ['a','b']){
-    if(save==='b')await page.getByLabel('Layered development Save').selectOption(save);
+    if(save==='b')await page.getByLabel('Campaign Save').selectOption(save);
     await login(page,host.hostKey);
     const current=await state(page,c);
     expect(current).toEqual(JSON.parse(readFileSync(join(c.root,`combat-r1-01-${save}.private.json`),'utf8')));
