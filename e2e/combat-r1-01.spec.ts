@@ -204,7 +204,13 @@ test('COMBAT-R1-01 connected Edge acceptance: reviewed SRD 5.1 monsters, >3 comb
           await combat.getByLabel('Physical d20 face').fill('19');
           await combat.getByLabel('Physical damage face').fill('6');
           await combat.getByRole('button',{name:'Resolve original attack'}).click();
-          await expect(combat.getByRole('status')).toContainText('rejected action HTTP 403');
+          // Accepted disposable worker wraps this equipment authority error as
+          // VALIDATION_FAILED/400; preserve the specific refusal and canonical state.
+          await expect(combat.getByRole('status')).toContainText('rejected action HTTP 400');
+          await expect(combat.getByRole('status')).toContainText('WEAPON_NOT_EQUIPPED');
+          const refused=await request(page,c,'/projection');
+          expect(refused.combatState).toEqual(proj.combatState);
+          expect(refused.combatEvidence).toEqual(proj.combatEvidence);
           sawForgedOwnershipRefusal=true;
         }
         if(!sawResistance){
